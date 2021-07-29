@@ -842,6 +842,10 @@ void HWCDisplay::BuildLayerStack() {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
+
+  layer_stack_.client_incompatible =
+      dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
+  DLOGV_IF(kTagClient, "layer_stack_.client_incompatible : %d", layer_stack_.client_incompatible);
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -852,6 +856,10 @@ void HWCDisplay::BuildSolidFillStack() {
   layer_stack_.flags.geometry_changed = 1U;
   // Append client target to the layer stack
   layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+
+  layer_stack_.client_incompatible =
+      dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
+  DLOGV_IF(kTagClient, "layer_stack_.client_incompatible : %d", layer_stack_.client_incompatible);
 }
 
 HWC2::Error HWCDisplay::SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type) {
@@ -1509,6 +1517,7 @@ HWC2::Error HWCDisplay::HandlePrepareError(DisplayError error) {
 }
 
 HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests) {
+  DTRACE_SCOPED();
   // clear geometry_changes_on_doze_suspend_ on successful prepare.
   geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
 
@@ -1541,6 +1550,8 @@ HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t 
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   layer_stack_invalid_ = false;
+
+  layer_stack_.client_incompatible = false;
 
   validate_done_ = true;
 
@@ -1935,8 +1946,18 @@ void HWCDisplay::DumpInputBuffers() {
     return;
   }
 
+  bool dump_gpu_target = false;  // whether to dump GPU Target layer.
   for (uint32_t i = 0; i < layer_stack_.layers.size(); i++) {
     auto layer = layer_stack_.layers.at(i);
+    if (!dump_gpu_target) {
+      if (layer->composition == kCompositionGPU) {
+        dump_gpu_target = true;  // Dump GPU Target layer only if its not a full MDP composition.
+      } else if (layer->composition == kCompositionGPUTarget) {
+        DLOGI("Skipping dumping target layer. dump_gpu_target : %d", dump_gpu_target);
+        break;  // Skip dumping GPU Target layer.
+      }
+    }
+
     const native_handle_t *handle =
         reinterpret_cast<const native_handle_t *>(layer->input_buffer.buffer_id);
     Fence::Wait(layer->input_buffer.acquire_fence);
@@ -1986,6 +2007,11 @@ void HWCDisplay::DumpInputBuffers() {
     }
 
     DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");
+
+    if (layer->composition == kCompositionGPUTarget) {  // Skip dumping the layers that follow
+      // follow GPU Target layer in layers list (i.e. stitch layers, noise layer, demura layer).
+      break;
+    }
   }
 }
 
