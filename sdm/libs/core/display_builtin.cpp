@@ -272,8 +272,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     return kErrorNone;
   }
 
+  DTRACE_BEGIN("Reset DispLayerStack");
   // Clean display layer stack for reuse.
   disp_layer_stack_ = DispLayerStack();
+  DTRACE_END();
 
   error = HandleSPR();
   if (error != kErrorNone) {

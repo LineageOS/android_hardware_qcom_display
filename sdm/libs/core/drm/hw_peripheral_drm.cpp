@@ -655,6 +655,7 @@ DisplayError HWPeripheralDRM::SetFrameTrigger(FrameTriggerMode mode) {
 }
 
 DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
+  DTRACE_SCOPED();
   if (pending_power_state_ != kPowerStateNone) {
     DLOGI("Power state %d pending!! Skip for now", pending_power_state_);
     return kErrorDeferred;
@@ -692,6 +693,7 @@ DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
 }
 
 DisplayError HWPeripheralDRM::GetPanelBrightness(int *level) {
+  DTRACE_SCOPED();
   char value[kMaxStringLength] = {0};
 
   if (!level) {
@@ -725,6 +727,7 @@ DisplayError HWPeripheralDRM::GetPanelBrightness(int *level) {
 }
 
 void HWPeripheralDRM::GetHWPanelMaxBrightness() {
+  DTRACE_SCOPED();
   char value[kMaxStringLength] = {0};
   hw_panel_info_.panel_max_brightness = 255.0f;
 
