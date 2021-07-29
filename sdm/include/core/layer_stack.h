@@ -203,6 +203,8 @@ struct LayerRequestFlags {
       uint32_t src_tone_map: 1;    //!< This flag will be set by SDM when the layer needs
                                    //!< source tone map.
       uint32_t rc: 1;  //!< This flag will be set by SDM when the layer is drawn by RC HW.
+      uint32_t update_format: 1;   //!< This flag will be set by SDM when layer format is updated
+                                   //!< The buffer format is mentioned in the LayerRequest Format
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.
@@ -218,9 +220,12 @@ struct LayerRequestFlags {
 */
 struct LayerRequest {
   LayerRequestFlags flags;  // Flags associated with this request
-  LayerBufferFormat format = kFormatRGBA8888;  // Requested format
-  uint32_t width = 0;  // Requested unaligned width.
+  LayerBufferFormat format = kFormatRGBA8888;  // Requested format - Used with tone_map and
+                                               // update_format flags
+  uint32_t width = 0;   // Requested unaligned width.
+                        // Used with tone_map flag
   uint32_t height = 0;  // Requested unalighed height
+                        // Used with tone_map flag
 };
 
 /*! @brief This structure defines flags associated with a layer stack. The 1-bit flag can be set to
@@ -456,6 +461,11 @@ struct LayerStack {
   PrimariesTransfer blend_cs = {};     //!< o/p - Blending color space of the frame, updated by SDM
 
   uint64_t elapse_timestamp = 0;       //!< system time until which display commit needs to be held
+
+  ColorMetaData gpu_target_color_metadata = { .colorPrimaries = ColorPrimaries_BT709_5,
+                                              .range = Range_Full,
+                                              .transfer = Transfer_sRGB };
+                                       //!< o/p - from SDM, applies to the Frame
 };
 
 }  // namespace sdm

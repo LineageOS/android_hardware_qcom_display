@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -46,6 +46,7 @@
 using PerFrameMetadataKey =
     android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
 using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
+using android::hardware::graphics::common::V1_2::Dataspace;
 
 namespace sdm {
 
@@ -56,6 +57,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range);
 bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata);
 bool IsBT2020(const ColorPrimaries &color_primary);
 int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds);
+DisplayError ColorMetadataToDataspace(ColorMetaData color_metadata, Dataspace *dataspace);
 
 enum GeometryChanges {
   kNone         = 0x000,
