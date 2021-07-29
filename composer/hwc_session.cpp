@@ -3542,10 +3542,25 @@ hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
 int32_t HWCSession::SetDisplayBrightnessScale(const android::Parcel *input_parcel) {
   auto display = input_parcel->readInt32();
   auto level = input_parcel->readInt32();
-  if (level < 0 || level > kBrightnessScaleMax) {
+
+  if (level < 0) {
     DLOGE("Invalid backlight scale level %d", level);
     return -EINVAL;
   }
+
+  // DPPS DRE case
+  int32_t dre_case = 0;
+  if (input_parcel->dataPosition() != input_parcel->dataSize()) {
+    dre_case = input_parcel->readInt32();
+  }
+
+  // Non-Dre case to check max backlight scale
+  if (!dre_case && level > kBrightnessScaleMax) {
+    DLOGE("Invalid backlight scale level %d, max scale %d, dre_case %d",
+      level, kBrightnessScaleMax, dre_case);
+    return -EINVAL;
+  }
+
   auto bl_scale = level * kSvBlScaleMax / kBrightnessScaleMax;
   auto error = CallDisplayFunction(display, &HWCDisplay::SetBLScale, (uint32_t)bl_scale);
   if (INT32(error) == HWC2_ERROR_NONE) {
