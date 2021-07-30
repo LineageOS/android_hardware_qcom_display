@@ -1909,6 +1909,9 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
     case HAL_PIXEL_FORMAT_YV12:
       *drm_format = DRM_FORMAT_YVU420;
       break;
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      ALOGW("HAL_PIXEL_FORMAT_RGBA_FP16 currently not supported");
+      break;
     default:
       ALOGE("Unsupported format %d", format);
   }
