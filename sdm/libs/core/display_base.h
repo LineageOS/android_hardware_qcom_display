@@ -162,6 +162,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) { return kErrorNotSupported; }
+  virtual void AppendRCMaskData(std::ostringstream &os);
   virtual std::string Dump();
   virtual DisplayError InitializeColorModes();
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {

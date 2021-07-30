@@ -976,6 +976,10 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
     DLOGE("failed to create the payload. Error:%d", ret);
     return;
   }
+
+  hw_layers_info.rc_layers_info.mask_layer_idx.clear();
+  hw_layers_info.rc_layers_info.rc_hw_layer_idx.clear();
+
   ret = rc_core_->ProcessOps(kRCFeaturePrepare, in, &out);
   if (!ret) {
     DLOGD_IF(kTagDisplay, "RC top_height = %d, RC bot_height = %d", rc_out_config->top_height,
@@ -985,6 +989,14 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
     hw_layers_info.rc_layers_info.top_height = rc_out_config->top_height;
     hw_layers_info.rc_layers_info.bottom_width = rc_out_config->bottom_width;
     hw_layers_info.rc_layers_info.bottom_height = rc_out_config->bottom_height;
+  }
+  for (const auto &layer : layer_stack->layers) {
+    if (layer->input_buffer.flags.mask_layer) {
+      hw_layers_info.rc_layers_info.mask_layer_idx.push_back(UINT32(layer->layer_id));
+      if (layer->request.flags.rc && !ret) {
+        hw_layers_info.rc_layers_info.rc_hw_layer_idx.push_back(UINT32(layer->layer_id));
+      }
+    }
   }
 }
 
@@ -1645,6 +1657,28 @@ DisplayError DisplayBase::SetMaxMixerStages(uint32_t max_mixer_stages) {
   return error;
 }
 
+void DisplayBase::AppendRCMaskData(std::ostringstream &os) {
+  uint32_t num_mask_layers = disp_layer_stack_.info.rc_layers_info.mask_layer_idx.size();
+  uint32_t num_rc_hw_layers = disp_layer_stack_.info.rc_layers_info.rc_hw_layer_idx.size();
+  if (num_mask_layers && rc_enable_prop_) {
+    os << "\nRC HW Mask Layer Idx: [";
+    for (uint32_t i = 0; i < num_rc_hw_layers; i++) {
+      os << disp_layer_stack_.info.rc_layers_info.rc_hw_layer_idx.at(i);
+      if (i < (num_rc_hw_layers - 1)) {
+        os << ", ";
+      }
+    }
+    os << "] of [";
+    for (uint32_t i = 0; i < num_mask_layers; i++) {
+      os << disp_layer_stack_.info.rc_layers_info.mask_layer_idx.at(i);
+      if (i < (num_mask_layers - 1)) {
+        os << ", ";
+      }
+    }
+    os << "]";
+  }
+}
+
 std::string DisplayBase::Dump() {
   ClientLock lock(disp_mutex_);
   HWDisplayAttributes attrib;
@@ -1743,6 +1777,8 @@ std::string DisplayBase::Dump() {
     os << "\nPartial FB ROI(LTRB):(" << INT(fb_roi.left) << " " << INT(fb_roi.top) << " " <<
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
+
+  AppendRCMaskData(os);
 
   const char *header  = "\n| Idx |   Comp Type   |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
   const char *newline = "\n|-----|---------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
