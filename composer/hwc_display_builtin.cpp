@@ -1331,11 +1331,31 @@ DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitc
   return kErrorNotSupported;
 }
 
-DisplayError HWCDisplayBuiltIn::SetStandByMode(bool enable) {
+DisplayError HWCDisplayBuiltIn::SetStandByMode(bool enable, bool is_twm) {
   if (enable) {
     if (!display_null_.IsActive()) {
       stored_display_intf_ = display_intf_;
       display_intf_ = &display_null_;
+      shared_ptr<Fence> release_fence = nullptr;
+
+      if (is_twm && current_power_mode_ == HWC2::PowerMode::On) {
+        DLOGD("Display is in ON state and device is entering TWM mode.");
+        DisplayError error = stored_display_intf_->SetDisplayState(kStateDoze,
+                                false /* teardown */,
+                                &release_fence);
+        if (error != kErrorNone) {
+          if (error == kErrorShutDown) {
+            shutdown_pending_ = true;
+            return error;
+          }
+          DLOGE("Set state failed. Error = %d", error);
+          return error;
+        } else {
+          current_power_mode_ = HWC2::PowerMode::Doze;
+          DLOGD("Display moved to DOZE state.");
+        }
+      }
+
       display_null_.SetActive(true);
       DLOGD("Null display is connected successfully");
     } else {
@@ -1343,6 +1363,10 @@ DisplayError HWCDisplayBuiltIn::SetStandByMode(bool enable) {
     }
   } else {
     if (display_null_.IsActive()) {
+      if (is_twm) {
+        DLOGE("Unexpected event. Display state may be inconsistent.");
+        return kErrorNotSupported;
+      }
       display_intf_ = stored_display_intf_;
       validated_ = false;
       display_null_.SetActive(false);
