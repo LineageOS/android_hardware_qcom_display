@@ -46,6 +46,7 @@ case "$target" in
     setprop vendor.display.enable_rounded_corner 1
     setprop vendor.display.disable_rounded_corner_thread 0
     setprop vendor.display.enable_rc_support 1
+    setprop vendor.display.enable_perf_hint_large_comp_cycle 1
     ;;
     esac
 esac
