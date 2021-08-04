@@ -279,13 +279,6 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_heap", flags,
                                          ION_HEAP(ION_SECURE_HEAP_ID), flags);
     }
-  } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
-    // memory from non secure CMA for tursted UI use case
-    is_default = false;
-    heap_name = "qcom,display";
-    buffer_allocator_.MapNameToIonHeap(heap_name, "display", flags, ION_HEAP(ION_DISPLAY_HEAP_ID),
-                                       flags);
   }
 
   if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
