@@ -298,6 +298,7 @@ struct LayerBuffer {
   }
 
   uint64_t handle_id = 0;
+  uint64_t usage = 0;           //!< Opaque Usage flags associated with this layer buffer.
 };
 
 // This enum represents buffer layout types.

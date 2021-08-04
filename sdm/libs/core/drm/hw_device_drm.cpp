@@ -346,6 +346,7 @@ int HWDeviceDRM::Registry::CreateFbId(const LayerBuffer &buffer, uint32_t *fb_id
   buf_info.aligned_width = layout.width = buffer.width;
   buf_info.aligned_height = layout.height = buffer.height;
   buf_info.format = buffer.format;
+  buf_info.usage = buffer.usage;
   GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
   buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset, &layout.num_planes);
   ret = master->CreateFbId(layout, fb_id);

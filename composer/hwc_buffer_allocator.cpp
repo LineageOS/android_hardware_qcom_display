@@ -630,7 +630,6 @@ int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
   private_handle_t hnd(-1, 0, 0, 0, 0, 0, 0);
   int format = HAL_PIXEL_FORMAT_RGBA_8888;
   uint64_t flags = 0;
-
   SetBufferInfo(buf_info.format, &format, &flags);
   // Setup only the required stuff, skip rest
   hnd.format = format;
@@ -639,7 +638,7 @@ int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
   if (flags & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
     hnd.flags = private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
-
+  hnd.usage = buf_info.usage;
   int ret = gralloc::GetBufferLayout(&hnd, stride, offset, num_planes);
   if (ret < 0) {
     DLOGE("GetBufferLayout failed");
