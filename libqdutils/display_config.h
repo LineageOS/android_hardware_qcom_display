@@ -173,6 +173,9 @@ int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum);
 // Sets display standy mode
 extern "C" int setStandByMode(int mode);
 
+// Get Panel Resolution
+extern "C" int getPanelResolution(int *width, int *height);
+
 }; //namespace
 
 

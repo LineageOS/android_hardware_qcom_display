@@ -1719,6 +1719,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetStandByMode(input_parcel);
       break;
 
+    case qService::IQService::GET_PANEL_RESOLUTION:
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      status = GetPanelResolution(input_parcel, output_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -2494,6 +2502,24 @@ int32_t HWCSession::GetVsyncPeriod(hwc2_display_t disp, uint32_t *vsync_period) 
 
 void HWCSession::Refresh(hwc2_display_t display) {
   callbacks_.Refresh(display);
+}
+
+android::status_t HWCSession::GetPanelResolution(const android::Parcel *input_parcel,
+                                                 android::Parcel *output_parcel) {
+  SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("Primary display is not initialized");
+    return -EINVAL;
+  }
+  auto panel_width = 0u;
+  auto panel_height = 0u;
+
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetPanelResolution(&panel_width, &panel_height);
+  output_parcel->writeInt32(INT32(panel_width));
+  output_parcel->writeInt32(INT32(panel_height));
+
+  return android::NO_ERROR;
 }
 
 android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input_parcel,
