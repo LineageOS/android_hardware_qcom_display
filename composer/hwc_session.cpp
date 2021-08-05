@@ -1114,7 +1114,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buff
 }
 
 int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
-  if (display >= HWCCallbacks::kNumDisplays) {
+  if (display >= HWCCallbacks::kNumDisplays || !hwc_display_[display]) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -1174,11 +1174,10 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     bool needs_validation = false;
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-      if (hwc_display_[display]) {
-        needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
-                            mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
-                            active_builtin_disp_id < HWCCallbacks::kNumDisplays);
-      }
+      needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
+                          mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
+                          active_builtin_disp_id < HWCCallbacks::kNumDisplays);
+
     }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
@@ -3179,7 +3178,7 @@ void HWCSession::DisplayPowerReset() {
 
   hwc2_display_t vsync_source = callbacks_.GetVsyncSource();
   // adb shell stop sets vsync source as max display
-  if (vsync_source != HWCCallbacks::kNumDisplays) {
+  if (vsync_source != HWCCallbacks::kNumDisplays && hwc_display_[vsync_source]) {
     status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
     if (status != HWC2::Error::None) {
       DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);
