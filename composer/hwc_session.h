@@ -509,6 +509,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display);
   void HandleSecureSession();
+  void SetCpuPerfHintLargeCompCycle();
   void HandlePendingPowerMode(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void HandlePendingHotplug(hwc2_display_t disp_id, const shared_ptr<Fence> &retire_fence);
   bool IsPluggableDisplayConnected();
