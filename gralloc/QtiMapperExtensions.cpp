@@ -71,10 +71,11 @@ Return<void> QtiMapperExtensions::getInterlacedFlag(void *buffer, getInterlacedF
   int interlaced_flag = 0;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     err = Error::NONE;
-    if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced_flag) != 0) {
-      ALOGW("%s: Error during getMetaData call. "
-      "interlaced_flag: %d", __FUNCTION__, interlaced_flag);
+    auto ret = getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced_flag);
+    if (ret != 0) {
       interlaced_flag = 0;
+      ALOGW("%s: getMetaData returned %d, defaulting to "
+      "interlaced_flag = %d", __FUNCTION__, ret, interlaced_flag);
     }
   }
   hidl_cb(err, interlaced_flag != 0);
