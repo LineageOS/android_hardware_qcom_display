@@ -134,11 +134,12 @@ class AllocInterface {
     @param[out] vm_names = Corresponding vector of names of vm to hyp assign in secure use case
     @param[out] alloc_type
     @param[out] flags - flags to specify desired heap allocation configuration
+    @param[out] alloc_size - align the size to be allocated based on alignment requirement of heap
 
   */
   virtual void GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *heap_name,
                            std::vector<std::string> *vm_names, unsigned int *alloc_type,
-                           unsigned int *flags);
+                           unsigned int *flags, unsigned int *alloc_size);
 
  protected:
   virtual ~AllocInterface() {}

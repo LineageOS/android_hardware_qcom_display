@@ -53,7 +53,7 @@ class DmaLegacyManager : public AllocInterface {
   virtual int SecureMemPerms(AllocData *data);
   virtual void GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *heap_name,
                            std::vector<std::string> *vm_names, unsigned int *alloc_type,
-                           unsigned int *flags);
+                           unsigned int *flags, unsigned int *alloc_size);
 
   static DmaLegacyManager *GetInstance();
 
