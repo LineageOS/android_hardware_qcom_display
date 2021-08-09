@@ -964,6 +964,7 @@ int32_t HWCSession::SetActiveConfig(hwc2_display_t display, hwc2_config_t config
 int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t target,
                                     const shared_ptr<Fence> acquire_fence, int32_t dataspace,
                                     hwc_region_t damage) {
+  DTRACE_SCOPED();
   return CallDisplayFunction(display, &HWCDisplay::SetClientTarget, target, acquire_fence,
                              dataspace, damage);
 }
@@ -971,6 +972,7 @@ int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t targ
 int32_t HWCSession::SetClientTarget_3_1(hwc2_display_t display, buffer_handle_t target,
                                         const shared_ptr<Fence> acquire_fence, int32_t dataspace,
                                         hwc_region_t damage) {
+  DTRACE_SCOPED();
   return CallDisplayFunction(display, &HWCDisplay::SetClientTarget_3_1, target, acquire_fence,
                              dataspace, damage);
 }

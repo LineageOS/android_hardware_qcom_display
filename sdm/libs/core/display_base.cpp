@@ -1078,6 +1078,7 @@ void DisplayBase::CommitThread() {
 }
 
 DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   DisplayError error = kErrorNone;
 
   if (!layer_stack) {
@@ -1163,6 +1164,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::PerformCommit(HWLayersInfo *hw_layers_info) {
+  DTRACE_SCOPED();
   DisplayError error = hw_intf_->Commit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("COMMIT failed: %d ", error);
@@ -1172,6 +1174,7 @@ DisplayError DisplayBase::PerformCommit(HWLayersInfo *hw_layers_info) {
 }
 
 DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
 
   disp_layer_stack_.stack = layer_stack;
@@ -1195,6 +1198,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   DisplayError error = SetUpCommit(layer_stack);
   if (error != kErrorNone) {
     DLOGW("SetUpCommit failed %d", error);
@@ -1210,6 +1214,7 @@ DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
+  DTRACE_SCOPED();
   DisplayError error = PerformCommit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("Commit IOCTL failed %d", error);
@@ -1241,6 +1246,7 @@ void DisplayBase::CleanupOnError() {
 }
 
 DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
+  DTRACE_SCOPED();
   // Store retire fence to track commit start.
   CacheRetireFence();
   if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
@@ -2698,6 +2704,7 @@ DisplayError DisplayBase::SetFrameBufferConfig(const DisplayConfigVariableInfo &
 }
 
 DisplayError DisplayBase::GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
   if (!variable_info) {
     return kErrorParameters;

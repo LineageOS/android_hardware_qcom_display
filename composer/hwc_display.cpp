@@ -1220,6 +1220,7 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
 
 HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                         int32_t dataspace, hwc_region_t damage) {
+  DTRACE_SCOPED();
   // TODO(user): SurfaceFlinger gives us a null pointer here when doing full SDE composition
   // The error is problematic for layer caching as it would overwrite our cached client target.
   // Reported bug 28569722 to resolve this.
@@ -1248,6 +1249,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
 
 HWC2::Error HWCDisplay::SetClientTarget_3_1(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                             int32_t dataspace, hwc_region_t damage) {
+  DTRACE_SCOPED();
   auto status = SetClientTarget(target, acquire_fence, dataspace, damage);
   if (status != HWC2::Error::None) {
     return status;
@@ -2073,6 +2075,7 @@ const char *HWCDisplay::GetDisplayString() {
 }
 
 int HWCDisplay::SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels) {
+  DTRACE_SCOPED();
   if (x_pixels <= 0 || y_pixels <= 0) {
     DLOGW("Unsupported config: x_pixels=%d, y_pixels=%d", x_pixels, y_pixels);
     return -EINVAL;
@@ -2165,6 +2168,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 }
 
 void HWCDisplay::GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels) {
+  DTRACE_SCOPED();
   DisplayConfigVariableInfo fb_config;
   display_intf_->GetFrameBufferConfig(&fb_config);
 
