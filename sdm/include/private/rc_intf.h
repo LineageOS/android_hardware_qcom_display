@@ -89,6 +89,7 @@ enum RCFeatureParams {
 // RC specific ops as enum
 enum RCFeatureOps {
   kRCFeaturePrepare,
+  kRCFeaturePostPrepare,
   kRCFeatureCommit,
   kRCFeatureOpsMax,
 };

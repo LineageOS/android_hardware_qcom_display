@@ -284,7 +284,7 @@ class DisplayBase : public DisplayInterface {
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes(const std::string &str_render_intent);
-  DisplayError SetupRC();
+  DisplayError InitRC();
   DisplayError HandlePendingVSyncEnable(const shared_ptr<Fence> &retire_fence);
   DisplayError ResetPendingPowerState(const shared_ptr<Fence> &retire_fence);
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
@@ -370,6 +370,8 @@ class DisplayBase : public DisplayInterface {
   bool rc_panel_feature_init_ = false;
   bool spr_enable_ = false;
   bool rc_enable_prop_ = false;
+  bool rc_config_enable_ = false;  // Specifies if RC is enabled by RCCore
+  RCLayersInfo rc_info_ = {};  // when rc_config_enable_ is true, this holds RC top/bottom info
   PanelFeatureFactoryIntf *pf_factory_ = nullptr;
   PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   bool first_cycle_ = true;
@@ -390,7 +392,7 @@ class DisplayBase : public DisplayInterface {
 
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
-  void SetRCData(LayerStack *layer_stack);
+  DisplayError PrepareRC(LayerStack *layer_stack);
   DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
   bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
   DisplayError GetNoisePluginParams(LayerStack *layer_stack);
@@ -408,6 +410,7 @@ class DisplayBase : public DisplayInterface {
   unsigned int rc_cached_mixer_width_ = 0;
   unsigned int rc_cached_mixer_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
+  bool rc_prepared_ = false;  // Used to avoid calling into RC core b/w Prepare and PrePrepare
   bool mmrm_updated_ = false;
   uint32_t mmrm_requested_clk_ = 0;
   static bool primary_active_;
