@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -51,6 +51,7 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError GetDefaultConfig(uint32_t *default_config);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError Deinit();
+  virtual DisplayError Flush(HWLayers *hw_layers);
 
  private:
   DisplayError UpdateHDRMetaData(HWLayers *hw_layers);

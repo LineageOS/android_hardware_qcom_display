@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -166,6 +166,18 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
   }
 
   return kErrorNone;
+}
+
+DisplayError HWTVDRM::Flush(HWLayers *hw_layers) {
+  if (hw_panel_info_.hdr_enabled) {
+    memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
+    hdr_metadata_.hdr_supported = 1;
+    hdr_metadata_.hdr_state = HDR_DISABLE;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id,
+                              &hdr_metadata_);
+  }
+
+  return HWDeviceDRM::Flush(hw_layers);
 }
 
 DisplayError HWTVDRM::Deinit() {
