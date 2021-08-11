@@ -79,7 +79,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1 \
     vendor.display.enable_camera_smooth=1 \
-    vendor.display.enable_allow_idle_fallback=1
+    vendor.display.enable_allow_idle_fallback=1 \
+    vendor.display.disable_idle_time_video=1 \
+    vendor.display.disable_idle_time_hdr=1
 
 # Enable offline rotator for Bengal, Monaco, Khaje.
 ifneq ($(filter bengal monaco khaje, $(TARGET_BOARD_PLATFORM)),$(TARGET_BOARD_PLATFORM))
