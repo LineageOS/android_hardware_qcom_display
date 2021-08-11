@@ -1489,41 +1489,6 @@ DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return hw_intf_->GetDynamicDSIClock(bit_clk_rate);
 }
 
-void DisplayBuiltIn::ResetPanel() {
-  DisplayError status = kErrorNone;
-  shared_ptr<Fence> release_fence = nullptr;
-  DisplayState last_display_state = {};
-
-  GetDisplayState(&last_display_state);
-  DLOGI("Power off display id = %d", display_id_);
-
-  status = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
-  if (status != kErrorNone) {
-    DLOGE("Power off for display id = %d failed with error = %d", display_id_, status);
-  }
-
-  DLOGI("Set display %d to state = %d", display_id_, last_display_state);
-  status = SetDisplayState(last_display_state, false /* teardown */, &release_fence);
-  if (status != kErrorNone) {
-     DLOGE("%d state for display id = %d failed with error = %d", last_display_state, display_id_,
-           status);
-  }
-
-  // If panel does not support current color modes, do not set color mode.
-  if (current_color_mode_.gamut && current_color_mode_.gamma &&
-      current_color_mode_.intent != snapdragoncolor::kMaxRenderIntent) {
-    status = SetStcColorMode(current_color_mode_);
-    if (status != kErrorNone) {
-      DLOGE("SetStcColorMode failed for display id = %d error = %d", display_id_, status);
-    }
-  }
-
-  status = SetVSyncState(true);
-  if (status != kErrorNone) {
-    DLOGE("Enable vsync failed for display id = %d with error = %d", display_id_, status);
-  }
-}
-
 DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
   *refresh_rate = current_refresh_rate_;
   return kErrorNone;
