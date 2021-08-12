@@ -801,6 +801,17 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
     hw_panel_info_.max_fps = current_mode.vrefresh;
   }
 
+  uint32_t min_transfer_time_us = hw_panel_info_.transfer_time_us;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay)) {
+      if (min_transfer_time_us > connector_info_.modes[mode_index].transfer_time_us)  {
+        min_transfer_time_us = connector_info_.modes[mode_index].transfer_time_us;
+      }
+    }
+  }
+  hw_panel_info_.min_transfer_time_us = min_transfer_time_us;
+
   if (connector_info_.qsync_fps > 0) {
     // For command mode panel, driver will set connector property qsync_fps
     hw_panel_info_.qsync_fps = connector_info_.qsync_fps;
@@ -865,7 +876,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
            hw_panel_info_.max_fps);
   DLOGI_IF(kTagDriverConfig, "Left Split = %d, Right Split = %d",
            hw_panel_info_.split_info.left_split, hw_panel_info_.split_info.right_split);
-  DLOGI_IF(kTagDriverConfig, "Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
+  DLOGI_IF(kTagDriverConfig, "Mode Transfer time = %d us", hw_panel_info_.transfer_time_us);
+  DLOGI_IF(kTagDriverConfig, "Panel Minimum Transfer time = %d us",
+    hw_panel_info_.min_transfer_time_us);
   DLOGI_IF(kTagDriverConfig, "Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
 }
 
