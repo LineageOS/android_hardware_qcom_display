@@ -1,7 +1,7 @@
 cc_library_shared {
 
     name: "libdisplaydebug",
-    defaults: ["qtidisplay_defaults"],
+    defaults: ["qtidisplay_common_defaults"],
     sanitize: {
         integer_overflow: true,
     },

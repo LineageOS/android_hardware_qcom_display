@@ -142,6 +142,7 @@ enum GeometryChanges {
   kAdded        = 0x080,
   kRemoved      = 0x100,
   kBufferGeometry = 0x200,
+  kColorTransform = 0x400,
   kDefault      = 0xFFFF,
 };
 
@@ -215,6 +216,15 @@ struct LayerFlags {
                               //!< with the current draw cycle.
 
       uint32_t is_noise : 1;  //!< This flag shall be set by SDM to indicate this layer as noise
+
+      uint32_t reserved1 : 1;
+                              //!< This flag is reserved(1) for private usage
+      uint32_t reserved2 : 1;
+                              //!< This flag is reserved(2) for private usage
+      uint32_t reserved3 : 1;
+                              //!< This flag is reserved(3) for private usage
+      uint32_t reserved4 : 1;
+                              //!< This flag is reserved(4) for private usage
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -318,6 +328,14 @@ struct LayerStackFlags {
       uint32_t demura_present : 1;  //!< This flag shall be set to true to indicate stack has demura
 
       uint32_t noise_present : 1;  //!< Set if stack has noise layer
+
+      uint32_t reserved1 : 1;  //!< This flag is reserved(1) for private usage
+
+      uint32_t reserved2 : 1;  //!< This flag is reserved(2) for private usage
+
+      uint32_t reserved3 : 1;  //!< This flag is reserved(3) for private usage
+
+      uint32_t reserved4 : 1;  //!< This flag is reserved(4) for private usage
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -536,6 +554,8 @@ struct LayerStack {
   CwbConfig *cwb_config = NULL;        //!< Struct that contains the original CWB configuration
                                        //!< provided by CWB client.
   bool validate_only = false;
+  bool client_incompatible = false;    //!< Flag to disable async commit when client target is
+                                       //!< not compatible.
 };
 
 }  // namespace sdm

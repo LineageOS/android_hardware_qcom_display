@@ -2,6 +2,7 @@
 cc_library_shared {
 
     name: "hdmi_cec.qcom",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },

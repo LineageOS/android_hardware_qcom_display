@@ -68,6 +68,8 @@ using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnecti
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfig;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback;
 using ::aidl::vendor::qti::hardware::display::config::CameraSmoothOp;
+using ::aidl::vendor::qti::hardware::display::config::Attributes;
+using ::aidl::vendor::qti::hardware::display::config::DisplayPortType;
 
 namespace aidl::vendor::qti::hardware::display::config {
   class DisplayConfigAIDL;
@@ -299,6 +301,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int RegisterCallbackClient(const std::shared_ptr<IDisplayConfigCallback>& callback,
                              int64_t *client_handle);
   int UnregisterCallbackClient(const int64_t client_handle);
+  int NotifyResolutionChange(int32_t disp_id, Attributes& attr);
 
   virtual int RegisterClientContext(std::shared_ptr<DisplayConfig::ConfigCallback> callback,
                                     DisplayConfig::ConfigInterface **intf);
@@ -358,12 +361,18 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     };
 
     void ProcessRequests();
+    void PerformFenceWaits();
     static void AsyncTask(CWB *cwb);
+    static void AsyncFenceWaits(CWB *cwb);
+    void NotifyCWBStatus(int status, QueueNode *cwb_node);
 
     std::queue<QueueNode *> queue_;
+    std::queue<pair<shared_ptr<Fence>, QueueNode *>> fence_wait_queue_;
 
     std::future<void> future_;
+    std::future<void> fence_wait_future_;
     Locker queue_lock_;
+    Locker fence_queue_lock_;
     std::mutex mutex_;
     std::condition_variable cv_;
     HWCSession *hwc_session_ = nullptr;
@@ -566,7 +575,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
                           HWC2::Error status);
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
-  int WaitForCommitDoneLocked(hwc2_display_t display, int client_id);
+  int WaitForCommitDone(hwc2_display_t display, int client_id);
+  void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -598,10 +608,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   HotPlugEvent pending_hotplug_event_ = kHotPlugNone;
   hwc2_display_t virtual_id_ = HWCCallbacks::kNumDisplays;
   Locker pluggable_handler_lock_;
-  bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
   int32_t disable_mask_layer_hint_ = 0;
+  int32_t enable_primary_reconfig_req_ = 0;
   float set_max_lum_ = -1.0;
   float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;

@@ -272,8 +272,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     return kErrorNone;
   }
 
+  DTRACE_BEGIN("Reset DispLayerStack");
   // Clean display layer stack for reuse.
   disp_layer_stack_ = DispLayerStack();
+  DTRACE_END();
 
   error = HandleSPR();
   if (error != kErrorNone) {
@@ -418,7 +420,7 @@ DisplayError DisplayBuiltIn::SetupSPR() {
     }
 
     if (color_mgr_) {
-    color_mgr_->ColorMgrSetSprIntf(reinterpret_cast<void *>(spr_.get()));
+      color_mgr_->ColorMgrSetSprIntf(spr_);
     }
   }
 
@@ -1403,6 +1405,8 @@ std::string DisplayBuiltIn::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
+  AppendRCMaskData(os);
+
   const char *header  = "\n| Idx |   Comp Type   |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
   const char *newline = "\n|-----|---------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
   const char *format  = "\n| %3s | %13s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
@@ -2179,6 +2183,7 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 
   if (error == kErrorNone) {
     ReconfigureDisplay();
+    validated_ = false;
   }
 
   return error;

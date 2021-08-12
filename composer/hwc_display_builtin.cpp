@@ -1520,6 +1520,11 @@ HWC2::Error HWCDisplayBuiltIn::SetAlternateDisplayConfig(bool set) {
   hwc2_config_t alt_config = 0;
   DisplayError error = kErrorNone;
 
+  // return early if non-DSC mode is already set
+  if (set && alternate_config_ != -1) {
+    return HWC2::Error::None;
+  }
+
   if (!set && alternate_config_ == -1) {
     return HWC2::Error::None;
   }

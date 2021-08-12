@@ -382,6 +382,7 @@ HWC2::Error HWCDisplayPluggable::SetColorTransform(const float *matrix,
     has_color_tranform_ = true;
   }
 
+  geometry_changes_ |= GeometryChanges::kColorTransform;
   callbacks_->Refresh(id_);
 
   return HWC2::Error::None;

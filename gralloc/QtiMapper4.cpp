@@ -57,8 +57,9 @@ QtiMapper::QtiMapper() {
 }
 
 bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_4_0 &bd) {
-  if (bd.width == 0 || bd.height == 0 || (static_cast<int32_t>(bd.format) <= 0) ||
-      bd.layerCount <= 0) {
+  unsigned int max_bpp = gralloc::GetBppForUncompressedRGB(HAL_PIXEL_FORMAT_RGBA_FP16);
+  if (bd.width == 0 || bd.height == 0 || (OVERFLOW((bd.width * max_bpp), bd.height)) ||
+      (static_cast<int32_t>(bd.format) <= 0) || bd.layerCount <= 0) {
     return false;
   }
 

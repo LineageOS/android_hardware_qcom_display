@@ -607,13 +607,13 @@ class HWCDisplay : public DisplayEventHandler {
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
+  uint32_t geometry_changes_ = GeometryChanges::kNone;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void WaitOnPreviousFence();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
-  uint32_t geometry_changes_ = GeometryChanges::kNone;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   int null_display_mode_ = 0;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.

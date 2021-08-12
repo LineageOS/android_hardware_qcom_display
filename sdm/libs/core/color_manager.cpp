@@ -368,6 +368,7 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   attributes = attr;
   version = feature_ver;
   dpps_intf = intf;
+  max_brightness = panel_info.panel_max_brightness;
 
   if (strlen(panel_info.panel_name)) {
     snprintf(&panel_name[0], sizeof(panel_name), "%s", &panel_info.panel_name[0]);
@@ -480,7 +481,7 @@ DisplayError ColorManagerProxy::ColorMgrSetModeWithRenderIntent(int32_t color_mo
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::ColorMgrSetSprIntf(void *spr_intf) {
+DisplayError ColorManagerProxy::ColorMgrSetSprIntf(std::shared_ptr<SPRIntf> spr_intf) {
   return color_intf_->ColorIntfSetSprInterface(spr_intf);
 }
 

@@ -388,32 +388,32 @@ int HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
     DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_idx);
     return -EINVAL;
   }
-
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
-  HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
-  if (!hwc_display) {
-    DLOGE("primary display object is not instantiated");
-    return -EINVAL;
-  }
-
-  uint32_t pending = 0;
-  DisplayError hwc_error = hwc_display->ControlPartialUpdate(enable, &pending);
-
-  if (hwc_error == kErrorNone) {
-    if (!pending) {
-      return 0;
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
+    HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
+    if (!hwc_display) {
+      DLOGE("primary display object is not instantiated");
+      return -EINVAL;
     }
-  } else if (hwc_error == kErrorNotSupported) {
-    return 0;
-  } else {
-    return -EINVAL;
+
+    uint32_t pending = 0;
+    DisplayError hwc_error = hwc_display->ControlPartialUpdate(enable, &pending);
+    if (hwc_error == kErrorNone) {
+      if (!pending) {
+        return 0;
+      }
+    } else if (hwc_error == kErrorNotSupported) {
+      return 0;
+    } else {
+      return -EINVAL;
+    }
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
   callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
-  int error = WaitForCommitDoneLocked(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
+  int error = WaitForCommitDone(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
   if (error != 0) {
     DLOGW("%s Partial update failed with error %d", enable ? "Enable" : "Disable", error);
   }
@@ -570,41 +570,46 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     DLOGE("No active displays");
     return -EINVAL;
   }
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-
-  if (hwc_display_[active_builtin_disp_id]) {
-    if (!enable) {
-      if (!idle_pc_ref_cnt_) {
-        auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
-                                                                                  synchronous);
-        if (err != kErrorNone) {
-          return (err == kErrorNotSupported) ? 0 : -EINVAL;
+  bool needs_refresh = false;
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
+    if (hwc_display_[active_builtin_disp_id]) {
+      if (!enable) {
+        if (!idle_pc_ref_cnt_) {
+          auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
+                                                                                    synchronous);
+          if (err != kErrorNone) {
+            return (err == kErrorNotSupported) ? 0 : -EINVAL;
+          }
+          needs_refresh = true;
         }
-        callbacks_.Refresh(active_builtin_disp_id);
-        int ret = WaitForCommitDoneLocked(active_builtin_disp_id, kClientIdlepowerCollapse);
-        if (ret != 0) {
-          DLOGW("Disable Idle PC failed with error %d", ret);
-          return -EINVAL;
+        idle_pc_ref_cnt_++;
+      } else if (idle_pc_ref_cnt_ > 0) {
+        if (!(idle_pc_ref_cnt_ - 1)) {
+          auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
+                                                                                    synchronous);
+          if (err != kErrorNone) {
+            return (err == kErrorNotSupported) ? 0 : -EINVAL;
+          }
         }
-        DLOGI("Idle PC disabled!!");
+        idle_pc_ref_cnt_--;
       }
-      idle_pc_ref_cnt_++;
-    } else if (idle_pc_ref_cnt_ > 0) {
-      if (!(idle_pc_ref_cnt_ - 1)) {
-        auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
-                                                                                  synchronous);
-        if (err != kErrorNone) {
-          return (err == kErrorNotSupported) ? 0 : -EINVAL;
-        }
-        DLOGI("Idle PC enabled!!");
-      }
-      idle_pc_ref_cnt_--;
+    } else {
+      DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
+      return -ENODEV;
     }
-    return 0;
+  }
+  if (needs_refresh) {
+    callbacks_.Refresh(active_builtin_disp_id);
+    int ret = WaitForCommitDone(active_builtin_disp_id, kClientIdlepowerCollapse);
+    if (ret != 0) {
+      DLOGW("%s Idle PC failed with error %d", enable ? "Enable" : "Disable", ret);
+      return -EINVAL;
+    }
   }
 
-  DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
-  return -ENODEV;
+  DLOGI("Idle PC %s!!", enable ? "enabled" : "disabled");
+  return 0;
 }
 
 int HWCSession::DisplayConfigImpl::ControlIdlePowerCollapse(bool enable, bool synchronous) {
@@ -678,6 +683,17 @@ int HWCSession::SetCameraSmoothInfo(CameraSmoothOp op, int32_t fps) {
   for (auto const& [id, callback] : callback_clients_) {
     if (callback) {
       callback->notifyCameraSmoothInfo(op, fps);
+    }
+  }
+
+  return 0;
+}
+
+int HWCSession::NotifyResolutionChange(int32_t disp_id, Attributes& attr) {
+  std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+  for (auto const& [id, callback] : callback_clients_) {
+    if (callback) {
+      callback->notifyResolutionChange(disp_id, attr);
     }
   }
 
@@ -1067,6 +1083,8 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
     // reject the cwb request if it's made on another display than the currently cwb active display
     QueueNode *node = queue_.front();
     if (node->display_type != display_type) {
+      native_handle_close(buffer);
+      native_handle_delete(const_cast<native_handle_t *>(buffer));
       return -1;
     }
   }
@@ -1118,23 +1136,22 @@ void HWCSession::CWB::ProcessRequests() {
       HWC2::Error error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
                                                          kCWBClientExternal);
       if (error != HWC2::Error::None) {
-        DLOGE("CWB buffer could not be set.");
         status = -1;
       } else {
         DLOGI("Successfully configured CWB buffer.");
       }
     }
 
+    hwc_session_->callbacks_.Refresh(node->display_type);
+
+    // Mutex scope
+    // Wait for the signal from commit thread to retrieve the CWB release fence
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cv_.wait(lock);
+    }
+
     if (!status) {
-      hwc_session_->callbacks_.Refresh(node->display_type);
-
-      // Mutex scope
-      // Wait for the signal from commit thread to retrieve the CWB release fence
-      {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cv_.wait(lock);
-      }
-
       shared_ptr<Fence> release_fence = nullptr;
       // Mutex scope
       {
@@ -1142,24 +1159,23 @@ void HWCSession::CWB::ProcessRequests() {
         hwc_display->GetReadbackBufferFence(&release_fence);
       }
 
-      if (release_fence >= 0) {
-        status = Fence::Wait(release_fence);
-      } else {
-        DLOGE("CWB release fence could not be retrieved.");
-        status = -1;
+      bool is_waiting = true;
+      {
+        SCOPE_LOCK(fence_queue_lock_);
+        // check whether fence wait is going on in another async thread.
+        is_waiting = static_cast<bool>(fence_wait_queue_.size());
+        // push current cwb request's release fence in the fence wait queue.
+        DLOGI("Pushing release fence in fenece wait queue.");
+        fence_wait_queue_.push({release_fence, node});
       }
+      if (!is_waiting) {  // incase of empty fence wait queue, create a new async thread
+        DLOGI("Creating AsyncFenceWaits async thread.");
+        // to perform fence wait on the cwb release fence.
+        fence_wait_future_ = std::async(HWCSession::CWB::AsyncFenceWaits, this);
+      }
+    } else {
+      NotifyCWBStatus(status, node);
     }
-
-    // Notify client about buffer status and erase the node from pending request queue.
-    std::shared_ptr<DisplayConfig::ConfigCallback> callback = node->callback.lock();
-    if (callback) {
-      DLOGI("Notify the client about buffer status %d.", status);
-      callback->NotifyCWBBufferDone(status, node->buffer);
-    }
-
-    native_handle_close(node->buffer);
-    native_handle_delete(const_cast<native_handle_t *>(node->buffer));
-    delete node;
 
     // Mutex scope
     // Make sure to exit here, if queue becomes empty after erasing current node from queue,
@@ -1177,8 +1193,63 @@ void HWCSession::CWB::ProcessRequests() {
   }
 }
 
+void HWCSession::CWB::PerformFenceWaits() {
+  while (true) {
+    shared_ptr<Fence> release_fence = nullptr;
+    QueueNode *cwb_node = nullptr;
+    {
+      SCOPE_LOCK(fence_queue_lock_);
+      if (!fence_wait_queue_.size()) {
+        DLOGI("CWB fence queue is empty. No pending release fence to wait on.");
+        break;
+      }
+
+      release_fence = fence_wait_queue_.front().first;
+      cwb_node = fence_wait_queue_.front().second;
+    }
+
+    int status = 0;
+    if (release_fence >= 0) {
+      status = Fence::Wait(release_fence);
+    } else {
+      DLOGE("CWB release fence could not be retrieved.");
+      status = -1;
+    }
+
+    NotifyCWBStatus(status, cwb_node);
+
+    {
+      SCOPE_LOCK(fence_queue_lock_);
+      fence_wait_queue_.pop();
+      DLOGI("Remove current release fence from the pending fence wait queue.");
+
+      if (!fence_wait_queue_.size()) {
+        DLOGI("CWB fence queue is empty. No pending release fence to wait on.");
+        break;
+      }
+    }
+  }
+}
+
+void HWCSession::CWB::NotifyCWBStatus(int status, QueueNode *cwb_node) {
+  // Notify client about buffer status and erase the node from pending request queue.
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = cwb_node->callback.lock();
+  if (callback) {
+    DLOGI("Notify the client about buffer status %d.", status);
+    callback->NotifyCWBBufferDone(status, cwb_node->buffer);
+  }
+
+  native_handle_close(cwb_node->buffer);
+  native_handle_delete(const_cast<native_handle_t *>(cwb_node->buffer));
+  delete cwb_node;
+}
+
 void HWCSession::CWB::AsyncTask(CWB *cwb) {
   cwb->ProcessRequests();
+}
+
+void HWCSession::CWB::AsyncFenceWaits(CWB *cwb) {
+  cwb->PerformFenceWaits();
 }
 
 void HWCSession::CWB::PresentDisplayDone(hwc2_display_t disp_id) {

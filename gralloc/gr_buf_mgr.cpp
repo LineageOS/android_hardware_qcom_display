@@ -884,9 +884,10 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
 
 Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
   unsigned int size, alignedw, alignedh;
+  unsigned int max_bpp = gralloc::GetBppForUncompressedRGB(HAL_PIXEL_FORMAT_RGBA_FP16);
   info.format = GetImplDefinedFormat(info.usage, info.format);
   int ret = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  if (ret < 0) {
+  if ((ret < 0) || (OVERFLOW((alignedw * max_bpp), alignedh))) {
     return Error::BAD_BUFFER;
   }
   auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
@@ -1162,13 +1163,6 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
 
   uint64_t usage = descriptor.GetUsage();
-
-  // Disable UBWC for RC layers, remove this check after fix is available in SF/framework
-  if (strstr(descriptor.GetName().c_str(), "ScreenDecorOverlay") != NULL) {
-    usage |= BufferUsage::CPU_READ_RARELY;
-    usage |= BufferUsage::CPU_WRITE_RARELY;
-  }
-
   int format = GetImplDefinedFormat(usage, descriptor.GetFormat());
   uint32_t layer_count = descriptor.GetLayerCount();
 

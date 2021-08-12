@@ -25,9 +25,9 @@ PRODUCT_PACKAGES += \
 #oem_services library
 PRODUCT_PACKAGES += \
     libfilefinder \
-    vendor.qti.hardware.display.demura@1.0-service.rc \
+    vendor.qti.hardware.display.demura-service.rc \
     vendor.qti.hardware.display.demura-service.xml \
-    vendor.qti.hardware.display.demura@1.0-service
+    vendor.qti.hardware.display.demura-service
 
 ifneq ($(TARGET_HAS_LOW_RAM),true)
 #QDCM calibration xml file for 2k panel
@@ -105,6 +105,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_optimize_refresh=0 \
     vendor.display.use_smooth_motion=1 \
     vendor.display.disable_stc_dimming=1 \
+    vendor.display.enable_dpps_dynamic_fps=1 \
     debug.sf.high_fps_late_sf_phase_offset_ns=-1000000 \
     debug.sf.high_fps_early_phase_offset_ns=-2000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-2000000 \
@@ -115,7 +116,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_async_vds_creation=1 \
     vendor.display.enable_rounded_corner=1 \
     vendor.display.disable_3d_adaptive_tm=1 \
-    vendor.display.disable_sdr_dimming=1
+    vendor.display.disable_sdr_dimming=1 \
+    vendor.display.enable_rc_support=1
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)

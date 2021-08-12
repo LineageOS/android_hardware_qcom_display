@@ -4,6 +4,7 @@
 cc_library_shared {
 
     name: "libfilefinder",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },
@@ -24,7 +25,8 @@ cc_library_shared {
         "libdl",
         "libutils",
         "libdisplaydebug",
-        "vendor.qti.hardware.display.demura@1.0",
+        "vendor.qti.hardware.display.demura@2.0",
+        "libhidlbase",
     ],
 
     srcs: ["file_finder_oem_extension.cpp"],
@@ -37,8 +39,8 @@ cc_library_shared {
 //
 
 cc_binary {
-
-    name: "vendor.qti.hardware.display.demura@1.0-service",
+    name: "vendor.qti.hardware.display.demura-service",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },
@@ -66,7 +68,7 @@ cc_binary {
         "libfilefinder",
         "libdisplaydebug",
         "libsdmutils",
-        "vendor.qti.hardware.display.demura@1.0",
+        "vendor.qti.hardware.display.demura@2.0",
     ],
 
     srcs: [
@@ -77,6 +79,6 @@ cc_binary {
     owner: "qti",
     vendor: true,
 
-    init_rc: ["vendor.qti.hardware.display.demura@1.0-service.rc"],
+    init_rc: ["vendor.qti.hardware.display.demura-service.rc"],
     vintf_fragments: ["vendor.qti.hardware.display.demura-service.xml"],
 }

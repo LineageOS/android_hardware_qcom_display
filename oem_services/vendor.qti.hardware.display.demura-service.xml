@@ -1,5 +1,5 @@
 <!--
-*Copyright (c) 2020, The Linux Foundation. All rights reserved.
+*Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,7 +30,7 @@
     <hal format="hidl">
         <name>vendor.qti.hardware.display.demura</name>
         <transport>hwbinder</transport>
-        <version>1.0</version>
+        <version>2.0</version>
         <interface>
             <name>IDemuraFileFinder</name>
             <instance>default</instance>

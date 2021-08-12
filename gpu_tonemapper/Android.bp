@@ -1,5 +1,6 @@
 cc_library_shared {
     name: "libgpu_tonemapper",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },

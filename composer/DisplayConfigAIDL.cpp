@@ -949,7 +949,7 @@ ScopedAStatus
 ScopedAStatus DisplayConfigAIDL::setCameraSmoothInfo(CameraSmoothOp op, int32_t fps) {
   int ret = -1;
 
-  if (fps <= 0) {
+  if (fps < 0) {
     return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
   }
 

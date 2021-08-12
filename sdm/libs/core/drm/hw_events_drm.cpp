@@ -595,8 +595,12 @@ DisplayError HWEventsDRM::RegisterPowerEvents(bool enable) {
   } else {
     ret = drmIoctl(poll_fds_[power_event_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
   }
-  if (ret) {
-    DLOGE("Failed to register event");
+  if (ret == -ENOENT) {
+    DLOGW("%s event failed as the device has disconnected. Event_thread_name : %s",
+          (enable) ? "Register" : "DeRegister", event_thread_name_.c_str());
+  } else if (ret) {
+    DLOGE("Failed to %s event. Event_thread_name : %s", (enable) ? "Register" : "DeRegister",
+          event_thread_name_.c_str());
     return kErrorResources;
   }
 

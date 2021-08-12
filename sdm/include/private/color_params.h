@@ -202,6 +202,7 @@ struct PPHWAttributes : HWResourceInfo, HWPanelInfo, DisplayConfigVariableInfo {
   char panel_name[256] = "generic_panel";
   PPFeatureVersion version;
   DppsControlInterface *dpps_intf = NULL;
+  uint32_t max_brightness = 0;
 
   void Set(const HWResourceInfo &hw_res, const HWPanelInfo &panel_info,
            const DisplayConfigVariableInfo &attr, const PPFeatureVersion &feature_ver,
