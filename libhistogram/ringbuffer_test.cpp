@@ -116,7 +116,7 @@ TEST_F(RingbufferTestCases, SimpleTest) {
   auto tk = std::make_shared<TickingTimeKeeper>();
   auto rb = histogram::Ringbuffer::create(numInsertions, std::make_unique<TimeKeeperWrapper>(tk));
 
-  drm_msm_hist frame;
+  drm_msm_hist frame {};
   for (auto i = 0u; i < HIST_V_SIZE; i++) {
     frame.data[i] = i;
   }
