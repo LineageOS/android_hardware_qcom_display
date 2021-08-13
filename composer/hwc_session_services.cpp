@@ -733,12 +733,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   if (!supported) {
     return 0;
   }
-
+  // Added this flag for pixel
+  hwc_session_->async_power_mode_triggered_  = true;
   // Active builtin display needs revalidation
   hwc2_display_t active_builtin_disp_id = hwc_session_->GetActiveBuiltinDisplay();
   HWC2::PowerMode previous_mode = hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode();
 
   DLOGI("disp_id: %d power_mode: %d", disp_id, power_mode);
+  auto mode = static_cast<HWC2::PowerMode>(power_mode);
+
   HWCDisplay::HWCLayerStack stack = {};
   hwc2_display_t dummy_disp_id = hwc_session_->map_hwc_display_.at(disp_id);
 
@@ -755,6 +758,16 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   hwc_session_->hwc_display_[dummy_disp_id]->UpdatePowerMode(
                                        hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode());
 
+  buffer_handle_t target = 0;
+  shared_ptr<Fence> acquire_fence = nullptr;
+  int32_t dataspace = 0;
+  hwc_region_t damage = {};
+  hwc_session_->hwc_display_[disp_id]->GetClientTarget(
+                                 target, acquire_fence, dataspace, damage);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetClientTarget(
+                                       target, acquire_fence, dataspace, damage);
+
+
   hwc_session_->locker_[dummy_disp_id].Unlock();  // Release the dummy display.
   // Release the display's power-state transition var read lock.
   hwc_session_->power_state_[disp_id].Unlock();
@@ -763,8 +776,7 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // those operations on the dummy display.
 
   // Perform the actual [synchronous] power-state change.
-  hwc_session_->hwc_display_[disp_id]->SetPowerMode(static_cast<HWC2::PowerMode>(power_mode),
-                                                    false /* teardown */);
+  hwc_session_->hwc_display_[disp_id]->SetPowerMode(mode, false /* teardown */);
 
   // Power state transition end.
   // Acquire the display's power-state transition var read lock.
@@ -775,6 +787,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // Retrieve the real display's layer-stack from the dummy display.
   hwc_session_->hwc_display_[dummy_disp_id]->GetLayerStack(&stack);
   hwc_session_->hwc_display_[disp_id]->SetLayerStack(&stack);
+  bool vsync_pending = hwc_session_->hwc_display_[dummy_disp_id]->VsyncEnablePending();
+  if (vsync_pending) {
+    hwc_session_->hwc_display_[disp_id]->SetVsyncEnabled(HWC2::Vsync::Enable);
+  }
+  hwc_session_->hwc_display_[dummy_disp_id]->GetClientTarget(
+                                       target, acquire_fence, dataspace, damage);
+  hwc_session_->hwc_display_[disp_id]->SetClientTarget(
+                                 target, acquire_fence, dataspace, damage);
+
   // Read display has got layerstack. Update the fences.
   hwc_session_->hwc_display_[disp_id]->PostPowerMode();
 
