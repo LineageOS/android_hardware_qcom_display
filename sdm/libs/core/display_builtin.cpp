@@ -571,6 +571,7 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
 
@@ -578,6 +579,7 @@ DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
 

@@ -814,6 +814,7 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
 
 int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
                                                   const CwbTapPoint &cwb_tappoint) {
+  DTRACE_SCOPED();
   if (cwb_tappoint < CwbTapPoint::kLmTapPoint || cwb_tappoint > CwbTapPoint::kDemuraTapPoint) {
     DLOGE("Invalid CWB tappoint passed by client ");
     return -1;
@@ -1169,6 +1170,7 @@ HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
 HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
                                                shared_ptr<Fence> acquire_fence,
                                                int32_t dataspace, hwc_region_t damage) {
+  DTRACE_SCOPED();
   HWC2::Error error = HWCDisplay::SetClientTarget(target, acquire_fence, dataspace, damage);
   if (error != HWC2::Error::None) {
     return error;
@@ -1293,6 +1295,7 @@ bool HWCDisplayBuiltIn::InitLayerStitch() {
 
 bool HWCDisplayBuiltIn::AllocateStitchBuffer() {
   // Buffer dimensions: FB width * (1.5 * height)
+  DTRACE_SCOPED();
 
   DisplayError error = display_intf_->GetFrameBufferConfig(&fb_config_);
   if (error != kErrorNone) {
@@ -1501,7 +1504,6 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
   SetCpuPerfHintLargeCompCycle();
-
   return status;
 }
 
