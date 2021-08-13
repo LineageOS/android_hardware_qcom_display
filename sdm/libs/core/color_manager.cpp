@@ -442,7 +442,7 @@ DisplayError ColorManagerProxy::ColorMgrSetColorTransform(uint32_t length,
   }
 
   if (!stc_intf_) {
-    DLOGE("STC interface is NULL");
+    DLOGW("STC interface is NULL");
     return kErrorNone;
   }
 
