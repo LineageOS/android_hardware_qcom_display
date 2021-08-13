@@ -1322,8 +1322,10 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   }
 
 #ifdef TRUSTED_VM
-  if (first_cycle_)
+  if (first_cycle_) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::RESET_PANEL_FEATURES, 0 /* argument is not used */);
+  }
 #endif
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {

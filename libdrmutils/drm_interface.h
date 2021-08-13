@@ -464,6 +464,11 @@ enum struct DRMOps {
    *      uint64_t - DSC/non-DSC Bitmask
    */
   CONNECTOR_SET_DSC_MODE,
+  /*
+   * Op: Reset panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  RESET_PANEL_FEATURES,
 };
 
 enum struct DRMRotation {

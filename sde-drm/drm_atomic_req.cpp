@@ -149,6 +149,9 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::NULL_COMMIT_PANEL_FEATURES: {
       drm_mgr_->GetPanelFeatureMgrIntf()->NullCommitPanelFeatures(drm_atomic_req_, token_);
     } break;
+    case DRMOps::RESET_PANEL_FEATURES: {
+      drm_mgr_->GetPanelFeatureMgrIntf()->ResetPanelFeatures(drm_atomic_req_, token_);
+    } break;
     default:
       DRM_LOGE("Invalid opcode %d", opcode);
   }

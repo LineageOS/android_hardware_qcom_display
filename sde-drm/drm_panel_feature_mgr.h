@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2020-2021, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -48,6 +48,7 @@ class DRMPanelFeatureMgr : public DRMPanelFeatureMgrIntf {
   void CachePanelFeature(const DRMPanelFeatureInfo &info);
   void CommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token);
   void NullCommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token);
+  void ResetPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token);
   void MarkForNullCommit(const DRMDisplayToken &token, const DRMPanelFeatureID &id);
 
  private:
