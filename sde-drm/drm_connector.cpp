@@ -728,6 +728,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string submode_string = "submode_idx=";
   const string compression_mode = "dsc_mode=";
   const string preferred_submode_string = "preferred_submode_idx=";
+  const string qsync_min_fps = "qsync_min_fps=";
 
   DRMModeInfo *mode_item = &info->modes.at(0);
   DRMSubModeInfo *submode_item = NULL;
@@ -825,6 +826,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
         submode_index = 0;
       }
       submode_item->panel_compression_mode = std::stoi(string(line, compression_mode.length()));
+    } else if (line.find(qsync_min_fps) != string::npos) {
+      mode_item->qsync_min_fps = std::stoi(string(line, qsync_min_fps.length()));
     }
   }
 

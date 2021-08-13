@@ -743,18 +743,14 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
                              out_fences);
 }
 
-void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
+void HWCSession::PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
+                                      uint32_t refresh_rate, uint32_t qsync_refresh_rate) {
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = qsync_callback_.lock();
   if (!callback) {
     return;
   }
 
-  bool qsync_enabled = 0;
-  int32_t refresh_rate = 0, qsync_refresh_rate = 0;
-  if (hwc_display_[display]->IsQsyncCallbackNeeded(&qsync_enabled,
-      &refresh_rate, &qsync_refresh_rate)) {
-    callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
-  }
+  callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
 }
 
 void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
@@ -834,7 +830,6 @@ void HWCSession::PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &ret
     hwc_display_[display]->SetPendingRefresh();
     callbacks_.ResetRefresh(display);
   }
-  PerformQsyncCallback(display);
   PerformIdleStatusCallback(display);
 
   if (clients_waiting_for_commit_[display].any()) {

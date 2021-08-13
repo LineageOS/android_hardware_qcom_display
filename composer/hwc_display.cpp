@@ -3393,4 +3393,11 @@ void HWCDisplay::HandleFrameDump() {
   }
 }
 
+DisplayError HWCDisplay::HandleQsyncState(const QsyncEventData &qsync_data) {
+  event_handler_->PerformQsyncCallback(id_, qsync_data.enabled,
+                                       qsync_data.refresh_rate,
+                                       qsync_data.qsync_refresh_rate);
+  return kErrorNone;
+}
+
 }  // namespace sdm
