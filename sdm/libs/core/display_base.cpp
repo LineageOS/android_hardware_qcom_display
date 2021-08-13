@@ -144,7 +144,7 @@ DisplayError DisplayBase::Init() {
   fb_config_.x_pixels = mixer_attributes_.width;
   fb_config_.y_pixels = mixer_attributes_.height;
 
-  if (IsPrimaryDisplay()) {
+  if (IsPrimaryDisplayLocked()) {
     HWScaleLutInfo lut_info = {};
     error = comp_manager_->GetScaleLutConfig(&lut_info);
     if (error == kErrorNone) {
@@ -224,7 +224,7 @@ DisplayError DisplayBase::Deinit() {
     ClientLock lock(disp_mutex_);
     ClearColorInfo();
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
-    if (IsPrimaryDisplay()) {
+    if (IsPrimaryDisplayLocked()) {
       hw_intf_->UnsetScaleLutConfig();
     }
   }
@@ -1594,7 +1594,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (pending_power_state_ == kPowerStateNone) {
       active_ = active;
       state_ = state;
-      if (IsPrimaryDisplay()) {
+      if (IsPrimaryDisplayLocked()) {
         primary_active_ = active;
       }
       // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as
@@ -3546,7 +3546,7 @@ void DisplayBase::MMRMEvent(uint32_t clk) {
   }
 
   // Only support primary. If off, allow secondary.
-  if (!IsPrimaryDisplay() && primary_active_) {
+  if (!IsPrimaryDisplayLocked() && primary_active_) {
     DLOGV("Ignoring event on secondary");
     return;
   }

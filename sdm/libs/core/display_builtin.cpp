@@ -2022,7 +2022,7 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   if (enable_dpps_dyn_fps_) {
     uint32_t dpps_fps = display_attributes_.fps;
     DppsNotifyPayload dpps_payload = {};
-    dpps_payload.is_primary = IsPrimaryDisplay();
+    dpps_payload.is_primary = IsPrimaryDisplayLocked();
     dpps_payload.payload = &dpps_fps;
     dpps_payload.payload_size = sizeof(dpps_fps);
     dpps_info_.DppsNotifyOps(kDppsUpdateFpsEvent, &dpps_payload, sizeof(dpps_payload));
