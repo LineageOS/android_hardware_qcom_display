@@ -361,18 +361,12 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
       }
     }
   } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
-    // To dump Layer Mixer output for CWB, use FrameBuffer or Mixer resolution.
-    uint32_t dest_scalar_enabled = 0;
-    IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
-
-    if (dest_scalar_enabled) {
-      error = GetMixerResolution(x_pixels, y_pixels);
-    } else {
-      error = GetFrameBufferConfig(&display_config);
-      if (error == kErrorNone) {
-        *x_pixels = display_config.x_pixels;
-        *y_pixels = display_config.y_pixels;
-      }
+    // To dump LM output for CWB, use FB resolution. If LM resolution differs from FB resolution in
+    // a CWB active frame, then LM resolution is reconfigured to FB resolution in PrePrepare phase.
+    error = GetFrameBufferConfig(&display_config);
+    if (error == kErrorNone) {
+      *x_pixels = display_config.x_pixels;
+      *y_pixels = display_config.y_pixels;
     }
   }
   return error;
