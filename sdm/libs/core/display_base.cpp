@@ -666,7 +666,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   if (color_mgr_) {
-    color_mgr_->PrePrepare();
+    color_mgr_->Prepare();
     // apply pending DE config
     PPPendingParams pending_action;
     PPDisplayAPIPayload req_payload;

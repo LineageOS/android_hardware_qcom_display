@@ -221,6 +221,11 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
     return error;
   }
 
+  // Do not skip validate if needs update PP features.
+  if (color_mgr_) {
+    needs_validate_ |= color_mgr_->IsValidateNeeded();
+  }
+
   error = DisplayBase::PrePrepare(layer_stack);
   if (error == kErrorNone) {
     return kErrorNone;
