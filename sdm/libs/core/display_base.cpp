@@ -978,6 +978,38 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
     }
   }
 
+  if (rc_cached_fb_width_ != fb_config_.x_pixels) {
+    GenericPayload in;
+    uint32_t *fb_width = nullptr;
+    ret = in.CreatePayload<uint32_t>(fb_width);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
+    }
+    *fb_width = rc_cached_fb_width_ = fb_config_.x_pixels;
+    ret = rc_core_->SetParameter(kRCFeatureFbWidth, in);
+    if (ret) {
+      DLOGE("failed to set fb width. Error:%d", ret);
+      return kErrorUndefined;
+    }
+  }
+
+  if (rc_cached_fb_height_ != fb_config_.y_pixels) {
+    GenericPayload in;
+    uint32_t *fb_height = nullptr;
+    ret = in.CreatePayload<uint32_t>(fb_height);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
+    }
+    *fb_height = rc_cached_fb_height_ = fb_config_.y_pixels;
+    ret = rc_core_->SetParameter(kRCFeatureFbHeight, in);
+    if (ret) {
+      DLOGE("failed to set mixer height. Error:%d", ret);
+      return kErrorUndefined;
+    }
+  }
+
   GenericPayload in;
   LayerStack **layer_stack_ptr = nullptr;
   ret = in.CreatePayload<LayerStack *>(layer_stack_ptr);

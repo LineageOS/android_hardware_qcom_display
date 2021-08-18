@@ -47,6 +47,8 @@ struct RCInputConfig {
   uint32_t max_mem_size = 0;
   uint32_t mixer_width = 0;
   uint32_t mixer_height = 0;
+  uint32_t fb_width = 0;
+  uint32_t fb_height = 0;
 };
 
 struct RCOutputConfig {
@@ -83,6 +85,8 @@ enum RCFeatureParams {
   kRCFeatureQueryDspp,
   kRCFeatureMixerWidth,
   kRCFeatureMixerHeight,
+  kRCFeatureFbWidth,
+  kRCFeatureFbHeight,
   kRCFeatureParamMax,
 };
 
