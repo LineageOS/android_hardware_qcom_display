@@ -177,6 +177,13 @@ static int set_rgb_led_brightness(enum rgb_led led, int brightness)
 {
     char file[48];
 
+    snprintf(file, sizeof(file), "/sys/class/leds/%s/trigger", led_names[led]);
+    rc = write_str(file, "none");
+    if (rc < 0) {
+        ALOGD("%s failed to set trigger to none\n", led_names[led]);
+        return rc;
+    }
+
     snprintf(file, sizeof(file), "/sys/class/leds/%s/brightness", led_names[led]);
     return write_int(file, brightness);
 }
