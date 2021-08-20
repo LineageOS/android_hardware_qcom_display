@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,6 +40,8 @@
 #include <display/drm/sde_drm.h>
 #include <algorithm>
 #include <iterator>
+#include <chrono>
+#include <thread>
 
 #include "drm_master.h"
 
@@ -80,11 +82,17 @@ void DRMMaster::DestroyInstance() {
 }
 
 int DRMMaster::Init() {
-  dev_fd_ = drmOpen("msm_drm", nullptr);
-  if (dev_fd_ < 0) {
-    DRM_LOGE("drmOpen failed with error %d", dev_fd_);
-    return -ENODEV;
-  }
+  uint8_t retry = 0;
+  do {
+    dev_fd_ = drmOpen("msm_drm", nullptr);
+    if(dev_fd_ < 0) {
+      DRM_LOGE("drmOpen failed with error %d, retry %d", dev_fd_, retry);
+      if (retry >= MAX_RETRY) {
+        return -ENODEV;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  } while(dev_fd_ < 0 && retry++ < MAX_RETRY);
 
   return 0;
 }
