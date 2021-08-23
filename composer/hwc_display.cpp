@@ -1812,6 +1812,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 }
 
 HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
+  DTRACE_SCOPED();
   auto status = HWC2::Error::None;
 
   // Do no call flush on errors, if a successful buffer is never submitted.
