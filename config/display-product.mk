@@ -17,6 +17,8 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.display.mapper@2.0.vendor \
     vendor.qti.hardware.display.mapper@3.0.vendor \
     vendor.qti.hardware.display.mapper@4.0.vendor \
+    init.qti.display_boot.sh \
+    init.qti.display_boot.rc \
     modetest
 
 ifneq ($(TARGET_HAS_LOW_RAM),true)
@@ -53,7 +55,7 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$
 #QDCM calibration xml file for nt36525 truly panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36525_video_mode_dsi_truly_panel.xml
 #QDCM calibration xml file for nt36672e LCD video mode single dsi with DSC panel.
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt36672e_lcd_video_mode_dsi_novatek_fhd_plus_144Hz_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672e_90Hz_fhd_plus_video_mode_panel_with_DSC.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672e_90Hz_fhd_plus_video_mode_panel_with_DSC.xml
 endif
 #QDCM calibration xml file for td4330 panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_v2_cmd_mode_dsi_truly_panel.xml
@@ -77,7 +79,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1 \
     vendor.display.enable_camera_smooth=1 \
-    vendor.display.enable_allow_idle_fallback=1
+    vendor.display.enable_allow_idle_fallback=1 \
+    vendor.display.disable_idle_time_video=1 \
+    vendor.display.disable_idle_time_hdr=1
 
 # Enable offline rotator for Bengal, Monaco, Khaje.
 ifneq ($(filter bengal monaco khaje, $(TARGET_BOARD_PLATFORM)),$(TARGET_BOARD_PLATFORM))

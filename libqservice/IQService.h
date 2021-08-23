@@ -80,6 +80,7 @@ public:
       SET_BRIGHTNESS_SCALE = 48,               // Set brightness scale ratio
       SET_COLOR_SAMPLING_ENABLED = 49,         // Toggle the collection of display color stats
       SET_STAND_BY_MODE = 50,                  // Set stand by mode for MDP hardware
+      GET_PANEL_RESOLUTION = 51,               // Get Panel Resolution
       COMMAND_LIST_END = 400,
     };
 

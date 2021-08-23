@@ -492,6 +492,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t SetColorModeFromClient(const android::Parcel *input_parcel);
   android::status_t getComposerStatus();
   android::status_t SetStandByMode(const android::Parcel *input_parcel);
+  android::status_t GetPanelResolution(const android::Parcel *input_parcel,
+                                       android::Parcel *output_parcel);
   android::status_t SetQSyncMode(const android::Parcel *input_parcel);
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
   android::status_t RefreshScreen(const android::Parcel *input_parcel);
@@ -509,6 +511,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display);
   void HandleSecureSession();
+  void SetCpuPerfHintLargeCompCycle();
   void HandlePendingPowerMode(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void HandlePendingHotplug(hwc2_display_t disp_id, const shared_ptr<Fence> &retire_fence);
   bool IsPluggableDisplayConnected();
