@@ -2096,10 +2096,14 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
 
   HWResourceInfo hw_resource_info = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  bool hdr_plus_supported = false;
+
+  // Checking library support for HDR10+
+  comp_manager_->GetHDR10PlusCapability(&hdr_plus_supported);
 
   fixed_info->hdr_supported = hw_resource_info.has_hdr;
   // Built-in displays always support HDR10+ when the target supports HDR
-  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr;
+  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr && hdr_plus_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;

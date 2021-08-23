@@ -109,6 +109,7 @@ class CompManager {
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
   DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);
+  DisplayError GetHDR10PlusCapability(bool *hdr_plus_support);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -148,6 +149,7 @@ class CompManager {
   HWResourceInfo hw_res_info_;
   BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
+  CapabilitiesInterface *cap_intf_ = nullptr;
   uint32_t max_sde_secondary_fetch_layers_ = 2;
   uint32_t max_sde_builtin_fetch_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;

@@ -49,6 +49,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   if (extension_intf) {
     error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, &resource_intf_);
     extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
+    extension_intf->CreateCapabilitiesExtn(&cap_intf_);
   } else {
     error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);
   }
@@ -56,6 +57,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   if (error != kErrorNone) {
     if (extension_intf) {
       extension_intf->DestroyDppsControlExtn(dpps_ctrl_intf_);
+      extension_intf->DestroyCapabilitiesExtn(cap_intf_);
     }
     return error;
   }
@@ -73,6 +75,7 @@ DisplayError CompManager::Deinit() {
   if (extension_intf_) {
     extension_intf_->DestroyResourceExtn(resource_intf_);
     extension_intf_->DestroyDppsControlExtn(dpps_ctrl_intf_);
+    extension_intf_->DestroyCapabilitiesExtn(cap_intf_);
   } else {
     ResourceDefault::DestroyResourceDefault(resource_intf_);
   }
@@ -519,6 +522,18 @@ DisplayError CompManager::SetMaxMixerStages(Handle display_ctx, uint32_t max_mix
                                               max_mixer_stages);
   }
 
+  return error;
+}
+
+DisplayError CompManager::GetHDR10PlusCapability(bool *hdr_plus_support) {
+  DisplayError error = kErrorNone;
+  if (cap_intf_) {
+    DLOGD_IF(kTagCompManager, "Attempting to get HDR10+ capability");
+    error = cap_intf_->GetCapability(kHDR10PlusCapability, hdr_plus_support);
+  }
+  if (error != kErrorNone || !cap_intf_) {
+    DLOGW("Failed to get HDR10+ capability");
+  }
   return error;
 }
 

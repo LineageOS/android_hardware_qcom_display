@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2018, 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, 2020 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -31,6 +31,7 @@
 #include "partial_update_interface.h"
 #include "strategy_interface.h"
 #include "resource_interface.h"
+#include "capabilities_interface.h"
 #include "dpps_control_interface.h"
 
 namespace sdm {
@@ -74,9 +75,13 @@ class ExtensionInterface {
                                           BufferAllocator *buffer_allocator,
                                           ResourceInterface **interface) = 0;
   virtual DisplayError DestroyResourceExtn(ResourceInterface *interface) = 0;
+
   virtual DisplayError CreateDppsControlExtn(DppsControlInterface **dpps_control_interface,
                                              SocketHandler *socket_handler) = 0;
   virtual DisplayError DestroyDppsControlExtn(DppsControlInterface *interface) = 0;
+
+  virtual DisplayError CreateCapabilitiesExtn(CapabilitiesInterface **interface) = 0;
+  virtual DisplayError DestroyCapabilitiesExtn(CapabilitiesInterface *interface) = 0;
 
  protected:
   virtual ~ExtensionInterface() { }
