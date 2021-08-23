@@ -594,6 +594,11 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
 
+  // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
+  if (!active_ && (pending_power_state_ == kPowerStateNone)) {
+    return kErrorPermission;
+  }
+
   DisplayError error = InitRC();
   if (error != kErrorNone) {
     // Non-fatal but not expected, log error
