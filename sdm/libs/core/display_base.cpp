@@ -3834,25 +3834,15 @@ DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
   return err;
 }
 
-DisplayError DisplayBase::SetDimmingBlLut(void *payload, size_t size) {
+DisplayError DisplayBase::SetDimmingConfig(void *payload, size_t size) {
   ClientLock lock(disp_mutex_);
 
-  DisplayError err = hw_intf_->SetDimmingBlLut(payload, size);
+  DisplayError err = hw_intf_->SetDimmingConfig(payload, size);
   if (err) {
-    DLOGE("Failed to set dimming bl LUT %d", err);
+    DLOGE("Failed to set dimming config %d", err);
   } else {
-    DLOGI_IF(kTagDisplay, "Dimimng bl LUT is set successfully");
+    DLOGI_IF(kTagDisplay, "Dimimng config is set successfully");
     event_handler_->Refresh();
-  }
-  return err;
-}
-
-DisplayError DisplayBase::EnableDimmingBacklightEvent(void *payload, size_t size) {
-  ClientLock lock(disp_mutex_);
-
-  DisplayError err = hw_intf_->EnableDimmingBacklightEvent(payload, size);
-  if (err) {
-    DLOGE("Failed to set dimming backlight event %d", err);
   }
   return err;
 }
