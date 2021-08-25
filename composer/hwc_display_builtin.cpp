@@ -371,44 +371,6 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
   return HWC2::Error::None;
 }
 
-void HWCDisplayBuiltIn::CacheAvrStatus() {
-  QSyncMode qsync_mode = kQSyncModeNone;
-
-  DisplayError error = display_intf_->GetQSyncMode(&qsync_mode);
-  if (error != kErrorNone) {
-    return;
-  }
-
-  bool qsync_enabled = (qsync_mode != kQSyncModeNone);
-  if (qsync_enabled_ != qsync_enabled) {
-    qsync_reconfigured_ = true;
-    qsync_enabled_ = qsync_enabled;
-  } else {
-    qsync_reconfigured_ = false;
-  }
-}
-
-bool HWCDisplayBuiltIn::IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
-                           int32_t *qsync_refresh_rate) {
-  if (!qsync_reconfigured_) {
-    return false;
-  }
-
-  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
-  // Qsync callback not needed if this display is not the source of vsync
-  if (!vsync_source) {
-    return false;
-  }
-
-  *qsync_enabled = qsync_enabled_;
-  uint32_t current_rate = 0;
-  display_intf_->GetRefreshRate(&current_rate);
-  *refresh_rate = INT32(current_rate);
-  *qsync_refresh_rate = qsync_fps_;
-
-  return true;
-}
-
 HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   auto status = HWCDisplay::SetPowerMode(mode, teardown);
   if (status != HWC2::Error::None) {
@@ -438,7 +400,6 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
   if (display_paused_ ) {
     return status;
   } else {
-    CacheAvrStatus();
     DisplayConfigFixedInfo fixed_info = {};
     display_intf_->GetConfig(&fixed_info);
 
@@ -814,6 +775,7 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
 
 int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
                                                   const CwbTapPoint &cwb_tappoint) {
+  DTRACE_SCOPED();
   if (cwb_tappoint < CwbTapPoint::kLmTapPoint || cwb_tappoint > CwbTapPoint::kDemuraTapPoint) {
     DLOGE("Invalid CWB tappoint passed by client ");
     return -1;
@@ -1169,6 +1131,7 @@ HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
 HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
                                                shared_ptr<Fence> acquire_fence,
                                                int32_t dataspace, hwc_region_t damage) {
+  DTRACE_SCOPED();
   HWC2::Error error = HWCDisplay::SetClientTarget(target, acquire_fence, dataspace, damage);
   if (error != HWC2::Error::None) {
     return error;
@@ -1293,6 +1256,7 @@ bool HWCDisplayBuiltIn::InitLayerStitch() {
 
 bool HWCDisplayBuiltIn::AllocateStitchBuffer() {
   // Buffer dimensions: FB width * (1.5 * height)
+  DTRACE_SCOPED();
 
   DisplayError error = display_intf_->GetFrameBufferConfig(&fb_config_);
   if (error != kErrorNone) {
@@ -1501,7 +1465,6 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
   SetCpuPerfHintLargeCompCycle();
-
   return status;
 }
 

@@ -464,6 +464,11 @@ enum struct DRMOps {
    *      uint64_t - DSC/non-DSC Bitmask
    */
   CONNECTOR_SET_DSC_MODE,
+  /*
+   * Op: Reset panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  RESET_PANEL_FEATURES,
 };
 
 enum struct DRMRotation {
@@ -695,6 +700,12 @@ struct DRMSubModeInfo {
   std::vector<uint64_t> dyn_bitclk_list;
 };
 
+enum DynamicFrontPorchType {
+  UNKNOWN,
+  VERTICAL,
+  HORIZONTAL
+};
+
 /* Per mode info */
 struct DRMModeInfo {
   drmModeModeInfo mode;
@@ -716,7 +727,10 @@ struct DRMModeInfo {
   uint32_t curr_submode_index = 0;
   uint64_t curr_bit_clk_rate;
   uint32_t curr_compression_mode;
+  DynamicFrontPorchType fp_type = UNKNOWN;
+  std::vector<uint32_t> dyn_fp_list;
   std::vector<DRMSubModeInfo> sub_modes;
+  uint32_t qsync_min_fps;
 };
 
 /* Per Connector Info*/

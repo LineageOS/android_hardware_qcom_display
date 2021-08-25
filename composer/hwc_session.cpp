@@ -743,18 +743,14 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
                              out_fences);
 }
 
-void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
+void HWCSession::PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
+                                      uint32_t refresh_rate, uint32_t qsync_refresh_rate) {
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = qsync_callback_.lock();
   if (!callback) {
     return;
   }
 
-  bool qsync_enabled = 0;
-  int32_t refresh_rate = 0, qsync_refresh_rate = 0;
-  if (hwc_display_[display]->IsQsyncCallbackNeeded(&qsync_enabled,
-      &refresh_rate, &qsync_refresh_rate)) {
-    callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
-  }
+  callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
 }
 
 void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
@@ -834,7 +830,6 @@ void HWCSession::PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &ret
     hwc_display_[display]->SetPendingRefresh();
     callbacks_.ResetRefresh(display);
   }
-  PerformQsyncCallback(display);
   PerformIdleStatusCallback(display);
 
   if (clients_waiting_for_commit_[display].any()) {
@@ -964,6 +959,7 @@ int32_t HWCSession::SetActiveConfig(hwc2_display_t display, hwc2_config_t config
 int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t target,
                                     const shared_ptr<Fence> acquire_fence, int32_t dataspace,
                                     hwc_region_t damage) {
+  DTRACE_SCOPED();
   return CallDisplayFunction(display, &HWCDisplay::SetClientTarget, target, acquire_fence,
                              dataspace, damage);
 }
@@ -971,6 +967,7 @@ int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t targ
 int32_t HWCSession::SetClientTarget_3_1(hwc2_display_t display, buffer_handle_t target,
                                         const shared_ptr<Fence> acquire_fence, int32_t dataspace,
                                         hwc_region_t damage) {
+  DTRACE_SCOPED();
   return CallDisplayFunction(display, &HWCDisplay::SetClientTarget_3_1, target, acquire_fence,
                              dataspace, damage);
 }
@@ -3184,13 +3181,14 @@ void HWCSession::HandleSecureSession() {
        display < HWCCallbacks::kNumRealDisplays; display++) {
     Locker::ScopeLock lock_d(locker_[display]);
     HWCDisplay *hwc_display = hwc_display_[display];
-    if (!hwc_display || hwc_display->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
+    if (!hwc_display) {
       continue;
     }
 
     bool is_active_secure_display = false;
     // The first On/Doze/DozeSuspend built-in display is taken as the secure display.
     if (!found_active_secure_display &&
+        hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN &&
         hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
       is_active_secure_display = true;
       found_active_secure_display = true;

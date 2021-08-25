@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2020-2021, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -454,6 +454,22 @@ void DRMPanelFeatureMgr::NullCommitPanelFeatures(drmModeAtomicReq *req,
     *it = {};
   }
 }
+
+// LCOV_EXCL_START
+void DRMPanelFeatureMgr::ResetPanelFeatures(drmModeAtomicReq *req,
+                                                 const DRMDisplayToken &token) {
+  lock_guard<mutex> lock(lock_);
+  DRMPanelFeatureInfo info;
+
+  info.prop_id = kDRMPanelFeatureSPRInit;
+  info.obj_id = token.crtc_id;
+  info.prop_ptr = 0;
+  ApplyDirtyFeature(req, token, info);
+
+  info.prop_id = kDRMPanelFeatureDemuraInit;
+  ApplyDirtyFeature(req, token, info);
+}
+// LCOV_EXCL_STOP
 
 void DRMPanelFeatureMgr::MarkForNullCommit(const DRMDisplayToken &token, const DRMPanelFeatureID &id) {
   DRMPanelFeatureInfo &info = feature_info_tbl_[id];

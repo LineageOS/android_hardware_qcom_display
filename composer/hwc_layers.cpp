@@ -291,7 +291,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   buffer_flipped_ = reinterpret_cast<uint64_t>(handle) != layer_buffer->buffer_id;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
   layer_buffer->handle_id = handle->id;
-
+  layer_buffer->usage = handle->usage;
   return HWC2::Error::None;
 }
 

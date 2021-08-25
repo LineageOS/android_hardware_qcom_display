@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,6 +35,8 @@ namespace sdm {
 class HWCDisplayEventHandler {
  public:
   virtual void DisplayPowerReset() = 0;
+  virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
+                                    uint32_t refresh_rate, uint32_t qsync_refresh_rate) = 0;
 
  protected:
   virtual ~HWCDisplayEventHandler() {}

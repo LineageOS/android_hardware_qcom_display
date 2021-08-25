@@ -571,6 +571,7 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
 
@@ -578,6 +579,7 @@ DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
 
@@ -664,6 +666,19 @@ void DisplayBuiltIn::HandleQsyncPostCommit() {
   if (notify_idle) {
     event_handler_->HandleEvent(kPostIdleTimeout);
   }
+
+  bool qsync_enabled = (qsync_mode_ != kQSyncModeNone);
+  if (qsync_enabled == qsync_enabled_) {
+    return;
+  }
+
+  QsyncEventData event_data;
+  event_data.enabled = qsync_enabled;
+  event_data.refresh_rate = display_attributes_.fps;
+  hw_intf_->GetQsyncFps(&event_data.qsync_refresh_rate);
+  event_handler_->HandleQsyncState(event_data);
+
+  qsync_enabled_ = qsync_enabled;
 }
 
 void DisplayBuiltIn::UpdateDisplayModeParams() {
@@ -811,6 +826,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   DisplayError err = hw_intf_->SetPanelBrightness(level);
   if (err == kErrorNone) {
     level_remainder_ = level_remainder;
+    pending_brightness_ = false;
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
   } else if (err == kErrorDeferred) {
@@ -2021,7 +2037,7 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   if (enable_dpps_dyn_fps_) {
     uint32_t dpps_fps = display_attributes_.fps;
     DppsNotifyPayload dpps_payload = {};
-    dpps_payload.is_primary = IsPrimaryDisplay();
+    dpps_payload.is_primary = IsPrimaryDisplayLocked();
     dpps_payload.payload = &dpps_fps;
     dpps_payload.payload_size = sizeof(dpps_fps);
     dpps_info_.DppsNotifyOps(kDppsUpdateFpsEvent, &dpps_payload, sizeof(dpps_payload));
@@ -2166,12 +2182,7 @@ void DisplayBuiltIn::HandlePowerEvent() {
 
 DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
   ClientLock lock(disp_mutex_);
-  if (hw_panel_info_.qsync_fps) {
-    *qsync_fps = hw_panel_info_.qsync_fps;
-    return kErrorNone;
-  }
-
-  return kErrorNotSupported;
+  return hw_intf_->GetQsyncFps(qsync_fps);
 }
 
 DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {

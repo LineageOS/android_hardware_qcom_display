@@ -93,6 +93,8 @@
 #define ION_SC_PREVIEW_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA_PREVIEW)
 #endif
 
+#define SIZE_2MB 0x200000
+
 namespace gralloc {
 
 DmaLegacyManager *DmaLegacyManager::dma_legacy_manager_ = NULL;
@@ -227,7 +229,7 @@ int DmaLegacyManager::SecureMemPerms(AllocData *data) {
 
 void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *ion_heap_name,
                                    std::vector<std::string> *vm_names, unsigned int *alloc_type,
-                                   unsigned int *ion_flags) {
+                                   unsigned int *ion_flags, unsigned int *alloc_size) {
   std::string heap_name = "qcom,system";
   unsigned int type = 0;
   uint32_t flags = 0;
@@ -280,12 +282,9 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string
                                          ION_HEAP(ION_SECURE_HEAP_ID), flags);
     }
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
-    // memory from non secure CMA for tursted UI use case
-    is_default = false;
-    heap_name = "qcom,display";
-    buffer_allocator_.MapNameToIonHeap(heap_name, "display", flags, ION_HEAP(ION_DISPLAY_HEAP_ID),
-                                       flags);
+    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED
+    // for tursted UI use case and align the size to 2MB
+    *alloc_size = ALIGN(*alloc_size, SIZE_2MB);
   }
 
   if (usage & BufferUsage::SENSOR_DIRECT_DATA) {

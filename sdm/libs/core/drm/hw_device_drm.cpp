@@ -346,6 +346,7 @@ int HWDeviceDRM::Registry::CreateFbId(const LayerBuffer &buffer, uint32_t *fb_id
   buf_info.aligned_width = layout.width = buffer.width;
   buf_info.aligned_height = layout.height = buffer.height;
   buf_info.format = buffer.format;
+  buf_info.usage = buffer.usage;
   GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
   buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset, &layout.num_planes);
   ret = master->CreateFbId(layout, fb_id);
@@ -656,6 +657,7 @@ void HWDeviceDRM::InitializeConfigs() {
 
 DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   drmModeModeInfo mode = {};
+  sde_drm::DRMModeInfo conn_mode = {};
   uint32_t mm_width = 0;
   uint32_t mm_height = 0;
   DRMTopology topology = DRMTopology::SINGLE_LM;
@@ -672,7 +674,8 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     res_mgr->GetDisplayDimInMM(&mm_width, &mm_height);
   } else {
     uint32_t submode_idx = connector_info_.modes[index].curr_submode_index;
-    mode = connector_info_.modes[index].mode;
+    conn_mode = connector_info_.modes[index];
+    mode = conn_mode.mode;
     mm_width = connector_info_.mmWidth;
     mm_height = connector_info_.mmHeight;
     topology = connector_info_.modes[index].sub_modes[submode_idx].topology;
@@ -699,6 +702,13 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
    */
 
   display_attributes_[index].v_front_porch = mode.vsync_start - mode.vdisplay;
+  bool adjusted = (connector_info_.dyn_bitclk_support &&
+                   conn_mode.fp_type == sde_drm::DynamicFrontPorchType::VERTICAL &&
+                   !conn_mode.dyn_fp_list.empty());
+  if (adjusted) {
+    display_attributes_[index].v_front_porch =
+        *std::min_element(conn_mode.dyn_fp_list.begin(), conn_mode.dyn_fp_list.end());
+  }
   display_attributes_[index].v_pulse_width = mode.vsync_end - mode.vsync_start;
   display_attributes_[index].v_back_porch = mode.vtotal - mode.vsync_end;
   display_attributes_[index].v_total = mode.vtotal;
@@ -709,6 +719,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
        topology == DRMTopology::DUAL_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE ||
        topology == DRMTopology::QUAD_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE_DSC ||
        topology == DRMTopology::QUAD_LM_DSC4HSMERGE);
+
+  // TODO(user): This clock should no longer be used as mode's pixel clock for RFI connectors.
+  // Driver can expose list of dynamic pixel clocks, userspace needs to support dynamic change.
   display_attributes_[index].clock_khz = mode.clock;
 
   // If driver doesn't return panel width/height information, default to 320 dpi
@@ -722,16 +735,16 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
   SetTopology(topology, &display_attributes_[index].topology);
 
-  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
-        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ," \
-        " TOPOLOGY: %d, HW_SPLIT: %d", index, display_attributes_[index].x_pixels,
-        display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
-        display_attributes_[index].y_dpi, display_attributes_[index].fps,
-        display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
-        display_attributes_[index].v_front_porch, display_attributes_[index].v_pulse_width,
-        display_attributes_[index].v_total, display_attributes_[index].h_total,
-        display_attributes_[index].clock_khz, display_attributes_[index].topology,
-        mixer_attributes_.split_type);
+  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
+      " V_FRONT_PORCH: %d [RFI Adjusted : %s], V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d,"
+      " CLK: %dKHZ, TOPOLOGY: %d, HW_SPLIT: %d", index, display_attributes_[index].x_pixels,
+      display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
+      display_attributes_[index].y_dpi, display_attributes_[index].fps,
+      display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
+      display_attributes_[index].v_front_porch, adjusted ? "True" : "False",
+      display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
+      display_attributes_[index].h_total, display_attributes_[index].clock_khz,
+      display_attributes_[index].topology, mixer_attributes_.split_type);
 
   return kErrorNone;
 }
@@ -1309,8 +1322,10 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   }
 
 #ifdef TRUSTED_VM
-  if (first_cycle_)
+  if (first_cycle_) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::RESET_PANEL_FEATURES, 0 /* argument is not used */);
+  }
 #endif
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {

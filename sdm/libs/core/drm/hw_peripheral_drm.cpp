@@ -957,4 +957,14 @@ DisplayError HWPeripheralDRM::SetAlternateDisplayConfig(uint32_t *alt_config) {
   return kErrorNotSupported;
 }
 
+DisplayError HWPeripheralDRM::GetQsyncFps(uint32_t *qsync_fps) {
+  uint32_t qsync_min_fps = connector_info_.modes[current_mode_index_].qsync_min_fps;
+  if (qsync_min_fps > 0) {
+    *qsync_fps = qsync_min_fps;
+    return kErrorNone;
+  }
+
+  return kErrorNotSupported;
+}
+
 }  // namespace sdm

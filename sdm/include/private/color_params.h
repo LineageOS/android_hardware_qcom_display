@@ -628,8 +628,13 @@ class PPFeaturesConfig {
   inline bool IsDirty() { return dirty_; }
   inline void MarkAsDirty() { dirty_ = true; }
 
+  inline bool IsPuDisable() { return disable_pu_; }
+  inline void MarkPuDisable() { disable_pu_ = true; }
+  inline void MarkPuEnable() { disable_pu_ = false; }
+
  private:
   bool dirty_ = 0;
+  bool disable_pu_ = false;
   Locker locker_;
   PPFeatureInfo *feature_[kMaxNumPPFeatures];  // reference to TFeatureInfo<T>.
   uint32_t next_idx_ = 0;
