@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -136,6 +136,9 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     } break;
     case DRMOps::PLANES_RESET_CACHE: {
       drm_mgr_->GetPlaneMgr()->ResetCache(drm_atomic_req_, obj_id);
+    } break;
+    case DRMOps::PLANES_RESET_LUT: {
+      drm_mgr_->GetPlaneMgr()->ResetPlanesLUT(drm_atomic_req_);
     } break;
     case DRMOps::COMMIT_PANEL_FEATURES: {
       drm_mgr_->GetPanelFeatureMgrIntf()->CommitPanelFeatures(drm_atomic_req_, token_);

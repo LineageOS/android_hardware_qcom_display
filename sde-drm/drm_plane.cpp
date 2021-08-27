@@ -415,6 +415,14 @@ void DRMPlaneManager::UnsetScalerLUT() {
   }
 }
 
+
+void DRMPlaneManager::ResetPlanesLUT(drmModeAtomicReq *req) {
+  lock_guard<mutex> lock(lock_);
+  for (auto &plane : plane_pool_) {
+    plane.second->ResetPlanesLUT(req);
+  }
+}
+
 void DRMPlaneManager::ResetCache(drmModeAtomicReq *req, uint32_t crtc_id) {
   lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
@@ -1239,6 +1247,43 @@ void DRMPlane::ResetCache(drmModeAtomicReq *req) {
     }
   }
 #endif
+}
+
+void DRMPlane::ResetPlanesLUT(drmModeAtomicReq *req) {
+  tmp_prop_val_map_.clear();
+  committed_prop_val_map_.clear();
+
+  for (int i = 0; i <= (int32_t)(DRMTonemapLutType::VIG_3D_GAMUT); i++) {
+    auto itr = plane_type_info_.tonemap_lut_version_map.find(static_cast<DRMTonemapLutType>(i));
+    if (itr != plane_type_info_.tonemap_lut_version_map.end()) {
+      DRMPlaneLutState *lut_state = nullptr;
+      DRMPPFeatureID feature_id = {};
+      switch (static_cast<DRMTonemapLutType>(i)) {
+        case DRMTonemapLutType::DMA_1D_GC:
+          lut_state = &dgm_1d_lut_gc_state_;
+          feature_id = kFeatureDgmGc;
+          break;
+        case DRMTonemapLutType::DMA_1D_IGC:
+          lut_state = &dgm_1d_lut_igc_state_;
+          feature_id = kFeatureDgmIgc;
+          break;
+        case DRMTonemapLutType::VIG_1D_IGC:
+          lut_state = &vig_1d_lut_igc_state_;
+          feature_id = kFeatureVigIgc;
+          break;
+        case DRMTonemapLutType::VIG_3D_GAMUT:
+          lut_state = &vig_3d_lut_gamut_state_;
+          feature_id = kFeatureVigGamut;
+          break;
+        default:
+          DLOGE("Invalid lut type = %d", i);
+          return;
+      }
+
+      *lut_state = kDirty;
+      ResetColorLUT(feature_id, req);
+    }
+  }
 }
 
 }  // namespace sde_drm

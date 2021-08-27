@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -85,6 +85,7 @@ class DRMPlane {
   void ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit, drmModeAtomicReq *req);
   void ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req);
   void ResetCache(drmModeAtomicReq *req);
+  void ResetPlanesLUT(drmModeAtomicReq *req);
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
@@ -135,6 +136,7 @@ class DRMPlaneManager {
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
   void ResetCache(drmModeAtomicReq *req, uint32_t crtc_id);
+  void ResetPlanesLUT(drmModeAtomicReq *req);
 
  private:
   void Perform(DRMOps code, drmModeAtomicReq *req, uint32_t obj_id, ...);

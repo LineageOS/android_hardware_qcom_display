@@ -280,6 +280,7 @@ class HWDeviceDRM : public HWInterface {
   uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.
   // Destination scaler blocks in use by all HWDeviceDRM instances.
   static std::atomic<uint32_t> hw_dest_scaler_blocks_used_;
+  static bool planes_reset_cache_;
 
  private:
   void SetDisplaySwitchMode(uint32_t index);
