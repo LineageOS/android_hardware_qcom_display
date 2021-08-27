@@ -445,6 +445,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetAlternateDisplayConfig(bool set) {
     return HWC2::Error::Unsupported;
   }
+  virtual void IsMultiDisplay(bool is_multi_display) {
+    is_multi_display_ = is_multi_display;
+  }
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -605,6 +608,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
+  bool is_multi_display_ = false;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
