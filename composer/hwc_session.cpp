@@ -67,6 +67,7 @@ shared_ptr<Fence> HWCSession::retire_fence_[HWCCallbacks::kNumDisplays];
 int HWCSession::commit_error_[HWCCallbacks::kNumDisplays] = { 0 };
 Locker HWCSession::display_config_locker_;
 Locker HWCSession::system_locker_;
+std::mutex HWCSession::command_seq_mutex_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 static const uint32_t kBrightnessScaleMax = 100;

@@ -1173,6 +1173,7 @@ void HWCSession::CWB::ProcessRequests() {
     }
 
     if (!status) {
+      std::lock_guard<std::mutex> lock(command_seq_mutex_);
       shared_ptr<Fence> release_fence = nullptr;
       // Mutex scope
       {
