@@ -846,6 +846,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.client_incompatible =
       dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
   DLOGV_IF(kTagClient, "layer_stack_.client_incompatible : %d", layer_stack_.client_incompatible);
+  ATRACE_INT("HDRPresent ", layer_stack_.flags.hdr_present ? 1 : 0);
 }
 
 void HWCDisplay::BuildSolidFillStack() {
