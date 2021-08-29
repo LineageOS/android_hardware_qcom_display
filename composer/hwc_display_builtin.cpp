@@ -1347,6 +1347,10 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     return;
   }
 
+  if (current_refresh_rate_ < 120) {
+    return;
+  }
+
   // Send hints when the device is in multi-display or when a skip layer is present.
   if (layer_stack_.flags.skip_present || is_multi_display_) {
     DLOGV_IF(kTagResources, "Found skip_layer:%d or is_multidisplay:%d. Set perf hint for large "
@@ -1487,12 +1491,13 @@ void HWCDisplayBuiltIn::LoadMixedModePerfHintThreshold() {
   // For mixed mode composition, if perf hint for large composition cycles is enabled and if the
   // use case meets the threshold, SF and HWC will be running on the gold CPU cores.
 
-  // For 120 fps, 10 layers should fall back to GPU
-  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(120, 10));
+  // For 120 fps, 8 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(120, 8));
 
-  // For 144 fps, 8 layers should fall back to GPU
-  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(144, 8));
+  // For 144 fps, 6 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(144, 6));
 
+  // TODO(user): Profile performance on 180 and 240 Hz without maxing out the CPU cores
   // For 180 fps, 8 layers should fall back to GPU
   mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(180, 8));
 
