@@ -3519,7 +3519,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
     DisplayState pending_state;
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
+    *needs_refresh = true;
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {
         shared_ptr<Fence> release_fence = nullptr;
