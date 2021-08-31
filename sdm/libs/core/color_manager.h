@@ -146,7 +146,8 @@ class ColorManagerProxy {
   bool GameEnhanceSupported();
   DisplayError ColorMgrGetStcModes(ColorModeList *mode_list);
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
-  DisplayError PrePrepare();
+  DisplayError Prepare();
+  bool IsValidateNeeded();
 
   /* ConfigureCWBDither can get/release dither setting base on bool variable free_data
    * if free_data is false to get dither setting needs to be applied.

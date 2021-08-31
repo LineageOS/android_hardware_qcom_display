@@ -527,12 +527,16 @@ DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::PrePrepare() {
+DisplayError ColorManagerProxy::Prepare() {
   DisplayError ret = kErrorNone;
 
-  needs_update_ = NeedAssetsUpdate();
   ret = ApplySwAssets();
   return ret;
+}
+
+bool ColorManagerProxy::IsValidateNeeded() {
+  needs_update_ = NeedAssetsUpdate();
+  return needs_update_;
 }
 
 DisplayError ColorManagerProxy::ApplySwAssets() {
