@@ -1206,6 +1206,22 @@ class DisplayInterface {
   */
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack) = 0;
 
+  /*! @brief Method to enable/disable display dimming feature.
+
+    @param[in] enable or disable
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingEnable(int int_enabled) = 0;
+
+  /*! @brief Method to set minimal backlight value for display dimming feature.
+
+    @param[in] minimal backlight value
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingMinBl(int min_bl) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

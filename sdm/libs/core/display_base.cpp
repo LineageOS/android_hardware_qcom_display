@@ -28,6 +28,7 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
+#include <drm_interface.h>
 
 #include <iomanip>
 #include <map>
@@ -3845,6 +3846,54 @@ DisplayError DisplayBase::SetDimmingConfig(void *payload, size_t size) {
     event_handler_->Refresh();
   }
   return err;
+}
+
+DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
+  struct sde_drm::DRMPPFeatureInfo info = {};
+  GenericPayload payload;
+  bool *bl_ctrl = nullptr;
+
+  int ret = payload.CreatePayload(bl_ctrl);
+  if (ret || !bl_ctrl) {
+    DLOGE("Create Payload failed with ret %d", ret);
+    return kErrorUndefined;
+  }
+
+  *bl_ctrl = int_enabled? true : false;
+  info.id = sde_drm::kFeatureDimmingDynCtrl;
+  info.type = sde_drm::kPropRange;
+  info.version = 0;
+  info.payload = bl_ctrl;
+  info.payload_size = sizeof(bool);
+  info.is_event = false;
+
+  DLOGV_IF(kTagDisplay, "Display %d-%d set dimming enable %d", display_id_,
+    display_type_, int_enabled);
+  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+}
+
+DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
+  struct sde_drm::DRMPPFeatureInfo info = {};
+  GenericPayload payload;
+  int *bl = nullptr;
+
+  int ret = payload.CreatePayload(bl);
+  if (ret || !bl) {
+    DLOGE("Create Payload failed with ret %d", ret);
+    return kErrorUndefined;
+  }
+
+  *bl = min_bl;
+  info.id = sde_drm::kFeatureDimmingMinBl;
+  info.type = sde_drm::kPropRange;
+  info.version = 0;
+  info.payload = bl;
+  info.payload_size = sizeof(int);
+  info.is_event = false;
+
+  DLOGV_IF(kTagDisplay, "Display %d-%d set dimming min_bl %d", display_id_,
+    display_type_, min_bl);
+  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 /* this func is called by DC dimming feature only after PCC updates */

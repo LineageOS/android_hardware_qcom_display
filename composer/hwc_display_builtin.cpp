@@ -1538,4 +1538,28 @@ HWC2::Error HWCDisplayBuiltIn::SetAlternateDisplayConfig(bool set) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetDimmingEnable(int int_enabled) {
+  DLOGV("Display ID: %" PRId64 " enabled: %d", id_, int_enabled);
+  DisplayError error = display_intf_->SetDimmingEnable(int_enabled);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. enabled = %d, error = %d", int_enabled, error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
+  DLOGV("Display ID: %" PRId64 " min_bl: %d", id_, min_bl);
+  DisplayError error = display_intf_->SetDimmingMinBl(min_bl);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. min_bl = %d, error = %d", min_bl, error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm
