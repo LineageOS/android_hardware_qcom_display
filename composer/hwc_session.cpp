@@ -3868,7 +3868,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
 }
 
 android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
-  bool needs_refresh = false;
+  bool trigger_refresh = false;
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   if (target_display == -1) {
     target_display = GetActiveBuiltinDisplay();
@@ -3885,6 +3885,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   std::copy(map_info_virtual_.begin(), map_info_virtual_.end(), std::back_inserter(map_info));
 
   for (auto &info : map_info) {
+    bool needs_refresh = false;
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
       if (hwc_display_[info.client_id]) {
@@ -3899,11 +3900,18 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
           return -EINVAL;
         }
       }
-    }
-    if (needs_refresh) {
-      callbacks_.Refresh(info.client_id);
+      trigger_refresh |= needs_refresh;
     }
   }
+  if (trigger_refresh) {
+    callbacks_.Refresh(target_display);
+    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    if (ret != 0) {
+      DLOGE("WaitForCommitDone failed with error %d", ret);
+      return -EINVAL;
+    }
+  }
+
   if (pending_hotplug_event_ == kHotPlugEvent) {
     // Do hotplug handling in a different thread to avoid blocking TUI thread.
     std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();
