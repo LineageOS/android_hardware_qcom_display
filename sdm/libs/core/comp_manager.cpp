@@ -431,31 +431,6 @@ DisplayError CompManager::Commit(Handle display_ctx, DispLayerStack *disp_layer_
   return kErrorNone;
 }
 
-DisplayError CompManager::ReConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
-
-  DTRACE_SCOPED();
-  DisplayCompositionContext *display_comp_ctx =
-                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
-
-  DisplayError error = kErrorUndefined;
-  resource_intf_->Start(display_resource_ctx, disp_layer_stack->stack);
-  LayerFeedback feedback(disp_layer_stack->info.app_layer_count);
-  error = resource_intf_->Prepare(display_resource_ctx, disp_layer_stack, &feedback);
-
-  if (error != kErrorNone) {
-    DLOGE("Reconfigure failed for display = %d", display_comp_ctx->display_type);
-  }
-
-  resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
-  if (error != kErrorNone) {
-      error = resource_intf_->PostPrepare(display_resource_ctx, disp_layer_stack);
-  }
-
-  return error;
-}
-
 DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
 
