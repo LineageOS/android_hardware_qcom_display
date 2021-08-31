@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -373,30 +373,6 @@ DisplayError CompManager::Commit(Handle display_ctx, HWLayers *hw_layers) {
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   return resource_intf_->Commit(display_comp_ctx->display_resource_ctx, hw_layers);
-}
-
-DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
-  SCOPE_LOCK(locker_);
-
-  DTRACE_SCOPED();
-  DisplayCompositionContext *display_comp_ctx =
-                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
-
-  DisplayError error = kErrorUndefined;
-  resource_intf_->Start(display_resource_ctx);
-  error = resource_intf_->Prepare(display_resource_ctx, hw_layers);
-
-  if (error != kErrorNone) {
-    DLOGE("Reconfigure failed for display = %d", display_comp_ctx->display_type);
-  }
-
-  resource_intf_->Stop(display_resource_ctx, hw_layers);
-  if (error != kErrorNone) {
-      error = resource_intf_->PostPrepare(display_resource_ctx, hw_layers);
-  }
-
-  return error;
 }
 
 DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
