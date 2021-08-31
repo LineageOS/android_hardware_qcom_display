@@ -453,6 +453,10 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   };
   virtual HWC2::Error GetClientTargetProperty(ClientTargetProperty *out_client_target_property);
+  virtual void GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
+                             int *active_config_index, uint32_t *num_configs);
+  virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
+                             int active_config_index, uint32_t num_configs) {};
 
  protected:
   static uint32_t throttling_refresh_rate_;
