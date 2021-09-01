@@ -3643,22 +3643,37 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
     if (enable_primary_reconfig_req_) {
       // todo (user): move this logic to wait for MDP resource reallocation/reconfiguration
       // to SDM module.
-      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+      {
+        SCOPE_LOCK(locker_[display_id]);
+        if (hwc_display_[display_id]) {
+          res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+        }
+        else {
+          DLOGW("Display %" PRIu64 "no longer available.", display_id);
+          return HWC2_ERROR_BAD_DISPLAY;
+        }
+      }
       if (needs_active_builtin_reconfig) {
         SCOPE_LOCK(locker_[active_builtin_id]);
-        hwc2_config_t current_config = 0, new_config = 0;
-        hwc_display_[active_builtin_id]->GetActiveConfig(&current_config);
-        int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
-        if (status) {
-          DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
-                active_builtin_id);
-          return status;
-        }
-        hwc_display_[active_builtin_id]->GetActiveConfig(&new_config);
+        if (hwc_display_[active_builtin_id]) {
+          hwc2_config_t current_config = 0, new_config = 0;
+          hwc_display_[active_builtin_id]->GetActiveConfig(&current_config);
+          int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
+          if (status) {
+            DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
+                  active_builtin_id);
+            return status;
+          }
+          hwc_display_[active_builtin_id]->GetActiveConfig(&new_config);
 
-        // In case of config change, notify client with the new configuration
-        if (new_config != current_config) {
-          NotifyDisplayAttributes(active_builtin_id, new_config);
+          // In case of config change, notify client with the new configuration
+          if (new_config != current_config) {
+            NotifyDisplayAttributes(active_builtin_id, new_config);
+          }
+        }
+        else {
+          DLOGW("Display %" PRIu64 "no longer available.", active_builtin_id);
+          return HWC2_ERROR_BAD_DISPLAY;
         }
       }
     }
@@ -3676,9 +3691,18 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
         }
         cached_retire_fence_ == nullptr;
       }
-      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
-      if (!enable_primary_reconfig_req_) {
-        needs_active_builtin_reconfig = false;
+      {
+        SCOPE_LOCK(locker_[display_id]);
+        if (hwc_display_[display_id]) {
+          res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+          if (!enable_primary_reconfig_req_) {
+            needs_active_builtin_reconfig = false;
+          }
+        }
+        else {
+          DLOGW("Display %" PRIu64 "no longer available.", display_id);
+          return HWC2_ERROR_BAD_DISPLAY;
+        }
       }
     } while (res_wait || needs_active_builtin_reconfig);
   }
