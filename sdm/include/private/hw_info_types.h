@@ -448,6 +448,7 @@ struct HWPanelInfo {
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
   uint32_t transfer_time_us = 0;       // transfer time in micro seconds to panel's active region
+  uint32_t min_transfer_time_us = 1;   // minimum transfer time across all modes
   uint32_t allowed_mode_switch = 0;    // Allowed mode switch bit mask
   uint32_t panel_mode_caps = 0;        // Video/Command mode capability bit mask
   bool qsync_support = false;          // Specifies panel supports qsync feature or not.

@@ -105,7 +105,7 @@ class CompManager {
   bool GetDemuraStatusForDisplay(const int32_t &display_id) {
     return display_demura_status_[display_id];
   }
-  DisplayError SetMaxSDEClk(uint32_t clk);
+  DisplayError SetMaxSDEClk(Handle display_ctx, uint32_t clk);
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
   DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);

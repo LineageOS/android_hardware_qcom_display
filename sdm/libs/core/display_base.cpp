@@ -3599,7 +3599,7 @@ void DisplayBase::CheckMMRMState() {
     }
   }
 
-  if (comp_manager_->SetMaxSDEClk(mmrm_requested_clk_) != kErrorNone) {
+  if (comp_manager_->SetMaxSDEClk(display_comp_ctx_, mmrm_requested_clk_) != kErrorNone) {
     DLOGW("Could not set max sde clk");
     return;
   }
@@ -3624,7 +3624,7 @@ void DisplayBase::MMRMEvent(uint32_t clk) {
 
   mmrm_requested_clk_ = clk;
   mmrm_updated_ = true;
-  DLOGV("MMRM state has been updated");
+  DLOGI("MMRM state has been updated, clk requested=%u", clk);
 
   // Invalidate to retrigger clk calculation
   validated_ = false;

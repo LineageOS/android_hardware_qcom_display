@@ -778,9 +778,11 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
   return resource_intf_->GetDemuraFetchResources(display_comp_ctx->display_resource_ctx, frl);
 }
 
-DisplayError CompManager::SetMaxSDEClk(uint32_t clk) {
+DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
   if (resource_intf_) {
-    return resource_intf_->SetMaxSDEClk(clk);
+    DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+    return resource_intf_->SetMaxSDEClk(display_comp_ctx->display_resource_ctx, clk);
   }
 
   return kErrorNotSupported;
