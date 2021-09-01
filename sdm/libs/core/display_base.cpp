@@ -1184,6 +1184,19 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
+#ifdef TRUSTED_VM
+  // Register all hw events on first commit for trusted vm only as the hw acquire happens as a
+  // part of first validate
+  if (first_cycle_) {
+    hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
+    hw_events_intf_->SetEventState(HWEvent::IDLE_NOTIFY, true);
+    hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
+    hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
+    hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
+    hw_events_intf_->SetEventState(HWEvent::MMRM, true);
+  }
+#endif
+
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
