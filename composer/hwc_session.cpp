@@ -745,6 +745,17 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
 
 void HWCSession::PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                       uint32_t refresh_rate, uint32_t qsync_refresh_rate) {
+  // AIDL callback
+  if (!callback_clients_.empty()) {
+    std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+    for (auto const& [id, callback] : callback_clients_) {
+      if (callback) {
+        callback->notifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
+      }
+    }
+  }
+
+  // HIDL callback
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = qsync_callback_.lock();
   if (!callback) {
     return;
