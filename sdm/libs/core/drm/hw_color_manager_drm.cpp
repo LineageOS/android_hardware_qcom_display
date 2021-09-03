@@ -33,6 +33,7 @@
 #include <map>
 #include <cstring>
 #include <vector>
+#include <new>
 
 #ifdef PP_DRM_ENABLE
 #include <display/drm/msm_drm_pp.h>
@@ -967,7 +968,7 @@ DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
     return kErrorParameters;
   }
 
-  mdp_gamut = new drm_msm_3d_gamut();
+  mdp_gamut = new(std::nothrow) drm_msm_3d_gamut();
   if (!mdp_gamut) {
     DLOGE("Failed to allocate memory for gamut");
     return kErrorMemory;
