@@ -110,6 +110,7 @@ class CompManager {
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
   DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);
   DisplayError GetHDR10PlusCapability(bool *hdr_plus_support);
+  DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
 
  private:
   static const int kMaxThermalLevel = 3;

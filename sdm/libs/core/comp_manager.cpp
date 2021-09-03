@@ -819,4 +819,13 @@ DisplayError CompManager::SetBacklightLevel(Handle display_ctx,
                                   backlight_level);
 }
 
+DisplayError CompManager::ForceToneMapConfigure(Handle display_ctx,
+    DispLayerStack *disp_layer_stack) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return resource_intf_->ForceToneMapConfigure(display_comp_ctx->display_resource_ctx,
+                                               disp_layer_stack);
+}
+
 }  // namespace sdm

@@ -1204,6 +1204,14 @@ class DisplayInterface {
   */
   virtual void FlushConcurrentWriteback() = 0;
 
+  /*! @brief Method to force tone mapping LUT update for an existing display layer stack
+
+    @param[inout] layer_stack \link LayerStack \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

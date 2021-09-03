@@ -98,7 +98,7 @@ DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_att
 
   if (strategy_intf_) {
     error = strategy_intf_->Start(disp_layer_stack_, max_attempts);
-    if (error == kErrorNone || error == kErrorNeedsValidate) {
+    if (error == kErrorNone || error == kErrorNeedsValidate || error == kErrorNeedsLutRegen) {
       extn_start_success_ = true;
       return error;
     }

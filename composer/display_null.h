@@ -143,6 +143,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetOutputBufferAcquireFence(shared_ptr<Fence> *))
   MAKE_NO_OP(DestroyLayer())
   MAKE_NO_OP(SetAlternateDisplayConfig(uint32_t *))
+  MAKE_NO_OP(ForceToneMapUpdate(LayerStack *layer_stack));
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};
