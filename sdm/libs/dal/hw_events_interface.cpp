@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -28,40 +28,40 @@
 */
 
 #include <utils/utils.h>
+#include <private/hw_events_interface.h>
 
-#include "hw_info_interface.h"
+#include <vector>
+
 #ifndef TARGET_HEADLESS
-#include "drm/hw_info_drm.h"
+#include "hw_events_drm.h"
 #endif
 
-#define __CLASS__ "HWInfoInterface"
+#define __CLASS__ "HWEventsInterface"
 
 namespace sdm {
 
-DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
-#ifndef TARGET_HEADLESS
-
-  *intf = new HWInfoDRM();
-#else
-  *intf = nullptr;
-#endif
-
+DisplayError HWEventsInterface::Create(int display_id, DisplayType display_type,
+                                       HWEventHandler *event_handler,
+                                       const std::vector<HWEvent> &event_list,
+                                       const HWInterface *hw_intf, HWEventsInterface **intf) {
   DisplayError error = kErrorNone;
-  if (*intf) {
-    error = (*intf)->Init();
-    if (error != kErrorNone) {
-      delete *intf;
-      *intf = nullptr;
-    }
+#ifndef TARGET_HEADLESS
+  HWEventsInterface *hw_events = new HWEventsDRM();
+
+  error = hw_events->Init(display_id, display_type, event_handler, event_list, hw_intf);
+  if (error != kErrorNone) {
+    delete hw_events;
   } else {
-    error = kErrorCriticalResource;
+    *intf = hw_events;
   }
+#endif
 
   return error;
 }
 
-DisplayError HWInfoInterface::Destroy(HWInfoInterface *intf) {
+DisplayError HWEventsInterface::Destroy(HWEventsInterface *intf) {
   if (intf) {
+    intf->Deinit();
     delete intf;
   }
 

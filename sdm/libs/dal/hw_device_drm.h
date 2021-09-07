@@ -31,6 +31,7 @@
 #define __HW_DEVICE_DRM_H__
 
 #include <utils/formats.h>
+#include <private/hw_interface.h>
 #include <drm_interface.h>
 #include <errno.h>
 #include <pthread.h>
@@ -42,7 +43,6 @@
 #include <memory>
 #include <mutex>
 
-#include "hw_interface.h"
 #include "hw_scale_drm.h"
 #include "hw_color_manager_drm.h"
 
@@ -109,7 +109,7 @@ class HWDeviceDRM : public HWInterface {
   void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
-  virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
+  virtual DisplayError SetPPFeature(PPFeatureInfo *feature);
   // This API is no longer supported, expectation is to call the correct API on HWEvents
   virtual DisplayError SetVSyncState(bool enable);
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);

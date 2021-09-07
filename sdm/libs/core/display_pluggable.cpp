@@ -24,14 +24,14 @@
 
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <private/hw_interface.h>
+#include <private/hw_info_interface.h>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "display_pluggable.h"
-#include "hw_info_interface.h"
-#include "hw_interface.h"
 
 #define __CLASS__ "DisplayPluggable"
 

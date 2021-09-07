@@ -30,6 +30,7 @@
 #include <private/color_interface.h>
 #include <private/panel_feature_factory_intf.h>
 #include <private/utils_factory_intf.h>
+#include <private/hw_interface.h>
 #include <utils/locker.h>
 #include <utils/sys.h>
 
@@ -37,7 +38,6 @@
 #include <vector>
 #include <utility>
 
-#include "hw_interface.h"
 #include "comp_manager.h"
 
 #define SET_REVISION(major, minor) ((major << 8) | minor)

@@ -30,6 +30,7 @@
 #include <utils/locker.h>
 #include <utils/utils.h>
 #include <sys/mman.h>
+#include <private/hw_info_interface.h>
 #include <map>
 #include <vector>
 #include <thread>
@@ -39,7 +40,6 @@
 #include "display_builtin.h"
 #include "display_pluggable.h"
 #include "display_virtual.h"
-#include "hw_info_interface.h"
 
 #define __CLASS__ "CoreImpl"
 

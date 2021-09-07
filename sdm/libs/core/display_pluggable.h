@@ -25,12 +25,13 @@
 #ifndef __DISPLAY_PLUGGABLE_H__
 #define __DISPLAY_PLUGGABLE_H__
 
+#include <private/hw_events_interface.h>
+
 #include <map>
 #include <string>
 #include <vector>
 
 #include "display_base.h"
-#include "hw_events_interface.h"
 
 namespace sdm {
 

@@ -33,6 +33,8 @@
 #include <private/panel_feature_factory_intf.h>
 #include <private/noise_plugin_intf.h>
 #include <private/noise_plugin_dbg.h>
+#include <private/hw_interface.h>
+#include <private/hw_events_interface.h>
 
 #include <limits.h>
 #include <map>
@@ -42,10 +44,8 @@
 #include <string>
 #include <vector>
 
-#include "hw_interface.h"
 #include "comp_manager.h"
 #include "color_manager.h"
-#include "hw_events_interface.h"
 
 #define GET_PANEL_FEATURE_FACTORY "GetPanelFeatureFactoryIntf"
 

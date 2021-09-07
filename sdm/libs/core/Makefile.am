@@ -10,18 +10,7 @@ c_sources = core_interface.cpp \
             comp_manager.cpp \
             strategy.cpp \
             resource_default.cpp \
-            color_manager.cpp \
-            hw_interface.cpp \
-            hw_info_interface.cpp \
-            hw_events_interface.cpp \
-            drm/hw_color_manager_drm.cpp \
-            drm/hw_device_drm.cpp \
-            drm/hw_events_drm.cpp \
-            drm/hw_info_drm.cpp \
-            drm/hw_peripheral_drm.cpp \
-            drm/hw_scale_drm.cpp \
-            drm/hw_tv_drm.cpp \
-            drm/hw_virtual_drm.cpp
+            color_manager.cpp
 
 core_h_sources = $(HEADER_PATH)/core/*.h
 
@@ -43,5 +32,5 @@ libsdmcore_la_CC = @CC@
 libsdmcore_la_SOURCES = $(c_sources)
 libsdmcore_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"SDM\"
 libsdmcore_la_CPPFLAGS = $(AM_CPPFLAGS) -DPP_DRM_ENABLE
-libsdmcore_la_LIBADD = ../utils/libsdmutils.la ../../../sde-drm/libsdedrm.la -ldl -ldisplaydebug
+libsdmcore_la_LIBADD = ../utils/libsdmutils.la ../dal/libsdmdal.la -ldl -ldisplaydebug
 libsdmcore_la_LDFLAGS = -shared -avoid-version

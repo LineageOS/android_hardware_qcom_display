@@ -30,11 +30,11 @@
 #include <utils/debug.h>
 #include <utils/utils.h>
 
-#include "hw_interface.h"
+#include <private/hw_interface.h>
 #ifndef TARGET_HEADLESS
-#include "drm/hw_peripheral_drm.h"
-#include "drm/hw_virtual_drm.h"
-#include "drm/hw_tv_drm.h"
+#include "hw_peripheral_drm.h"
+#include "hw_virtual_drm.h"
+#include "hw_tv_drm.h"
 #endif
 
 #define __CLASS__ "HWInterface"
