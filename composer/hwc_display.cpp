@@ -509,6 +509,11 @@ int HWCDisplay::Init() {
     DLOGI("HDR Handling disabled");
   }
 
+  HWCDebugHandler::Get()->GetProperty(DISABLE_SDR_HISTOGRAM, &disable_sdr_histogram_);
+  if (disable_sdr_histogram_) {
+    DLOGI("Non-HDR histogram handling disabled");
+  }
+
   int property_swap_interval = 1;
   HWCDebugHandler::Get()->GetProperty(ZERO_SWAP_INTERVAL, &property_swap_interval);
   if (property_swap_interval == 0) {
@@ -623,6 +628,9 @@ int HWCDisplay::Deinit() {
 // LayerStack operations
 HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
+  if (disable_sdr_histogram_)
+    layer->IgnoreSdrContentMetadata(true);
+
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;

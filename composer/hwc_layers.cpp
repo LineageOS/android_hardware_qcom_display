@@ -146,6 +146,11 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
   return true;
 }
 
+bool IsHdr(const ColorPrimaries &color_primary, const GammaTransfer &gamma_transfer) {
+  return (color_primary == ColorPrimaries_BT2020)  &&
+      ((gamma_transfer == Transfer_SMPTE_ST2084) || (gamma_transfer == Transfer_HLG));
+}
+
 bool IsBT2020(const ColorPrimaries &color_primary) {
   switch (color_primary) {
   case ColorPrimaries_BT2020:
@@ -909,6 +914,11 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
 
   // Handle colorMetaData / Dataspace handling now
   ValidateAndSetCSC(handle);
+
+  if (ignore_sdr_content_md_ &&
+      !IsHdr(layer_buffer->color_metadata.colorPrimaries, layer_buffer->color_metadata.transfer)) {
+    return kErrorNone;
+  }
 
   int hist_set = qtigralloc::getMetadataState(handle, QTI_VIDEO_HISTOGRAM_STATS);
   if (hist_set > 0) {
