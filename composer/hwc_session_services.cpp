@@ -767,6 +767,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   hwc_session_->hwc_display_[dummy_disp_id]->SetClientTarget(
                                        target, acquire_fence, dataspace, damage);
 
+  // Initialize the variable config map of dummy display using map of real display.
+  // Pass the real display's last active config index to dummy display.
+  std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map;
+  int active_config_index = -1;
+  uint32_t num_configs = 0;
+  hwc_session_->hwc_display_[disp_id]->GetConfigInfo(&variable_config_map, &active_config_index,
+                                                     &num_configs);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetConfigInfo(variable_config_map,
+                                                           active_config_index, num_configs);
 
   hwc_session_->locker_[dummy_disp_id].Unlock();  // Release the dummy display.
   // Release the display's power-state transition var read lock.

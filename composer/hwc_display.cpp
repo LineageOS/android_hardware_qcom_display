@@ -2992,4 +2992,11 @@ HWC2::Error HWCDisplay::GetClientTargetProperty(ClientTargetProperty *out_client
   return HWC2::Error::None;
 }
 
+void HWCDisplay::GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
+                               int *active_config_index, uint32_t *num_configs) {
+  *variable_config_map = variable_config_map_;
+  *active_config_index = active_config_index_;
+  *num_configs = num_configs_;
+}
+
 } //namespace sdm

@@ -1164,8 +1164,14 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_NONE;
   }
 
+  // 1. For power transition cases other than Off->On or On->Off, async power mode
+  // will not be used. Hence, set override_mode to false for them.
+  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+  // in main thread path.
   if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
-     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
     override_mode = false;
   }
 
@@ -3225,13 +3231,14 @@ void HWCSession::HandleSecureSession() {
        display < HWCCallbacks::kNumRealDisplays; display++) {
     Locker::ScopeLock lock_d(locker_[display]);
     HWCDisplay *hwc_display = hwc_display_[display];
-    if (!hwc_display || hwc_display->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
+    if (!hwc_display) {
       continue;
     }
 
     bool is_active_secure_display = false;
     // The first On/Doze/DozeSuspend built-in display is taken as the secure display.
     if (!found_active_secure_display &&
+        hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN &&
         hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
       is_active_secure_display = true;
       found_active_secure_display = true;
