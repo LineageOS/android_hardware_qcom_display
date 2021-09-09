@@ -284,6 +284,10 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
     // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED
     // for tursted UI use case and align the size to 2MB
+    is_default = false;
+    heap_name = "qcom,display";
+    buffer_allocator_.MapNameToIonHeap(heap_name, "display", flags,
+                                       ION_HEAP(ION_DISPLAY_HEAP_ID), flags);
     *alloc_size = ALIGN(*alloc_size, SIZE_2MB);
   }
 
