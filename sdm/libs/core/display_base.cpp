@@ -3548,6 +3548,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     if (err != kErrorNone) {
       return err;
     }
+    comp_manager_->GetDefaultQosData(display_comp_ctx_, &cached_qos_data_);
   } else if (secure_event == kTUITransitionPrepare) {
     DisplayState state = state_;
     err = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
