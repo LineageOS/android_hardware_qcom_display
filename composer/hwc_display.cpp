@@ -2417,6 +2417,22 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
           id_, sdm_id_, type_);
   }
+
+  if (active_secure_sessions_[kSecureCamera] != secure_sessions[kSecureCamera]) {
+    if (secure_sessions[kSecureCamera]) {
+      pending_power_mode_ = current_power_mode_;
+      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off, true /* teardown */);
+      if (error != HWC2::Error::None) {
+        DLOGE("SetPowerMode failed. Error = %d", error);
+      }
+    } else {
+      *power_on_pending = (pending_power_mode_ != HWC2::PowerMode::Off) ? true : false;
+    }
+
+    DLOGI("SecureCamera state changed from %d to %d for display %" PRId64 " %d-%d",
+          active_secure_sessions_.test(kSecureCamera), secure_sessions.test(kSecureCamera),
+          id_, sdm_id_, type_);
+  }
   active_secure_sessions_ = secure_sessions;
   return 0;
 }
