@@ -632,6 +632,10 @@ class PPFeaturesConfig {
   inline void MarkPuDisable() { disable_pu_ = true; }
   inline void MarkPuEnable() { disable_pu_ = false; }
 
+  inline bool IsSwAssetDirty() { return sw_asset_dirty_; }
+  inline void MarkSwAssetDirty() { sw_asset_dirty_ = true; }
+  inline void ClearSwAssertDirty() { sw_asset_dirty_ = false; }
+
  private:
   bool dirty_ = 0;
   bool disable_pu_ = false;
@@ -640,6 +644,7 @@ class PPFeaturesConfig {
   uint32_t next_idx_ = 0;
   PPFrameCaptureData frame_capture_data;
   PPDETuningCfgData de_tuning_data_ = {};
+  bool sw_asset_dirty_ = false;
 };
 
 }  // namespace sdm
