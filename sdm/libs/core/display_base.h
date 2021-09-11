@@ -217,6 +217,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
     return kErrorNotSupported;
   }
+  virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack);
 
  protected:
   struct DisplayMutex {

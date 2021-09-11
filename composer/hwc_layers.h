@@ -119,6 +119,9 @@ class HWCLayer {
   shared_ptr<Fence> GetReleaseFence();
   void SetReleaseFence(const shared_ptr<Fence> &release_fence);
   bool IsLayerCompatible() { return compatible_; }
+  void IgnoreSdrContentMetadata(bool disable) {
+    ignore_sdr_content_md_ = disable;
+  }
 
  private:
   Layer *layer_ = nullptr;
@@ -142,6 +145,7 @@ class HWCLayer {
   bool buffer_flipped_ = false;
   bool secure_ = false;
   bool compatible_ = false;
+  bool ignore_sdr_content_md_ = false;
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;

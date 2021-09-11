@@ -146,6 +146,11 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
   return true;
 }
 
+bool IsHdr(const ColorPrimaries &color_primary, const GammaTransfer &gamma_transfer) {
+  return (color_primary == ColorPrimaries_BT2020)  &&
+      ((gamma_transfer == Transfer_SMPTE_ST2084) || (gamma_transfer == Transfer_HLG));
+}
+
 bool IsBT2020(const ColorPrimaries &color_primary) {
   switch (color_primary) {
   case ColorPrimaries_BT2020:
@@ -627,7 +632,7 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
   }
   if ((!SameConfig(&old_mastering_display, &mastering_display, UINT32(sizeof(MasteringDisplay)))) ||
       (!SameConfig(&old_content_light, &content_light, UINT32(sizeof(ContentLightLevel))))) {
-    layer_->update_mask.set(kMetadataUpdate);
+    layer_->update_mask.set(kContentMetadata);
     geometry_changes_ |= kDataspace;
   }
   return HWC2::Error::None;
@@ -657,7 +662,7 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadataBlobs(uint32_t num_elements,
           color_metadata.dynamicMetaDataValid = true;
           color_metadata.dynamicMetaDataLen = sizes[i];
           std::memcpy(color_metadata.dynamicMetaDataPayload, metadata, sizes[i]);
-          layer_->update_mask.set(kMetadataUpdate);
+          layer_->update_mask.set(kContentMetadata);
         }
         break;
       default:
@@ -910,6 +915,11 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   // Handle colorMetaData / Dataspace handling now
   ValidateAndSetCSC(handle);
 
+  if (ignore_sdr_content_md_ &&
+      !IsHdr(layer_buffer->color_metadata.colorPrimaries, layer_buffer->color_metadata.transfer)) {
+    return kErrorNone;
+  }
+
   int hist_set = qtigralloc::getMetadataState(handle, QTI_VIDEO_HISTOGRAM_STATS);
   if (hist_set > 0) {
     VideoHistogramMetadata histogram = {};
@@ -926,7 +936,7 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
         }
 
         layer_buffer->hist_data.stats_valid = true;
-        layer->update_mask.set(kMetadataUpdate);
+        layer_->update_mask.set(kContentMetadata);
       }
     }
   }
@@ -1008,13 +1018,13 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
           !SameConfig(&new_metadata.masteringDisplayInfo,
           &layer_buffer->color_metadata.masteringDisplayInfo, UINT32(sizeof(MasteringDisplay)))) {
         layer_buffer->color_metadata.masteringDisplayInfo = new_metadata.masteringDisplayInfo;
-        layer_->update_mask.set(kMetadataUpdate);
+        layer_->update_mask.set(kContentMetadata);
       }
       if (new_metadata.contentLightLevel.lightLevelSEIEnabled &&
           !SameConfig(&new_metadata.contentLightLevel,
           &layer_buffer->color_metadata.contentLightLevel, UINT32(sizeof(ContentLightLevel)))) {
         layer_buffer->color_metadata.contentLightLevel = new_metadata.contentLightLevel;
-        layer_->update_mask.set(kMetadataUpdate);
+        layer_->update_mask.set(kContentMetadata);
       }
       if (new_metadata.cRI.criEnabled &&
           !SameConfig(&new_metadata.cRI, &layer_buffer->color_metadata.cRI,
@@ -1029,7 +1039,7 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
           layer_buffer->color_metadata.dynamicMetaDataLen = new_metadata.dynamicMetaDataLen;
           std::memcpy(layer_buffer->color_metadata.dynamicMetaDataPayload,
                       new_metadata.dynamicMetaDataPayload, new_metadata.dynamicMetaDataLen);
-        layer_->update_mask.set(kMetadataUpdate);
+        layer_->update_mask.set(kContentMetadata);
       }
     } else {
       dataspace_supported_ = false;

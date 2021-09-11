@@ -92,6 +92,8 @@ class ResourceInterface {
   virtual DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) = 0;
   virtual ~ResourceInterface() {}
   virtual DisplayError SetMaxSDEClk(Handle display_ctx, uint32_t clk) = 0;
+  virtual DisplayError ForceToneMapConfigure(Handle display_ctx,
+                                             DispLayerStack *disp_layer_stack) = 0;
 };
 
 }  // namespace sdm

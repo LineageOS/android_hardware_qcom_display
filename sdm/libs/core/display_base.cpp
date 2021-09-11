@@ -639,6 +639,41 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
 }
 
+DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
+  int level = 0;
+  DisplayError error = kErrorNotSupported;
+
+
+  for (size_t hw_index = 0; hw_index < disp_layer_stack_.info.index.size(); hw_index++) {
+    size_t layer_index = disp_layer_stack_.info.index.at(hw_index);
+
+    if (layer_index >= layer_stack->layers.size()) {
+      DLOGE("Error forcing TM update. Layer stack appears to have changed");
+      return error;
+    }
+
+    Layer *stack_layer = layer_stack->layers.at(layer_index);
+    Layer &cached_layer = disp_layer_stack_.info.hw_layers.at(hw_index);
+    HWLayerConfig &hw_config = disp_layer_stack_.info.config[hw_index];
+
+    cached_layer.input_buffer.hist_data = stack_layer->input_buffer.hist_data;
+    cached_layer.input_buffer.color_metadata = stack_layer->input_buffer.color_metadata;
+    hw_config.left_pipe.lut_info.clear();
+    hw_config.right_pipe.lut_info.clear();
+  }
+
+  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
+  }
+  error = comp_manager_->ForceToneMapConfigure(display_comp_ctx_, &disp_layer_stack_);
+  if (error == kErrorNone) {
+    validated_ = true;
+  }
+
+  return error;
+}
+
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);

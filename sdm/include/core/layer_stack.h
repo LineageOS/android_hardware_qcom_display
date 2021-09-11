@@ -127,6 +127,7 @@ enum LayerUpdate {
   kSurfaceInvalidate,
   kClientCompRequest,
   kColorTransformUpdate,
+  kContentMetadata,
   kLayerUpdateMax,
 };
 

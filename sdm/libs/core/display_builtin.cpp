@@ -227,8 +227,8 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   }
 
   error = DisplayBase::PrePrepare(layer_stack);
-  if (error == kErrorNone) {
-    return kErrorNone;
+  if (error == kErrorNone || error == kErrorNeedsLutRegen) {
+    return error;
   }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
@@ -274,6 +274,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 
   DisplayError error = PrePrepare(layer_stack);
   if (error == kErrorNone) {
+    return kErrorNone;
+  }
+
+  if (error == kErrorNeedsLutRegen && (ForceToneMapUpdate(layer_stack) == kErrorNone)) {
     return kErrorNone;
   }
 
