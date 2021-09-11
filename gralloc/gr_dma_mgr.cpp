@@ -239,6 +239,7 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
     // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED
     // for tursted UI use case and align the size to 2MB
+    heap_name = "qcom,demura";
     *alloc_size = ALIGN(*alloc_size, SIZE_2MB);
   }
 
