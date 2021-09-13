@@ -367,7 +367,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   hw_layers_.updates_mask.set(kUpdateResources);
   comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
-  rc_pu_flag_status_ = hw_layers_.info.rc_pu_flag_status;
 
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
 
@@ -477,21 +476,13 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   if (rc_panel_feature_init_) {
     GenericPayload in, out;
     RCMaskCfgState *mask_status = nullptr;
-    uint64_t *rc_pu_flag_status = nullptr;
     int ret = -1;
     ret = out.CreatePayload<RCMaskCfgState>(mask_status);
     if (ret) {
       DLOGE("failed to create the payload. Error:%d", ret);
       return kErrorUndefined;
     }
-    ret = in.CreatePayload<uint64_t>(rc_pu_flag_status);
-    if (ret) {
-      DLOGE("failed to create the payload. Error:%d", ret);
-      return kErrorUndefined;
-    }
-    *rc_pu_flag_status = rc_pu_flag_status_;
     ret = rc_core_->ProcessOps(kRCFeatureCommit, in, &out);
-    hw_layers_.info.rc_pu_needs_full_roi = (*mask_status).rc_pu_full_roi;
     if (ret) {
      // If RC commit failed, fall back to default (GPU/SDE pipes) drawing of "handled" mask layers.
      DLOGW("Failed to set the data on driver for display: %d-%d, Error: %d, status: %d",
@@ -508,14 +499,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
         return kErrorNotValidated;
       }
     } else {
-      DLOGI_IF(kTagDisplay, "Status of RC mask data: %d., pu_rc_status_: 0x%" PRIx64,
-               (*mask_status).rc_mask_state, rc_pu_flag_status_);
-      if ((*mask_status).rc_pu_full_roi) {
-        if (rc_pu_flag_status_ && rc_pu_flag_status_ != SDE_HW_PU_USECASE) {
-          needs_validate_ = true;
-          return kErrorNotValidated;
-        }
-      }
+      DLOGI_IF(kTagDisplay, "Status of RC mask data: %d.", (*mask_status).rc_mask_state);
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
         needs_validate_ = true;
         DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",

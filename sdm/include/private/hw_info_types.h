@@ -715,8 +715,6 @@ struct HWLayersInfo {
   bool game_present = false;  // Indicates there is game layer or not
   bool rc_config = false;
   RCLayersInfo rc_layers_info = {};
-  uint64_t rc_pu_flag_status = 0;
-  bool rc_pu_needs_full_roi = false;
 };
 
 struct HWQosData {
