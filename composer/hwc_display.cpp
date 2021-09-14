@@ -2802,25 +2802,25 @@ int HWCDisplay::GetActiveConfigIndex() {
 
 HWC2::Error HWCDisplay::GetClientTargetProperty(ClientTargetProperty *out_client_target_property) {
 
-  Layer *client_target_layer = client_target_->GetSDMLayer();
-  if (!client_target_layer->request.flags.update_format) {
+  Layer *client_layer = client_target_->GetSDMLayer();
+  if (!client_layer->request.flags.update_format) {
     return HWC2::Error::None;
   }
   int32_t format = 0;
   uint64_t flags = 0;
-  auto err = buffer_allocator_->SetBufferInfo(client_target_layer->request.format, &format,
+  auto err = buffer_allocator_->SetBufferInfo(client_layer->request.format, &format,
                                               &flags);
   if (err) {
-    DLOGE("Invalid format: %s requested", GetFormatString(client_target_layer->request.format));
+    DLOGE("Invalid format: %s requested", GetFormatString(client_layer->request.format));
     return HWC2::Error::BadParameter;
   }
   Dataspace dataspace;
-  DisplayError error = ColorMetadataToDataspace(layer_stack_.gpu_target_color_metadata,
+  DisplayError error = ColorMetadataToDataspace(client_layer->request.color_metadata,
                                                    &dataspace);
   if (error != kErrorNone) {
     DLOGE("Invalid Dataspace requested: Primaries = %d Transfer = %d ds = %d",
-          layer_stack_.gpu_target_color_metadata.colorPrimaries,
-          layer_stack_.gpu_target_color_metadata.transfer, dataspace);
+          client_layer->request.color_metadata.colorPrimaries,
+          client_layer->request.color_metadata.transfer, dataspace);
     return HWC2::Error::BadParameter;
   }
   out_client_target_property->dataspace = dataspace;

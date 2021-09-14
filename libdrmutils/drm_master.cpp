@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,6 +37,9 @@
 // that doesn't use keyword "virtual" for a variable name. Not doing so leads to the kernel version
 // of drm.h being included causing compilation to fail
 #include <drm/msm_drm.h>
+#ifdef KERNEL_5_4
+#include <drm/sde_drm.h>
+#endif
 #include <algorithm>
 #include <iterator>
 
