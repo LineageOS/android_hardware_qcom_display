@@ -588,6 +588,7 @@ void HWDeviceDRM::GetCWBCapabilities() {
       has_cwb_crop_ = static_cast<bool>(iter.second.modes[current_mode_index_].has_cwb_crop);
       has_dedicated_cwb_ =
           static_cast<bool>(iter.second.modes[current_mode_index_].has_dedicated_cwb);
+      has_cwb_dither_ = static_cast<bool>(iter.second.has_cwb_dither);
       break;
     }
   }
@@ -2979,10 +2980,8 @@ DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
                 sde_drm::DRMCWbCaptureMode mode) {
   int ret = 0;
   DRMPPFeatureInfo kernel_params = {};
-  DRMConnectorInfo conn_info = {};
 
-  drm_mgr_intf_->GetConnectorInfo(conn_id, &conn_info);
-  if (conn_info.has_cwb_dither) {
+  if (has_cwb_dither_) {
     kernel_params.id = DRMPPFeatureID::kFeatureCWBDither;
   } else {
     kernel_params.id = DRMPPFeatureID::kFeatureDither;
