@@ -314,12 +314,9 @@ int engine_blit(int srcFenceFd)
 void checkGlError(const char *file, int line)
 //-----------------------------------------------------------------------------
 {
-  for (GLint error = glGetError(); error; error = glGetError()) {
+  for (GLint error = glGetError(); error != GL_NO_ERROR; error = glGetError()) {
     const char *pError = "<unknown error>";
     switch (error) {
-      case GL_NO_ERROR:
-        pError = "GL_NO_ERROR";
-        break;
       case GL_INVALID_ENUM:
         pError = "GL_INVALID_ENUM";
         break;
@@ -337,7 +334,7 @@ void checkGlError(const char *file, int line)
         break;
     }
 
-    ALOGE("glError (%s) %s:%d\n", pError, file, line);
+    ALOGE("glError %d (%s) %s:%d\n", error, pError, file, line);
   }
 }
 
@@ -345,60 +342,56 @@ void checkGlError(const char *file, int line)
 void checkEglError(const char *file, int line)
 //-----------------------------------------------------------------------------
 {
-  for (int i = 0; i < 5; i++) {
-    const EGLint error = eglGetError();
-    if (error == EGL_SUCCESS) {
+  const EGLint error = eglGetError();
+  if (error == EGL_SUCCESS) {
+    return;
+  }
+
+  const char *pError = "<unknown error>";
+  switch (error) {
+    case EGL_NOT_INITIALIZED:
+      pError = "EGL_NOT_INITIALIZED";
+      break;
+    case EGL_BAD_ACCESS:
+      pError = "EGL_BAD_ACCESS";
+      break;
+    case EGL_BAD_ALLOC:
+      pError = "EGL_BAD_ALLOC";
+      break;
+    case EGL_BAD_ATTRIBUTE:
+      pError = "EGL_BAD_ATTRIBUTE";
+      break;
+    case EGL_BAD_CONTEXT:
+      pError = "EGL_BAD_CONTEXT";
+      break;
+    case EGL_BAD_CONFIG:
+      pError = "EGL_BAD_CONFIG";
+      break;
+    case EGL_BAD_CURRENT_SURFACE:
+      pError = "EGL_BAD_CURRENT_SURFACE";
+      break;
+    case EGL_BAD_DISPLAY:
+      pError = "EGL_BAD_DISPLAY";
+      break;
+    case EGL_BAD_SURFACE:
+      pError = "EGL_BAD_SURFACE";
+      break;
+    case EGL_BAD_MATCH:
+      pError = "EGL_BAD_MATCH";
+      break;
+    case EGL_BAD_PARAMETER:
+      pError = "EGL_BAD_PARAMETER";
+      break;
+    case EGL_BAD_NATIVE_PIXMAP:
+      pError = "EGL_BAD_NATIVE_PIXMAP";
+      break;
+    case EGL_BAD_NATIVE_WINDOW:
+      pError = "EGL_BAD_NATIVE_WINDOW";
+      break;
+    case EGL_CONTEXT_LOST:
+      pError = "EGL_CONTEXT_LOST";
       break;
     }
 
-    const char *pError = "<unknown error>";
-    switch (error) {
-      case EGL_SUCCESS:
-        pError = "EGL_SUCCESS";
-        break;
-      case EGL_NOT_INITIALIZED:
-        pError = "EGL_NOT_INITIALIZED";
-        break;
-      case EGL_BAD_ACCESS:
-        pError = "EGL_BAD_ACCESS";
-        break;
-      case EGL_BAD_ALLOC:
-        pError = "EGL_BAD_ALLOC";
-        break;
-      case EGL_BAD_ATTRIBUTE:
-        pError = "EGL_BAD_ATTRIBUTE";
-        break;
-      case EGL_BAD_CONTEXT:
-        pError = "EGL_BAD_CONTEXT";
-        break;
-      case EGL_BAD_CONFIG:
-        pError = "EGL_BAD_CONFIG";
-        break;
-      case EGL_BAD_CURRENT_SURFACE:
-        pError = "EGL_BAD_CURRENT_SURFACE";
-        break;
-      case EGL_BAD_DISPLAY:
-        pError = "EGL_BAD_DISPLAY";
-        break;
-      case EGL_BAD_SURFACE:
-        pError = "EGL_BAD_SURFACE";
-        break;
-      case EGL_BAD_MATCH:
-        pError = "EGL_BAD_MATCH";
-        break;
-      case EGL_BAD_PARAMETER:
-        pError = "EGL_BAD_PARAMETER";
-        break;
-      case EGL_BAD_NATIVE_PIXMAP:
-        pError = "EGL_BAD_NATIVE_PIXMAP";
-        break;
-      case EGL_BAD_NATIVE_WINDOW:
-        pError = "EGL_BAD_NATIVE_WINDOW";
-        break;
-      case EGL_CONTEXT_LOST:
-        pError = "EGL_CONTEXT_LOST";
-        break;
-    }
-    ALOGE("eglError (%s) %s:%d\n", pError, file, line);
-  }
+    ALOGE("eglError %d (%s) %s:%d\n", error, pError, file, line);
 }
