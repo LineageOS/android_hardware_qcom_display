@@ -491,6 +491,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
   hw_layers_info.blend_cs = layer_stack->blend_cs;
+  hw_layers_info.wide_color_primaries.clear();
 
   int index = 0;
   for (auto &layer : layers) {
