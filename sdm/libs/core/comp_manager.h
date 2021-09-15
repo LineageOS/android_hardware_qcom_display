@@ -92,7 +92,7 @@ class CompManager {
   bool CheckResourceState(Handle display_ctx, bool *res_exhausted, HWDisplayAttributes attr);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
-  DisplayError FreeDemuraFetchResources(Handle display_ctx);
+  DisplayError FreeDemuraFetchResources(const uint32_t &display_id);
   DisplayError GetDemuraFetchResourceCount(std::map<uint32_t, uint8_t> *fetch_resource_cnt);
   DisplayError ReserveDemuraFetchResources(const uint32_t &display_id,
                                            const int8_t &preferred_rect);
