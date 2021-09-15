@@ -25,7 +25,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -353,6 +353,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.app_layer_count = 0;
 
   hw_layers_info.stack = layer_stack;
+  hw_layers_info.wide_color_primaries.clear();
 
   for (auto &layer : layers) {
     if (layer->buffer_map == nullptr) {
