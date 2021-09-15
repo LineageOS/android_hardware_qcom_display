@@ -136,8 +136,8 @@ TEST_F(RingbufferTestCases, SimpleTest) {
 TEST_F(RingbufferTestCases, TestEvictionSingle) {
   int fill_frame0 = 9;
   int fill_frame1 = 111;
-  drm_msm_hist frame0;
-  drm_msm_hist frame1;
+  drm_msm_hist frame0 {};
+  drm_msm_hist frame1 {};
   for (auto i = 0u; i < HIST_V_SIZE; i++) {
     frame0.data[i] = fill_frame0;
     frame1.data[i] = fill_frame1;
