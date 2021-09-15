@@ -45,8 +45,7 @@ class CPUHint {
  private:
   bool enabled_ = false;
   DynLib vendor_ext_lib_;
-  int (*fn_perf_hint_offload_)(int hint, const char *pkg, int duration, int type,
-                               int numArgs, int *) = NULL;
+  int (*fn_perf_event_offload_)(int hint, const char *pkg, int numArgs, int *) = NULL;
 };
 
 }  // namespace sdm
