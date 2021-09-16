@@ -310,6 +310,7 @@ class HWDeviceDRM : public HWInterface {
 
   bool has_cwb_crop_ = false;       // virtual connector supports CWB ROI feature.
   bool has_dedicated_cwb_ = false;  // virtual connector supports dedicated CWB feature.
+  bool has_cwb_dither_ = false;     // virtual connector supports CWB Dither feature.
   static HWCwbConfig cwb_config_;
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
 
