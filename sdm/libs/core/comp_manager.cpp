@@ -792,6 +792,7 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
 }
 
 DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
+  DTRACE_SCOPED();
   if (resource_intf_) {
     DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
