@@ -189,6 +189,12 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
+  int value = 0;  // Default value when property is not present.
+  HWCDebugHandler::Get()->GetProperty(ENABLE_VERBOSE_LOG, &value);
+  if (value == 1) {
+    HWCDebugHandler::DebugAll(value, value);
+  }
+
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   DLOGI("null_display_mode_: %d", null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
@@ -206,7 +212,7 @@ int HWCSession::Init() {
     DLOGI("Did not register HWCSession as the HWCUEvent handler");
   }
 
-  int value = 0;  // Default value when property is not present.
+  value = 0;  // Default value when property is not present.
   Debug::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &value);
   async_powermode_ = (value == 1);
   DLOGI("builtin_powermode_override: %d", async_powermode_);
