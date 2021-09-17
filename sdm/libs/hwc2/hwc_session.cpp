@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, 2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -2590,16 +2590,18 @@ int HWCSession::CreatePrimaryDisplay() {
       continue;
     }
 
-    // todo (user): If primary display is not connected (e.g. hdmi as primary), a NULL display
-    // need to be created. SF expects primary display hotplug during callback registration unlike
-    // previous implementation where first hotplug could be notified anytime.
-    if (!info.is_connected) {
-      DLOGE("Primary display is not connected. Not supported at present.");
-      break;
-    }
-
     auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
     hwc2_display_t client_id = map_info_primary_.client_id;
+    if (!info.is_connected) {
+      // primary display is not connected, create a dummy display.
+      HWCDisplayDummy::Create(core_intf_, &buffer_allocator_, &callbacks_, this, qservice_,
+                    0, 0, hwc_display);
+      null_display_active_ = true;
+      map_info_primary_.disp_type = info.display_type;
+      map_info_primary_.sdm_id = info.display_id;
+      status = kErrorNone;
+      break;
+    }
 
     DLOGI("Create primary display type = %d, sdm id = %d, client id = %d", info.display_type,
                                                                     info.display_id, client_id);
@@ -2759,6 +2761,14 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;
+
+    if (info.is_primary && info.is_connected && null_display_active_) {
+      DLOGI("Pluggable display is connected. Exit!");
+      auto hwc_display_dummy = hwc_display_[HWC_DISPLAY_PRIMARY];
+      HWCDisplayDummy::Destroy(hwc_display_dummy);
+      CoreInterface::DestroyCore();
+      _exit(1);
+    }
 
     // Do not recreate primary display or if display is not connected.
     if (info.is_primary || info.display_type != kPluggable || !info.is_connected) {

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -75,6 +75,11 @@ HWCDisplayDummy::HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buff
   display_null_.SetFrameBufferConfig(config);
   num_configs_ = 1;
   display_intf_ = &display_null_;
+  client_target_ = new HWCLayer(id_, buffer_allocator_);
+  current_refresh_rate_ = max_refresh_rate_ = 60;
+  hwc_config_map_.resize(num_configs_);
+  variable_config_map_[0] = config;
+  hwc_config_map_.at(0) = 0;
 }
 
 HWC2::Error HWCDisplayDummy::GetActiveConfig(hwc2_config_t *out_config) {
