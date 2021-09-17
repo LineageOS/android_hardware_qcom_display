@@ -107,6 +107,7 @@ case "$target" in
         setprop vendor.display.enable_posted_start_dyn 1
         setprop vendor.display.enable_allow_idle_fallback 1
         setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.enable_async_powermode 1
         ;;
     esac
 esac

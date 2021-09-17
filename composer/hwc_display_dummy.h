@@ -51,6 +51,8 @@ class HWCDisplayDummy : public HWCDisplay {
   virtual bool VsyncEnablePending();
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
+  virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
+                             int active_config_index, uint32_t num_configs);
  private:
   HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                   HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,

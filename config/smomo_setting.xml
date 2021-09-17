@@ -37,7 +37,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	<SmoMoWhiteList>
 		<LayerWhiteList>
 			<LayerApp name="snapcam">
-				<AppLayer name="SurfaceView[org.codeaurora.snapcam/com.android.camera.CameraLauncher](BLAST)#0" type="camera" mode="1" enable="false"/>
+				<AppLayer name="SurfaceView - org.codeaurora.snapcam/com.android.camera.CameraActivity#0" type="camera"/>
+				<AppLayer name="SurfaceView - org.codeaurora.snapcam/com.android.camera.CameraLauncher#0" type="camera"/>
+				<AppLayer name="SurfaceView - org.codeaurora.snapcam/com.android.camera.CameraLauncher#1" type="camera"/>
+				<AppLayer name="SurfaceView[org.codeaurora.snapcam/com.android.camera.CameraLauncher](BLAST)#1" type="camera"/>
+				<AppLayer name="SurfaceView[org.codeaurora.snapcam/com.android.camera.CameraLauncher](BLAST)#0" type="camera" mode="1" enable="true"/>
 			</LayerApp>
 
 			<LayerApp name="testgame">
