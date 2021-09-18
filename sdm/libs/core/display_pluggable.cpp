@@ -137,6 +137,10 @@ DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
+  if (error == kErrorNeedsLutRegen && (ForceToneMapUpdate(layer_stack) == kErrorNone)) {
+    return kErrorNone;
+  }
+
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
