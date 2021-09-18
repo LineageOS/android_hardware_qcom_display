@@ -3011,6 +3011,16 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   GetDisplayAttributesForConfig(INT(config), &info);
   active_refresh_rate_ = info.fps;
 
+  DisplayConfigVariableInfo current_config_info = {};
+  GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
+  // Set fb config if new resolution differs
+  if (info.x_pixels != current_config_info.x_pixels ||
+      info.y_pixels != current_config_info.y_pixels) {
+    if (SetFrameBufferConfig(info.x_pixels, info.y_pixels)) {
+      return HWC2::Error::BadParameter;
+    }
+  }
+
   return HWC2::Error::None;
 }
 
