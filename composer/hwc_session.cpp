@@ -1271,6 +1271,9 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     if (secure_sessions.any()) {
       DLOGE("Secure session is active, cannot create virtual display.");
       return HWC2::Error::Unsupported;
+    } else if (IsVirtualDisplayConnected()) {
+      DLOGE("Previous virtual session is active, cannot create virtual display.");
+      return HWC2::Error::Unsupported;
     } else if (IsPluggableDisplayConnected()) {
       DLOGE("External session is active, cannot create virtual display.");
       return HWC2::Error::Unsupported;
@@ -1322,6 +1325,15 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
 
 bool HWCSession::IsPluggableDisplayConnected() {
   for (auto &map_info : map_info_pluggable_) {
+    if (hwc_display_[map_info.client_id]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool HWCSession::IsVirtualDisplayConnected() {
+  for (auto &map_info : map_info_virtual_) {
     if (hwc_display_[map_info.client_id]) {
       return true;
     }
