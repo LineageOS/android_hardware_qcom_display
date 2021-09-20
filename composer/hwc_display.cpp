@@ -2993,6 +2993,7 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
   if (current_config == config) {
+    SetActiveConfigIndex(config);
     return HWC2::Error::None;
   }
 
