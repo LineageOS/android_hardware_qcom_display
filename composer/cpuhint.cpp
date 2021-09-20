@@ -46,13 +46,13 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
   }
 
   if (vendor_ext_lib_.Open(path)) {
-    if (!vendor_ext_lib_.Sym("perf_hint_offload", reinterpret_cast<void **> \
-        (&fn_perf_hint_offload_))) {
+    if (!vendor_ext_lib_.Sym("perf_event_offload", reinterpret_cast<void **> \
+        (&fn_perf_event_offload_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
     }
     DLOGI("Successfully Loaded Vendor Extension Library symbols");
-    enabled_ = true;
+    enabled_ = (fn_perf_event_offload_ != NULL);
   } else {
     DLOGW("Failed to open %s : %s", path, vendor_ext_lib_.Error());
   }
@@ -62,7 +62,8 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
 
 void CPUHint::ReqHintsOffload(int hint, int duration) {
   if(enabled_ && hint > 0) {
-    int handle = fn_perf_hint_offload_(hint, NULL, duration, 0, 0, NULL);
+    int args[] = {0, duration};
+    int handle = fn_perf_event_offload_(hint, NULL, 2, args);
     if (handle < 0) {
       DLOGW("Failed to send hint 0x%x. handle = %d", hint, handle);
     }
