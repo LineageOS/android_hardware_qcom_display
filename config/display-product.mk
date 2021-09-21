@@ -13,10 +13,6 @@ PRODUCT_PACKAGES += \
     libsdmutils \
     libqdutils \
     libqdMetaData \
-    libqdMetaData.system \
-    libdisplayconfig \
-    libgralloc.qti \
-    libdisplayconfig.qti \
     libdisplayconfig.vendor \
     libdisplayconfig.qti.vendor \
     vendor.display.config@2.0.vendor \
@@ -191,22 +187,17 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 displayconfig_enabled default var1 var2 var3
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default var1 var2 var3
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
 SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
-SOONG_CONFIG_qtidisplay_displayconfig_enabled := false
 SOONG_CONFIG_qtidisplay_default := true
 SOONG_CONFIG_qtidisplay_var1 := false
 SOONG_CONFIG_qtidisplay_var2 := false
 SOONG_CONFIG_qtidisplay_var3 := false
-
-ifeq ($(call is-vendor-board-platform,QCOM),true)
-    SOONG_CONFIG_qtidisplay_displayconfig_enabled := true
-endif
 
 # Techpack values
 
