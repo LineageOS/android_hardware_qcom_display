@@ -168,6 +168,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int GetConfigCount(DispType dpy, uint32_t *count);
     virtual int GetActiveConfig(DispType dpy, uint32_t *config);
     virtual int SetActiveConfig(DispType dpy, uint32_t config);
+    virtual int GetActiveBuiltinDisplayAttributes(
+                                           DisplayConfig::Attributes *attributes);
     virtual int GetDisplayAttributes(uint32_t config_index, DispType dpy,
                                      DisplayConfig::Attributes *attributes);
     virtual int SetPanelBrightness(uint32_t level);

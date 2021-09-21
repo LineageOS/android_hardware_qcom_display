@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -239,6 +239,34 @@ int HWCSession::SetActiveConfigIndex(int disp_id, uint32_t config) {
 
 int HWCSession::DisplayConfigImpl::SetActiveConfig(DispType dpy, uint32_t config) {
   return hwc_session_->SetActiveConfigIndex(MapDisplayType(dpy), config);
+}
+
+int HWCSession::DisplayConfigImpl::GetActiveBuiltinDisplayAttributes(
+                                           DisplayConfig::Attributes *attributes) {
+  int32_t error = -EINVAL;
+  hwc2_display_t disp_id = HWC_DISPLAY_PRIMARY;
+
+  if (hwc_session_->hwc_display_[disp_id]) {
+    uint32_t config_index = 0;
+    HWC2::Error ret = hwc_session_->hwc_display_[disp_id]->GetActiveConfig(&config_index);
+    if (ret != HWC2::Error::None) {
+      goto err;
+    }
+    DisplayConfigVariableInfo hwc_display_attributes;
+    error = hwc_session_->hwc_display_[disp_id]->GetDisplayAttributesForConfig(
+                          static_cast<int>(config_index), &hwc_display_attributes);
+    if (!error) {
+      attributes->vsync_period = hwc_display_attributes.vsync_period_ns;
+      attributes->x_res = hwc_display_attributes.x_pixels;
+      attributes->y_res = hwc_display_attributes.y_pixels;
+      attributes->x_dpi = hwc_display_attributes.x_dpi;
+      attributes->y_dpi = hwc_display_attributes.y_dpi;
+      attributes->panel_type = DisplayConfig::DisplayPortType::kDefault;
+      attributes->is_yuv = hwc_display_attributes.is_yuv;
+    }
+  }
+err:
+  return error;
 }
 
 int HWCSession::DisplayConfigImpl::GetDisplayAttributes(uint32_t config_index, DispType dpy,
