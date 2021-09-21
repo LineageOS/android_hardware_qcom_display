@@ -199,6 +199,7 @@ HWC2::Error HWCDisplayVirtualDPU::Present(shared_ptr<Fence> *out_retire_fence) {
 }
 
 HWC2::Error HWCDisplayVirtualDPU::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
+  DTRACE_SCOPED();
   // Retire fence points to WB done.
   // Explicitly query for output buffer acquire fence.
   display_intf_->GetOutputBufferAcquireFence(&layer_stack_.retire_fence);

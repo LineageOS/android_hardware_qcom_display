@@ -13,6 +13,10 @@ PRODUCT_PACKAGES += \
     libsdmutils \
     libqdutils \
     libqdMetaData \
+    libqdMetaData.system \
+    libdisplayconfig \
+    libgralloc.qti \
+    libdisplayconfig.qti \
     libdisplayconfig.vendor \
     libdisplayconfig.qti.vendor \
     vendor.display.config@2.0.vendor \
@@ -106,18 +110,20 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.use_smooth_motion=1 \
     vendor.display.disable_stc_dimming=1 \
     vendor.display.enable_dpps_dynamic_fps=1 \
-    debug.sf.high_fps_late_sf_phase_offset_ns=-1000000 \
+    debug.sf.high_fps_late_sf_phase_offset_ns=-2000000 \
     debug.sf.high_fps_early_phase_offset_ns=-2000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-2000000 \
     debug.sf.disable_client_composition_cache=1 \
     debug.sf.enable_gl_backpressure=1 \
     debug.sf.enable_hwc_vds=1 \
+    debug.sf.enable_advanced_sf_phase_offset=1 \
     vendor.display.vds_allow_hwc=1 \
     vendor.display.enable_async_vds_creation=1 \
     vendor.display.enable_rounded_corner=1 \
     vendor.display.disable_3d_adaptive_tm=1 \
     vendor.display.disable_sdr_dimming=1 \
-    vendor.display.enable_rc_support=1
+    vendor.display.enable_rc_support=1 \
+    vendor.display.disable_sdr_histogram=1
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
@@ -162,10 +168,6 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquir
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.supports_background_blur=1
 
-ifeq ($(TARGET_BOARD_PLATFORM),taro)
-PRODUCT_PROPERTY_OVERRIDES += debug.sf.set_idle_timer_ms=80
-endif
-
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -189,17 +191,22 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default var1 var2 var3
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 displayconfig_enabled default var1 var2 var3
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
 SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
+SOONG_CONFIG_qtidisplay_displayconfig_enabled := false
 SOONG_CONFIG_qtidisplay_default := true
 SOONG_CONFIG_qtidisplay_var1 := false
 SOONG_CONFIG_qtidisplay_var2 := false
 SOONG_CONFIG_qtidisplay_var3 := false
+
+ifeq ($(call is-vendor-board-platform,QCOM),true)
+    SOONG_CONFIG_qtidisplay_displayconfig_enabled := true
+endif
 
 # Techpack values
 

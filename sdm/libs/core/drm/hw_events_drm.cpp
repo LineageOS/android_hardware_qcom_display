@@ -284,34 +284,30 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
     return kErrorResources;
   }
 
-  RegisterPanelDead(true);
-  RegisterIdleNotify(true);
-  RegisterIdlePowerCollapse(true);
-
   int value = 0;
   if (Debug::Get()->GetProperty(DISABLE_HW_RECOVERY_PROP, &value) == kErrorNone) {
     disable_hw_recovery_ = (value == 1);
   }
   DLOGI("disable_hw_recovery_ set to %d", disable_hw_recovery_);
-  if (!disable_hw_recovery_) {
-    RegisterHwRecovery(true);
-  }
 
   if (Debug::Get()->GetProperty(ENABLE_HISTOGRAM_INTR, &value) == kErrorNone) {
     enable_hist_interrupt_ = (value == 1);
   }
   DLOGI("enable_hist_interrupt_ set to %d", enable_hist_interrupt_);
-  if (enable_hist_interrupt_) {
-    RegisterHistogram(true);
-  }
 
   if (Debug::Get()->GetProperty(DISABLE_MMRM_PROP, &value) == kErrorNone) {
     disable_mmrm_ = (value == 1);
   }
   DLOGI("disable_mmrm_ set to %d", disable_mmrm_);
-  if (!disable_mmrm_) {
-    RegisterMMRM(true);
-  }
+
+#ifndef TRUSTED_VM
+  SetEventState(HWEvent::PANEL_DEAD, true);
+  SetEventState(HWEvent::IDLE_NOTIFY, true);
+  SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
+  SetEventState(HWEvent::HW_RECOVERY, true);
+  SetEventState(HWEvent::HISTOGRAM, true);
+  SetEventState(HWEvent::MMRM, true);
+#endif
 
   return kErrorNone;
 }
@@ -376,6 +372,30 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
     } break;
     case HWEvent::POWER_EVENT: {
       RegisterPowerEvents(enable);
+    } break;
+    case HWEvent::PANEL_DEAD: {
+      RegisterPanelDead(enable);
+    } break;
+    case HWEvent::IDLE_NOTIFY: {
+      RegisterIdleNotify(enable);
+    } break;
+    case HWEvent::IDLE_POWER_COLLAPSE: {
+      RegisterIdlePowerCollapse(enable);
+    } break;
+    case HWEvent::HW_RECOVERY: {
+      if (!disable_hw_recovery_) {
+        RegisterHwRecovery(enable);
+      }
+    } break;
+    case HWEvent::HISTOGRAM: {
+      if (enable_hist_interrupt_) {
+        RegisterHistogram(enable);
+      }
+    } break;
+    case HWEvent::MMRM: {
+      if (!disable_mmrm_) {
+        RegisterMMRM(enable);
+      }
     } break;
     default:
       DLOGE("Event not supported");
@@ -595,15 +615,17 @@ DisplayError HWEventsDRM::RegisterPowerEvents(bool enable) {
   } else {
     ret = drmIoctl(poll_fds_[power_event_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
   }
-  if (ret == -ENOENT) {
-    DLOGW("%s event failed as the device has disconnected. Event_thread_name : %s",
-          (enable) ? "Register" : "DeRegister", event_thread_name_.c_str());
-  } else if (ret) {
-    DLOGE("Failed to %s event. Event_thread_name : %s", (enable) ? "Register" : "DeRegister",
-          event_thread_name_.c_str());
-    return kErrorResources;
+  if (ret) {
+    ret = -errno;
+    if (ret == -ENOENT || ret == -ENODEV || ret == -EACCES) {
+      DLOGW("%s event failed as the device has disconnected. Event_thread_name : %s Ret=%d",
+            (enable) ? "Register" : "DeRegister", event_thread_name_.c_str(), ret);
+    } else {
+      DLOGE("Failed to %s event. Event_thread_name : %s, Ret=%d", (enable) ? "Register" :
+            "DeRegister", event_thread_name_.c_str(), ret);
+      return kErrorResources;
+    }
   }
-
   return kErrorNone;
 }
 

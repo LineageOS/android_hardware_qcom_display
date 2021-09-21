@@ -341,7 +341,8 @@ bool ColorManagerProxy::NeedsPartialUpdateDisable() {
     // unexpected reset of disable_pu_. But this is a rare case.
     pp_features_.MarkPuEnable();
   }
-  return (pu_disable || pp_features_.IsDirty() || needs_update_ || apply_mode_);
+  return (pu_disable || pp_features_.IsDirty() || needs_update_ || apply_mode_ ||
+    pp_features_.IsSwAssetDirty());
 }
 
 DisplayError ColorManagerProxy::Commit() {
@@ -524,15 +525,36 @@ DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
     needs_update_ = false;
   }
 
+  {
+    Locker &locker(pp_features_.GetLocker());
+    SCOPE_LOCK(locker);
+    bool dirty = pp_features_.IsSwAssetDirty();
+    if (dirty) {
+      pp_features_.ClearSwAssertDirty();
+    }
+  }
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::PrePrepare() {
+DisplayError ColorManagerProxy::Prepare() {
   DisplayError ret = kErrorNone;
 
-  needs_update_ = NeedAssetsUpdate();
   ret = ApplySwAssets();
   return ret;
+}
+
+bool ColorManagerProxy::IsValidateNeeded() {
+  needs_update_ = NeedAssetsUpdate();
+  if (needs_update_) {
+    return needs_update_;
+  }
+
+  {
+    Locker &locker(pp_features_.GetLocker());
+    SCOPE_LOCK(locker);
+    bool dirty = pp_features_.IsSwAssetDirty();
+    return dirty;
+  }
 }
 
 DisplayError ColorManagerProxy::ApplySwAssets() {

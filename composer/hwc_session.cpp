@@ -745,6 +745,17 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
 
 void HWCSession::PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                       uint32_t refresh_rate, uint32_t qsync_refresh_rate) {
+  // AIDL callback
+  if (!callback_clients_.empty()) {
+    std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+    for (auto const& [id, callback] : callback_clients_) {
+      if (callback) {
+        callback->notifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
+      }
+    }
+  }
+
+  // HIDL callback
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = qsync_callback_.lock();
   if (!callback) {
     return;
@@ -3632,22 +3643,37 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
     if (enable_primary_reconfig_req_) {
       // todo (user): move this logic to wait for MDP resource reallocation/reconfiguration
       // to SDM module.
-      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+      {
+        SCOPE_LOCK(locker_[display_id]);
+        if (hwc_display_[display_id]) {
+          res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+        }
+        else {
+          DLOGW("Display %" PRIu64 "no longer available.", display_id);
+          return HWC2_ERROR_BAD_DISPLAY;
+        }
+      }
       if (needs_active_builtin_reconfig) {
         SCOPE_LOCK(locker_[active_builtin_id]);
-        hwc2_config_t current_config = 0, new_config = 0;
-        hwc_display_[active_builtin_id]->GetActiveConfig(&current_config);
-        int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
-        if (status) {
-          DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
-                active_builtin_id);
-          return status;
-        }
-        hwc_display_[active_builtin_id]->GetActiveConfig(&new_config);
+        if (hwc_display_[active_builtin_id]) {
+          hwc2_config_t current_config = 0, new_config = 0;
+          hwc_display_[active_builtin_id]->GetActiveConfig(&current_config);
+          int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
+          if (status) {
+            DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
+                  active_builtin_id);
+            return status;
+          }
+          hwc_display_[active_builtin_id]->GetActiveConfig(&new_config);
 
-        // In case of config change, notify client with the new configuration
-        if (new_config != current_config) {
-          NotifyDisplayAttributes(active_builtin_id, new_config);
+          // In case of config change, notify client with the new configuration
+          if (new_config != current_config) {
+            NotifyDisplayAttributes(active_builtin_id, new_config);
+          }
+        }
+        else {
+          DLOGW("Display %" PRIu64 "no longer available.", active_builtin_id);
+          return HWC2_ERROR_BAD_DISPLAY;
         }
       }
     }
@@ -3665,9 +3691,18 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
         }
         cached_retire_fence_ == nullptr;
       }
-      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
-      if (!enable_primary_reconfig_req_) {
-        needs_active_builtin_reconfig = false;
+      {
+        SCOPE_LOCK(locker_[display_id]);
+        if (hwc_display_[display_id]) {
+          res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+          if (!enable_primary_reconfig_req_) {
+            needs_active_builtin_reconfig = false;
+          }
+        }
+        else {
+          DLOGW("Display %" PRIu64 "no longer available.", display_id);
+          return HWC2_ERROR_BAD_DISPLAY;
+        }
       }
     } while (res_wait || needs_active_builtin_reconfig);
   }
@@ -3857,7 +3892,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
 }
 
 android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
-  bool needs_refresh = false;
+  bool trigger_refresh = false;
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   if (target_display == -1) {
     target_display = GetActiveBuiltinDisplay();
@@ -3874,6 +3909,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   std::copy(map_info_virtual_.begin(), map_info_virtual_.end(), std::back_inserter(map_info));
 
   for (auto &info : map_info) {
+    bool needs_refresh = false;
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
       if (hwc_display_[info.client_id]) {
@@ -3888,11 +3924,18 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
           return -EINVAL;
         }
       }
-    }
-    if (needs_refresh) {
-      callbacks_.Refresh(info.client_id);
+      trigger_refresh |= needs_refresh;
     }
   }
+  if (trigger_refresh) {
+    callbacks_.Refresh(target_display);
+    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    if (ret != 0) {
+      DLOGE("WaitForCommitDone failed with error %d", ret);
+      return -EINVAL;
+    }
+  }
+
   if (pending_hotplug_event_ == kHotPlugEvent) {
     // Do hotplug handling in a different thread to avoid blocking TUI thread.
     std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();

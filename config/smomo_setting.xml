@@ -28,21 +28,25 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <SmomoSetting>
-    <SmomoModeList>
-        <SmomoMode id="1" name="snapcam">
-            <FpsMap minFps="70" maxFps="74" appFps="72" refreshRate="144"/>
-        </SmomoMode>
-    </SmomoModeList>
+  <SmomoModeList>
+    <SmomoMode id="1" name="game">
+      <!-- Sample mode config used by Game layer which defines 2 mode entries -->
+      <FpsMap minFps="100" maxFps="1000" appFps="120" refreshRate="120" qsync="true" bypass="true" vsyncMove="3000000" early="1000000" late="6000000" slack="500000"/>
+      <FpsMap minFps="52" maxFps="68" appFps="60" refreshRate="120" qsync="true" vsyncMove="3000000" early="1000000" late="6000000" slack="500000" maxLatency="0"/>
+    </SmomoMode>
+  </SmomoModeList>
 
-    <SmoMoWhiteList>
-        <LayerWhiteList>
-            <LayerApp name="snapcam">
-                <AppLayer name="SurfaceView[org.codeaurora.snapcam/com.android.camera.CameraLauncher](BLAST)#0" type="camera" mode="1" enable="false"/>
-            </LayerApp>
+  <SmoMoWhiteList>
+    <LayerWhiteList>
+      <!-- Sample config for Camera layer which uses default strategy -->
+      <LayerApp name="camera">
+        <AppLayer name="SurfaceView[com.sample.camera/com.android.camera.CameraActivity](BLAST)#0" type="camera" strategy="default" enable="true"/>
+      </LayerApp>
 
-            <LayerApp name="testgame">
-                <AppLayer name="SurfaceView - com.test.game/com.test.game.Activity#0" type="game" enable="false"/>
-            </LayerApp>
-        </LayerWhiteList>
-    </SmoMoWhiteList>
+      <!-- Sample config for Game layer which uses mode strategy -->
+      <LayerApp name="game">
+        <AppLayer name="SurfaceView[com.sample.game/com.sample.game.GameActivity](BLAST)#0" type="game" strategy="mode" mode="1" variation="0.6" samples="8" enable="true"/>
+      </LayerApp>
+    </LayerWhiteList>
+  </SmoMoWhiteList>
 </SmomoSetting>

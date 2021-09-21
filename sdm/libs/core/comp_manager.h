@@ -105,10 +105,12 @@ class CompManager {
   bool GetDemuraStatusForDisplay(const int32_t &display_id) {
     return display_demura_status_[display_id];
   }
-  DisplayError SetMaxSDEClk(uint32_t clk);
+  DisplayError SetMaxSDEClk(Handle display_ctx, uint32_t clk);
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
   DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);
+  DisplayError GetHDR10PlusCapability(bool *hdr_plus_support);
+  DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -148,6 +150,7 @@ class CompManager {
   HWResourceInfo hw_res_info_;
   BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
+  CapabilitiesInterface *cap_intf_ = nullptr;
   uint32_t max_sde_secondary_fetch_layers_ = 2;
   uint32_t max_sde_builtin_fetch_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;

@@ -221,9 +221,14 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
     return error;
   }
 
+  // Do not skip validate if needs update PP features.
+  if (color_mgr_) {
+    needs_validate_ |= color_mgr_->IsValidateNeeded();
+  }
+
   error = DisplayBase::PrePrepare(layer_stack);
-  if (error == kErrorNone) {
-    return kErrorNone;
+  if (error == kErrorNone || error == kErrorNeedsLutRegen) {
+    return error;
   }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
@@ -269,6 +274,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 
   DisplayError error = PrePrepare(layer_stack);
   if (error == kErrorNone) {
+    return kErrorNone;
+  }
+
+  if (error == kErrorNeedsLutRegen && (ForceToneMapUpdate(layer_stack) == kErrorNone)) {
     return kErrorNone;
   }
 
@@ -2096,10 +2105,14 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
 
   HWResourceInfo hw_resource_info = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  bool hdr_plus_supported = false;
+
+  // Checking library support for HDR10+
+  comp_manager_->GetHDR10PlusCapability(&hdr_plus_supported);
 
   fixed_info->hdr_supported = hw_resource_info.has_hdr;
   // Built-in displays always support HDR10+ when the target supports HDR
-  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr;
+  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr && hdr_plus_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;

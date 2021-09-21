@@ -121,6 +121,7 @@
 #define ENABLE_POMS_DURING_DOZE              DISPLAY_PROP("enable_poms_during_doze")
 // Disable 3D adaptive tone mapping support
 #define DISABLE_3D_ADAPTIVE_TM               DISPLAY_PROP("disable_3d_adaptive_tm")
+#define DISABLE_SDR_HISTOGRAM                DISPLAY_PROP("disable_sdr_histogram")
 // Disable SDR dimming support
 #define DISABLE_SDR_DIMMING                  DISPLAY_PROP("disable_sdr_dimming")
 

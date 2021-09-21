@@ -509,6 +509,11 @@ int HWCDisplay::Init() {
     DLOGI("HDR Handling disabled");
   }
 
+  HWCDebugHandler::Get()->GetProperty(DISABLE_SDR_HISTOGRAM, &disable_sdr_histogram_);
+  if (disable_sdr_histogram_) {
+    DLOGI("Non-HDR histogram handling disabled");
+  }
+
   int property_swap_interval = 1;
   HWCDebugHandler::Get()->GetProperty(ZERO_SWAP_INTERVAL, &property_swap_interval);
   if (property_swap_interval == 0) {
@@ -623,6 +628,9 @@ int HWCDisplay::Deinit() {
 // LayerStack operations
 HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
+  if (disable_sdr_histogram_)
+    layer->IgnoreSdrContentMetadata(true);
+
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
@@ -846,6 +854,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.client_incompatible =
       dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
   DLOGV_IF(kTagClient, "layer_stack_.client_incompatible : %d", layer_stack_.client_incompatible);
+  ATRACE_INT("HDRPresent ", layer_stack_.flags.hdr_present ? 1 : 0);
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -1811,6 +1820,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 }
 
 HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
+  DTRACE_SCOPED();
   auto status = HWC2::Error::None;
 
   // Do no call flush on errors, if a successful buffer is never submitted.
@@ -2773,6 +2783,8 @@ HWC2::Error HWCDisplay::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
 HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
     hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
     VsyncPeriodChangeTimeline *out_timeline) {
+  DTRACE_SCOPED();
+
 
   if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Invalid config: %d", config);
@@ -2782,6 +2794,25 @@ HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
   if (!IsModeSwitchAllowed(config)) {
     return HWC2::Error::BadConfig;
   }
+
+  // DRM driver expects DRM_PREFERRED_MODE to be set as part of first commit
+  if (!IsFirstCommitDone()) {
+    // Store client's config.
+    // Set this as part of post commit.
+    pending_first_commit_config_ = true;
+    pending_first_commit_config_index_ = config;
+    DLOGI("Defer config change to %d until first commit", UINT32(config));
+    return HWC2::Error::None;
+  } else if (pending_first_commit_config_) {
+    // Config override request from client.
+    // Honour latest request.
+    pending_first_commit_config_ = false;
+  }
+
+  // Cache refresh rate set by client.
+  DisplayConfigVariableInfo info = {};
+  GetDisplayAttributesForConfig(INT(config), &info);
+  active_refresh_rate_ = info.fps;
 
   if (vsync_period_change_constraints->seamlessRequired && !AllowSeamless(config)) {
     DLOGE("Seamless switch to the config: %d, is not allowed!", config);

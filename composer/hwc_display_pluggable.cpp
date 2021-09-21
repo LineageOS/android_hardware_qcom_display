@@ -168,6 +168,7 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
 }
 
 HWC2::Error HWCDisplayPluggable::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
+  DTRACE_SCOPED();
   auto status = HWC2::Error::None;
 
   HandleFrameOutput();

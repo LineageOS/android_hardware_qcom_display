@@ -33,11 +33,6 @@ service qti_display_boot /vendor/bin/init.qti.display_boot.sh
    disabled
    oneshot
 
-on boot
-   # spec fence
-   chown system graphics /dev/spec_sync
-   chmod 0660 /dev/spec_sync
-
 on post-fs-data
    start qti_display_boot
 

@@ -661,6 +661,13 @@ DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
     return kErrorDeferred;
   }
 
+#ifdef TRUSTED_VM
+  if (first_cycle_) {
+    DLOGI("First cycle is not done yet!! Skip for now");
+    return kErrorDeferred;
+  }
+#endif
+
   char buffer[kMaxSysfsCommandLength] = {0};
 
   if (brightness_base_path_.empty()) {

@@ -87,7 +87,10 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) {
     return kErrorNone;
   }
-  virtual DisplayError SetMaxSDEClk(uint32_t clk) { return kErrorNotSupported; }
+  virtual DisplayError SetMaxSDEClk(Handle display_ctx, uint32_t clk) { return kErrorNotSupported; }
+  virtual DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
+    return kErrorNotSupported;
+  }
 
  private:
   enum PipeOwner {

@@ -49,6 +49,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   if (extension_intf) {
     error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, &resource_intf_);
     extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
+    extension_intf->CreateCapabilitiesExtn(&cap_intf_);
   } else {
     error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);
   }
@@ -56,6 +57,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   if (error != kErrorNone) {
     if (extension_intf) {
       extension_intf->DestroyDppsControlExtn(dpps_ctrl_intf_);
+      extension_intf->DestroyCapabilitiesExtn(cap_intf_);
     }
     return error;
   }
@@ -73,6 +75,7 @@ DisplayError CompManager::Deinit() {
   if (extension_intf_) {
     extension_intf_->DestroyResourceExtn(resource_intf_);
     extension_intf_->DestroyDppsControlExtn(dpps_ctrl_intf_);
+    extension_intf_->DestroyCapabilitiesExtn(cap_intf_);
   } else {
     ResourceDefault::DestroyResourceDefault(resource_intf_);
   }
@@ -522,6 +525,18 @@ DisplayError CompManager::SetMaxMixerStages(Handle display_ctx, uint32_t max_mix
   return error;
 }
 
+DisplayError CompManager::GetHDR10PlusCapability(bool *hdr_plus_support) {
+  DisplayError error = kErrorNone;
+  if (cap_intf_) {
+    DLOGD_IF(kTagCompManager, "Attempting to get HDR10+ capability");
+    error = cap_intf_->GetCapability(kHDR10PlusCapability, hdr_plus_support);
+  }
+  if (error != kErrorNone || !cap_intf_) {
+    DLOGW("Failed to get HDR10+ capability");
+  }
+  return error;
+}
+
 void CompManager::ControlPartialUpdate(Handle display_ctx, bool enable) {
   SCOPE_LOCK(locker_);
 
@@ -763,9 +778,11 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
   return resource_intf_->GetDemuraFetchResources(display_comp_ctx->display_resource_ctx, frl);
 }
 
-DisplayError CompManager::SetMaxSDEClk(uint32_t clk) {
+DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
   if (resource_intf_) {
-    return resource_intf_->SetMaxSDEClk(clk);
+    DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+    return resource_intf_->SetMaxSDEClk(display_comp_ctx->display_resource_ctx, clk);
   }
 
   return kErrorNotSupported;
@@ -800,6 +817,15 @@ DisplayError CompManager::SetBacklightLevel(Handle display_ctx,
   return resource_intf_->Perform(ResourceInterface::kCmdSetBacklightLevel,
                                   display_comp_ctx->display_resource_ctx,
                                   backlight_level);
+}
+
+DisplayError CompManager::ForceToneMapConfigure(Handle display_ctx,
+    DispLayerStack *disp_layer_stack) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return resource_intf_->ForceToneMapConfigure(display_comp_ctx->display_resource_ctx,
+                                               disp_layer_stack);
 }
 
 }  // namespace sdm
