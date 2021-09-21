@@ -107,8 +107,7 @@ DisplayError DisplayBuiltIn::Init() {
                  HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD,
                  HWEvent::HW_RECOVERY,      HWEvent::HISTOGRAM,
                  HWEvent::BACKLIGHT_EVENT,  HWEvent::POWER_EVENT,
-                 HWEvent::MMRM,             HWEvent::IDLE_NOTIFY,
-                 HWEvent::VM_RELEASE_EVENT};
+                 HWEvent::MMRM,             HWEvent::VM_RELEASE_EVENT};
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_.push_back(HWEvent::IDLE_POWER_COLLAPSE);
   }
@@ -307,6 +306,8 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   CacheFrameROI();
 
   NotifyDppsHdrPresent(layer_stack);
+
+  pending_commit_ = true;
 
   return kErrorNone;
 }
@@ -712,6 +713,8 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
 
   handle_idle_timeout_ = false;
 
+  pending_commit_ = false;
+
   return kErrorNone;
 }
 
@@ -1021,18 +1024,20 @@ void DisplayBuiltIn::SetVsyncStatus(bool enable) {
 }
 
 void DisplayBuiltIn::IdleTimeout() {
-  if (hw_panel_info_.mode == kModeVideo) {
-    if (event_handler_->HandleEvent(kIdleTimeout) != kErrorNone) {
-      return;
-    }
-    handle_idle_timeout_ = true;
-    event_handler_->Refresh();
-    hw_intf_->EnableSelfRefresh();
-    if (!enhance_idle_time_) {
-      ClientLock lock(disp_mutex_);
-      comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
-    }
-    hw_intf_->EnableSelfRefresh();
+  DTRACE_SCOPED();
+  if (state_ == kStateOff || hw_panel_info_.mode != kModeVideo) {
+    return;
+  }
+
+  if (pending_commit_) {
+    return;
+  }
+
+  handle_idle_timeout_ = true;
+  event_handler_->Refresh();
+  hw_intf_->EnableSelfRefresh();
+  if (!enhance_idle_time_) {
+    comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
   }
 }
 

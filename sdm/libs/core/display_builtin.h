@@ -231,7 +231,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
-  bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
   bool panel_feature_init_ = false;

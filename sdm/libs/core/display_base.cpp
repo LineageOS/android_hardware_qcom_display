@@ -1204,9 +1204,13 @@ void DisplayBase::CommitThread() {
     disp_mutex_.worker_cv.notify_one();
 
     // Wait for client thread to signal. Handle spurious interrupts.
-    disp_mutex_.worker_cv.wait(disp_mutex_.worker_mutex, [this] {
-      return disp_mutex_.worker_busy;
-    });
+    if (!(disp_mutex_.worker_cv.wait_until(disp_mutex_.worker_mutex, WaitUntil(), [this] {
+      return (disp_mutex_.worker_busy);
+    }))) {
+      DLOGI("Received idle timeout");
+      IdleTimeout();
+      continue;
+    }
 
     if (disp_mutex_.worker_exit) {
       DLOGI("Terminate commit thread.");
@@ -1230,7 +1234,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   // part of first validate
   if (first_cycle_) {
     hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
-    hw_events_intf_->SetEventState(HWEvent::IDLE_NOTIFY, true);
     hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
     hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
     hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
@@ -3915,6 +3918,19 @@ void DisplayBase::PrepareForAsyncTransition() {
   // To prevent accidental usage, reset all such internal pointers referring to caller structures
   //    so that an instant fatal error is observed in place of prolonged corruption.
   disp_layer_stack_.stack = nullptr;
+}
+
+std::chrono::system_clock::time_point DisplayBase::WaitUntil() {
+  int idle_time_ms = disp_layer_stack_.info.set_idle_time_ms;
+  std::chrono::system_clock::time_point timeout_time;
+  // Indefinite wait if state is off or idle timeout has triggered
+  if (state_ == kStateOff || idle_time_ms == 0 || handle_idle_timeout_) {
+    timeout_time = std::chrono::system_clock::from_time_t(INT_MAX);
+  } else {
+    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+    timeout_time = current_time + std::chrono::milliseconds(idle_time_ms);
+  }
+  return timeout_time;
 }
 
 }  // namespace sdm

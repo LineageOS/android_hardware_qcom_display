@@ -105,7 +105,7 @@ DisplayError DisplayPluggable::Init() {
   GetScanSupport();
   underscan_supported_ = (scan_support_ == kScanAlwaysUnderscanned) || (scan_support_ == kScanBoth);
 
-  event_list_ = {HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT, HWEvent::CEC_READ_MESSAGE,
+  event_list_ = {HWEvent::VSYNC, HWEvent::EXIT, HWEvent::CEC_READ_MESSAGE,
                  HWEvent::HW_RECOVERY, HWEvent::POWER_EVENT};
 
   error = HWEventsInterface::Create(display_id_, kPluggable, this, event_list_, hw_intf_,

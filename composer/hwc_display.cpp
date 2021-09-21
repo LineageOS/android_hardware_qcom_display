@@ -1451,16 +1451,6 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
-    case kIdleTimeout: {
-      SCOPE_LOCK(HWCSession::locker_[id_]);
-      if (pending_commit_) {
-        // If idle timeout event comes in between prepare
-        // and commit, drop it since device is not really
-        // idle.
-        return kErrorNotSupported;
-      }
-      break;
-    }
     case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
       // TODO(user): Following scenario need to be addressed

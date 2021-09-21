@@ -72,7 +72,6 @@ class HWEventsDRM : public HWEventsInterface {
 
   void *DisplayEventHandler();
   void HandleVSync(char *data);
-  void HandleIdleTimeout(char *data);
   void HandleCECMessage(char *data);
   void HandleThreadExit(char *data) {}
   void HandleThermal(char *data) {}
@@ -93,7 +92,6 @@ class HWEventsDRM : public HWEventsInterface {
   void CloseFds();
   DisplayError RegisterVSync();
   DisplayError RegisterPanelDead(bool enable);
-  DisplayError RegisterIdleNotify(bool enable);
   DisplayError RegisterIdlePowerCollapse(bool enable);
   DisplayError RegisterHwRecovery(bool enable);
   DisplayError RegisterHistogram(bool enable);
@@ -113,7 +111,6 @@ class HWEventsDRM : public HWEventsInterface {
   bool vsync_registered_ = false;
   uint32_t vsync_handler_count_ = 0;
   std::mutex vsync_mutex_;  // To protect vsync_enabled_ and vsync_registered_
-  uint32_t idle_notify_index_ = UINT32_MAX;
   sde_drm::DRMDisplayToken token_ = {};
   bool is_primary_ = false;
   uint32_t panel_dead_index_ = UINT32_MAX;

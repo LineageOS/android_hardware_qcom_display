@@ -109,15 +109,6 @@ DisplayError HWEventsDRM::InitializePollFd() {
         // Clear any existing data
         Sys::pread_(poll_fds_[i].fd, data, kMaxStringLength, 0);
       } break;
-      case HWEvent::IDLE_NOTIFY: {
-        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
-        if (poll_fds_[i].fd < 0) {
-          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
-          return kErrorResources;
-        }
-        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
-        idle_notify_index_ = i;
-      } break;
       case HWEvent::IDLE_POWER_COLLAPSE: {
         poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
         if (poll_fds_[i].fd < 0) {
@@ -211,9 +202,6 @@ DisplayError HWEventsDRM::SetEventParser() {
     switch (event_data.event_type) {
       case HWEvent::VSYNC:
         event_data.event_parser = &HWEventsDRM::HandleVSync;
-        break;
-      case HWEvent::IDLE_NOTIFY:
-        event_data.event_parser = &HWEventsDRM::HandleIdleTimeout;
         break;
       case HWEvent::CEC_READ_MESSAGE:
         event_data.event_parser = &HWEventsDRM::HandleCECMessage;
@@ -317,7 +305,6 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 
 #ifndef TRUSTED_VM
   SetEventState(HWEvent::PANEL_DEAD, true);
-  SetEventState(HWEvent::IDLE_NOTIFY, true);
   SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
   SetEventState(HWEvent::HW_RECOVERY, true);
   SetEventState(HWEvent::HISTOGRAM, true);
@@ -332,7 +319,6 @@ DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
 
   SetEventState(HWEvent::PANEL_DEAD, false);
-  SetEventState(HWEvent::IDLE_NOTIFY, false);
   SetEventState(HWEvent::IDLE_POWER_COLLAPSE, false);
   SetEventState(HWEvent::HW_RECOVERY, false);
   SetEventState(HWEvent::HISTOGRAM, false);
@@ -388,9 +374,6 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
     } break;
     case HWEvent::PANEL_DEAD: {
       RegisterPanelDead(enable);
-    } break;
-    case HWEvent::IDLE_NOTIFY: {
-      RegisterIdleNotify(enable);
     } break;
     case HWEvent::IDLE_POWER_COLLAPSE: {
       RegisterIdlePowerCollapse(enable);
@@ -455,7 +438,6 @@ void HWEventsDRM::CloseFds() {
         poll_fds_[i].fd = -1;
       } break;
       case HWEvent::MMRM:
-      case HWEvent::IDLE_NOTIFY:
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PANEL_DEAD:
       case HWEvent::HW_RECOVERY:
@@ -511,7 +493,6 @@ void *HWEventsDRM::DisplayEventHandler() {
       switch (event_data_list_[i].event_type) {
         case HWEvent::VSYNC:
         case HWEvent::PANEL_DEAD:
-        case HWEvent::IDLE_NOTIFY:
         case HWEvent::IDLE_POWER_COLLAPSE:
         case HWEvent::HW_RECOVERY:
         case HWEvent::HISTOGRAM:
@@ -663,32 +644,6 @@ DisplayError HWEventsDRM::RegisterHistogram(bool enable) {
 
   if (ret) {
     DLOGE("register histogram enable:%d failed", enable);
-    return kErrorResources;
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
-  if (idle_notify_index_ == UINT32_MAX) {
-    DLOGI("idle notify is not supported event");
-    return kErrorNone;
-  }
-
-  struct drm_msm_event_req req = {};
-  int ret = 0;
-
-  req.object_id = token_.crtc_id;
-  req.object_type = DRM_MODE_OBJECT_CRTC;
-  req.event = DRM_EVENT_IDLE_NOTIFY;
-  if (enable) {
-    ret = drmIoctl(poll_fds_[idle_notify_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
-  } else {
-    ret = drmIoctl(poll_fds_[idle_notify_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
-  }
-
-  if (ret) {
-    DLOGE("register idle notify enable:%d failed", enable);
     return kErrorResources;
   }
 
@@ -877,48 +832,6 @@ void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned i
   int64_t timestamp = (int64_t)(tv_sec)*1000000000 + (int64_t)(tv_usec)*1000;
   DTRACE_SCOPED();
   ev_data->event_handler_->VSync(timestamp);
-}
-
-void HWEventsDRM::HandleIdleTimeout(char *data) {
-  char event_data[kMaxStringLength];
-  int32_t size;
-  struct drm_msm_event_resp *event_resp = NULL;
-
-  size = (int32_t)Sys::pread_(poll_fds_[idle_notify_index_].fd, event_data, kMaxStringLength, 0);
-  if (size < 0) {
-    return;
-  }
-
-  if (size > kMaxStringLength) {
-    DLOGE("event size %d is greater than event buffer size %d\n", size, kMaxStringLength);
-    return;
-  }
-
-  if (size < (int32_t)sizeof(*event_resp)) {
-    DLOGE("size %d exp %zd\n", size, sizeof(*event_resp));
-    return;
-  }
-
-  int32_t i = 0;
-
-  while (i < size) {
-    event_resp = (struct drm_msm_event_resp *)&event_data[i];
-    switch (event_resp->base.type) {
-      case DRM_EVENT_IDLE_NOTIFY:
-      {
-        DLOGV("Received Idle time event");
-        event_handler_->IdleTimeout();
-        break;
-      }
-      default: {
-        DLOGE("invalid event %d", event_resp->base.type);
-        break;
-      }
-    }
-    i += event_resp->base.length;
-  }
-
-  return;
 }
 
 void HWEventsDRM::HandleCECMessage(char *data) {
