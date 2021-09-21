@@ -138,6 +138,7 @@
 #define DISABLE_DEMURA_PRIMARY               DISPLAY_PROP("disable_demura_primary")
 #define DISABLE_DEMURA_SECONDARY             DISPLAY_PROP("disable_demura_secondary")
 #define DISABLE_DEMURA_PANEL_REPLACEMENT     DISPLAY_PROP("disable_demura_panel_replacement")
+#define DISABLE_DEMURA_OPT_SINGLELM          DISPLAY_PROP("disable_demura_opt_singlelm")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
