@@ -2169,30 +2169,26 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  uint32_t max_input_width = hw_resource_.hw_dest_scalar_info.max_input_width;
-  uint32_t dual_max_input_width = max_input_width - DEST_SCALAR_OVERFETCH_SIZE;
-  if (mixer_attributes_.split_type == kDualSplit &&
-     (mixer_attributes.width > dual_max_input_width)) {
-    DLOGW("Input width exceeds width limit in dual LM mode. input_width %d width_limit %d",
-          mixer_attributes.width, dual_max_input_width);
-    return kErrorNotSupported;
-  }
-
-  if (display_attributes_[index].is_device_split) {
-    max_input_width *= 2;
-  }
-
-  if (mixer_attributes.width > max_input_width) {
-    DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
-          max_input_width);
-    return kErrorNotSupported;
-  }
-
   uint32_t topology_num_split = 0;
   GetTopologySplit(display_attributes_[index].topology, &topology_num_split);
   if (mixer_attributes.width % topology_num_split != 0) {
     DLOGW("Uneven LM split: topology:%d supported_split:%d mixer_width:%d",
-           display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
+          display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
+    return kErrorNotSupported;
+  }
+
+  uint32_t max_input_width = hw_resource_.hw_dest_scalar_info.max_input_width;
+  uint32_t split_max_input_width = max_input_width - DEST_SCALAR_OVERFETCH_SIZE;
+  uint32_t lm_split_width = mixer_attributes.width / topology_num_split;
+  if (topology_num_split > 1 && lm_split_width > split_max_input_width) {
+    DLOGW("Input width exceeds width limit in split LM mode. input_width %d width_limit %d",
+          lm_split_width, split_max_input_width);
+    return kErrorNotSupported;
+  }
+
+  if (mixer_attributes.width > max_input_width * topology_num_split) {
+    DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
+          max_input_width * topology_num_split);
     return kErrorNotSupported;
   }
 
