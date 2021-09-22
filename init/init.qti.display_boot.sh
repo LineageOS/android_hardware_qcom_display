@@ -100,7 +100,7 @@ case "$target" in
         ;;
         507)
         # Set property for blair
-        setprop vendor.display.target.version 2
+        setprop vendor.display.target.version 3
         setprop vendor.display.disable_offline_rotator 0
         setprop vendor.display.disable_rotator_ubwc 1
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
