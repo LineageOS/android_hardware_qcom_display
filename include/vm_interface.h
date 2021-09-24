@@ -30,7 +30,7 @@
 #define SDM_COMP_SERVICE_INSTANCE 1
 
 #define VM_INTF_REVISION_MAJOR (1)
-#define VM_INTF_REVISION_MINOR (2)
+#define VM_INTF_REVISION_MINOR (3)
 
 #define VM_INTF_VERSION ((uint16_t) ((VM_INTF_REVISION_MAJOR << 8) | VM_INTF_REVISION_MINOR))
 
@@ -115,6 +115,8 @@ typedef struct CmdSetDisplayConfigs_t  {
     struct {
       uint32_t x_pixels;
       uint32_t y_pixels;
+      uint32_t v_total;
+      uint32_t h_total;
       uint32_t fps;
       int config_idx;
       DisplayType disp_type;

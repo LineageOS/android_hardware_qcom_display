@@ -60,10 +60,9 @@ struct IPCBacklightParams {
 };
 
 struct IPCDisplayConfigParams {
-  uint32_t x_pixels = 0;          //!< Total number of pixels in X-direction on the display panel.
-  uint32_t y_pixels = 0;          //!< Total number of pixels in Y-direction on the display panel.
+  uint32_t h_total = 0;           //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
+  uint32_t v_total = 0;           //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
   uint32_t fps = 0;               //!< Frame rate per second.
-  int config_idx = -1;            //!< Specifies the config index of the display resolution mode.
   bool is_primary = false;        //!< Flag specifies primary/secondary
   bool smart_panel = false;       //!< If the display config has smart panel.
 };

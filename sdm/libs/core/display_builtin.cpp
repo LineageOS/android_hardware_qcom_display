@@ -2150,10 +2150,9 @@ void DisplayBuiltIn::SendDisplayConfigs() {
     if (error != kErrorNone) {
       return;
     }
-    disp_configs->x_pixels = display_attributes_.x_pixels;
-    disp_configs->y_pixels = display_attributes_.y_pixels;
+    disp_configs->h_total = display_attributes_.h_total;
+    disp_configs->v_total = display_attributes_.v_total;
     disp_configs->fps = display_attributes_.fps;
-    disp_configs->config_idx = active_index;
     disp_configs->smart_panel = display_attributes_.smart_panel;
     disp_configs->is_primary = IsPrimaryDisplayLocked();
     if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
@@ -2212,6 +2211,18 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
   }
 
   return error;
+}
+
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  ClientLock lock(disp_mutex_);
+  DisplayError error = DisplayBase::HandleSecureEvent(secure_event, needs_refresh);
+  if (error != kErrorNone) {
+    return error;
+  }
+  if (secure_event == kTUITransitionStart && hw_panel_info_.mode == kModeVideo) {
+    SendDisplayConfigs();
+  }
+  return kErrorNone;
 }
 
 }  // namespace sdm

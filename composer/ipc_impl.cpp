@@ -117,17 +117,16 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       }
       CmdSetDisplayConfigs &cmd_disp_configs = cmd.cmd_set_disp_configs;
       cmd.id = kCmdSetDisplayConfig;
-      cmd_disp_configs.x_pixels= disp_configs->x_pixels;
-      cmd_disp_configs.y_pixels= disp_configs->y_pixels;
-      cmd_disp_configs.fps= disp_configs->fps;
-      cmd_disp_configs.config_idx= disp_configs->config_idx;
-      cmd_disp_configs.smart_panel= disp_configs->smart_panel;
+      cmd_disp_configs.h_total = disp_configs->h_total;
+      cmd_disp_configs.v_total = disp_configs->v_total;
+      cmd_disp_configs.fps = disp_configs->fps;
+      cmd_disp_configs.smart_panel = disp_configs->smart_panel;
       cmd_disp_configs.disp_type = disp_configs->is_primary ? kDisplayTypePrimary :
-                         kDisplayTypeSecondary1;
-      DLOGI("Send display configs: WxH %dx%d, fps %d, config_idx %d, %s panel, disp_type %d to SVM",
-             cmd_disp_configs.x_pixels, cmd_disp_configs.y_pixels, cmd_disp_configs.fps,
-             cmd_disp_configs.config_idx, cmd_disp_configs.smart_panel ? "cmdmode" : "videomode",
-             cmd_disp_configs.disp_type);
+                                   kDisplayTypeSecondary1;
+      DLOGI("Send display configs: h_total %d v_total %d, fps %d, %s panel, disp_type %d to SVM",
+            cmd_disp_configs.h_total, cmd_disp_configs.v_total,
+            cmd_disp_configs.fps, cmd_disp_configs.smart_panel ? "cmdmode" : "videomode",
+            cmd_disp_configs.disp_type);
       return qrtr_client_intf_->SendCommand(cmd);
     }
   } break;
