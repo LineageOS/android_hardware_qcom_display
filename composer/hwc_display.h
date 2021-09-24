@@ -250,7 +250,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
-  virtual DisplayError SetStandByMode(bool enable) {
+  virtual DisplayError SetStandByMode(bool enable, bool is_twm) {
     return kErrorNotSupported;
   }
   virtual DisplayError Flush() {
