@@ -806,7 +806,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
         display_type_, teardown);
 
-  if (state == state_) {
+  if (state == state_ && (pending_power_state_ == kPowerStateNone)) {
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
