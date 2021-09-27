@@ -36,8 +36,6 @@
 #include "generic_intf.h"
 #include "generic_payload.h"
 
-#define SDE_HW_PU_USECASE 0x1000
-
 namespace sdm {
 
 struct RCInputConfig {
@@ -69,7 +67,7 @@ enum RCMaskStackStatus {
 
 struct RCMaskCfgState {
   RCMaskStackStatus rc_mask_state = kStatusIgnore;
-  bool rc_pu_full_roi = false;
+  bool rc_pu_full_roi = false;  // Unused, as driver is handling PU
 };
 
 // RC specific params as enum
