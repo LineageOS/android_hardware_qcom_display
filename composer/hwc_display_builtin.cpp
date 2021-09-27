@@ -153,13 +153,6 @@ int HWCDisplayBuiltIn::Init() {
                       &window_rect_.right, &window_rect_.bottom) != kErrorUndefined;
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
           window_rect_.right, window_rect_.bottom);
-
-    value = 0;
-    HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
-    enable_poms_during_doze_ = (value == 1);
-    if (enable_poms_during_doze_) {
-      DLOGI("Enable POMS during Doze mode %" PRIu64 , id_);
-    }
   }
 
   value = 0;
@@ -1474,13 +1467,7 @@ bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
     return IsSmartPanelConfig(config);
   }
 
-  for (auto &config : variable_config_map_) {
-    if (config.second.smart_panel) {
-      return true;
-    }
-  }
-
-  return false;
+  return smart_panel_config_;
 }
 
 int HWCDisplayBuiltIn::Deinit() {
