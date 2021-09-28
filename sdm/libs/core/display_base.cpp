@@ -461,6 +461,9 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
   if (!ret) {
     DLOGD_IF(kTagDisplay, "RC top_height = %d, RC bot_height = %d", rc_out_config->top_height,
              rc_out_config->bottom_height);
+    if (rc_out_config->rc_needs_full_roi) {
+      DisablePartialUpdateOneFrame();
+    }
     hw_layers_info.rc_config = true;
     hw_layers_info.rc_layers_info.top_width = rc_out_config->top_width;
     hw_layers_info.rc_layers_info.top_height = rc_out_config->top_height;
@@ -501,6 +504,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     } else {
       DLOGI_IF(kTagDisplay, "Status of RC mask data: %d.", (*mask_status).rc_mask_state);
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
+        DisablePartialUpdateOneFrame();
         needs_validate_ = true;
         DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
                  display_id_, display_type_);
