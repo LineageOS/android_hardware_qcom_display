@@ -223,13 +223,18 @@ DisplayError DisplayBase::Deinit() {
   {  // Scope for lock
     ClientLock lock(disp_mutex_);
     ClearColorInfo();
-    comp_manager_->UnregisterDisplay(display_comp_ctx_);
     if (IsPrimaryDisplayLocked()) {
       hw_intf_->UnsetScaleLutConfig();
     }
   }
   HWEventsInterface::Destroy(hw_events_intf_);
   HWInterface::Destroy(hw_intf_);
+
+  {  // Scope for lock
+    ClientLock lock(disp_mutex_);
+    comp_manager_->UnregisterDisplay(display_comp_ctx_);
+  }
+
   if (rc_panel_feature_init_) {
     rc_core_->Deinit();
     rc_panel_feature_init_ = false;
