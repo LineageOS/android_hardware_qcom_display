@@ -108,9 +108,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.disable_ui_3d_tonemap=1
 
-ifeq ($(TARGET_BOARD_PLATFORM), msmnile)
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
-endif
 
 #Set WCG properties
 ifeq ($(TARGET_BOARD_PLATFORM),$(TRINKET))
