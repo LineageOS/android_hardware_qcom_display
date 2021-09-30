@@ -27,12 +27,15 @@
 
 #include <map>
 #include <vector>
+#include <chrono>
 
 #include "hw_device_drm.h"
 
 namespace sdm {
 
 using std::vector;
+
+typedef std::chrono::steady_clock SteadyClock;
 
 class HWTVDRM : public HWDeviceDRM {
  public:
@@ -62,8 +65,8 @@ class HWTVDRM : public HWDeviceDRM {
   const float kMinPeakLuminance = 300.0f;
   const float kMaxPeakLuminance = 1000.0f;
   drm_msm_ext_hdr_metadata hdr_metadata_ = {};
-  struct timeval hdr_reset_start_ = {};
-  struct timeval hdr_reset_end_ = {};
+  std::chrono::time_point<SteadyClock> hdr_reset_start_;
+  std::chrono::time_point<SteadyClock> hdr_reset_end_;
   bool reset_hdr_flag_ = false;
   bool in_multiset_ = false;
 };
