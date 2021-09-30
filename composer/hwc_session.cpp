@@ -3161,6 +3161,8 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
 }
 
 void HWCSession::DisplayPowerReset() {
+  // Wait until all commands are flushed.
+  std::lock_guard<std::mutex> lock(command_seq_mutex_);
   // Acquire lock on all displays.
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY;
     display < HWCCallbacks::kNumDisplays; display++) {
