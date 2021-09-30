@@ -1060,12 +1060,6 @@ void DisplayBuiltIn::PingPongTimeout() {
   hw_intf_->DumpDebugData();
 }
 
-void DisplayBuiltIn::ThermalEvent(int64_t thermal_level) {
-  ClientLock lock(disp_mutex_);
-  validated_ = false;
-  comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
-}
-
 void DisplayBuiltIn::IdlePowerCollapse() {
   if (hw_panel_info_.mode == kModeCommand) {
     ClientLock lock(disp_mutex_);
