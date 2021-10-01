@@ -2051,14 +2051,22 @@ DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
   }
 
   uint32_t mode_flag = 0;
+  sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
 
+  // Refresh rate change needed if new panel mode differs from current
   if (hw_display_mode == kModeCommand) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+    if (connector_info_.modes[cmd_mode_index_].mode.vrefresh != current_mode.mode.vrefresh) {
+      vrefresh_ = connector_info_.modes[cmd_mode_index_].mode.vrefresh;
+    }
     current_mode_index_ = cmd_mode_index_;
     connector_info_.modes[current_mode_index_].cur_panel_mode = mode_flag;
     DLOGI_IF(kTagDriverConfig, "switch panel mode to command");
   } else if (hw_display_mode == kModeVideo) {
     mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+    if (connector_info_.modes[video_mode_index_].mode.vrefresh != current_mode.mode.vrefresh) {
+      vrefresh_ = connector_info_.modes[video_mode_index_].mode.vrefresh;
+    }
     current_mode_index_ = video_mode_index_;
     connector_info_.modes[current_mode_index_].cur_panel_mode = mode_flag;
     DLOGI_IF(kTagDriverConfig, "switch panel mode to video");
