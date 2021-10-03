@@ -74,8 +74,9 @@ using sde_drm::DRMColorspace;
 
 namespace sdm {
 
-static uint64_t timeval_to_ms(const struct timeval &tv) {
-  return (UINT64(tv.tv_sec) * 1000ull + UINT64(tv.tv_usec) / 1000ull);
+static uint64_t timeval_diff(std::chrono::time_point<SteadyClock> &start,
+                             std::chrono::time_point<SteadyClock> &end) {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 }
 
 static int32_t GetEOTF(const GammaTransfer &transfer) {
@@ -386,7 +387,7 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayersInfo *hw_layers_info) {
     hdr_metadata_.hdr_state = HDR_ENABLE;
     reset_hdr_flag_ = true;
     in_multiset_ = false;
-    gettimeofday(&hdr_reset_start_, NULL);
+    hdr_reset_start_ = SteadyClock::now();
 
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id, &hdr_metadata_);
     DumpHDRMetaData(hdr_op);
@@ -396,10 +397,8 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayersInfo *hw_layers_info) {
     // playback. This timer calculates the 2 sec window after playback stops to stop sending HDR
     // metadata. This will be replaced with an idle timer implementation in the future.
     if (reset_hdr_flag_) {
-      gettimeofday(&hdr_reset_end_, NULL);
-      const uint64_t hdr_reset_start_ms = timeval_to_ms(hdr_reset_start_);
-      const uint64_t hdr_reset_end_ms = timeval_to_ms(hdr_reset_end_);
-      const uint64_t hdr_reset_duration_ms = hdr_reset_end_ms - hdr_reset_start_ms;
+      hdr_reset_end_ = SteadyClock::now();
+      const uint64_t hdr_reset_duration_ms = timeval_diff(hdr_reset_start_, hdr_reset_end_);
 
       if (hdr_reset_duration_ms >= UINT64(MIN_HDR_RESET_WAITTIME) * 1000ull) {
         memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
