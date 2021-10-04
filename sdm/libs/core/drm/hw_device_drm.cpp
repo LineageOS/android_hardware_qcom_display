@@ -957,6 +957,7 @@ DisplayError HWDeviceDRM::GetNumDisplayAttributes(uint32_t *count) {
 DisplayError HWDeviceDRM::GetDisplayAttributes(uint32_t index,
                                                HWDisplayAttributes *display_attributes) {
   if (index >= display_attributes_.size()) {
+    DLOGW("Index > display_attributes_.size(). Return.");
     return kErrorParameters;
   }
   *display_attributes = display_attributes_[index];
@@ -2242,6 +2243,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
 
 DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
   if (!mixer_attributes) {
+    DLOGW("mixer_attributes invalid. Return.");
     return kErrorParameters;
   }
 

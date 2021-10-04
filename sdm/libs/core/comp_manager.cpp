@@ -226,18 +226,21 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
   error = resource_intf_->ReconfigureDisplay(display_comp_ctx->display_resource_ctx,
                                              display_attributes, hw_panel_info, mixer_attributes);
   if (error != kErrorNone) {
+    DLOGW("ReconfigureDisplay returned error=%d", error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
                                   display_comp_ctx->display_resource_ctx, default_qos_data);
   if (error != kErrorNone) {
+    DLOGW("GetDefaultQosData Data returned error=%d", error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdCheckEnforceSplit,
                                   display_comp_ctx->display_resource_ctx, display_attributes.fps);
   if (error != kErrorNone) {
+    DLOGW("CheckEnforceSplit returned error=%d", error);
     return error;
   }
 
