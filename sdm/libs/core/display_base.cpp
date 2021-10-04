@@ -3633,6 +3633,7 @@ void DisplayBase::CheckMMRMState() {
   if (!mmrm_updated_) {
     return;
   }
+  DTRACE_SCOPED();
   DLOGI("Handling updated MMRM request");
   mmrm_updated_ = false;
   bool reduced_clk = (mmrm_requested_clk_ < hw_resource_info_.max_sde_clk) ? true : false;
@@ -3665,7 +3666,7 @@ void DisplayBase::CheckMMRMState() {
 
 void DisplayBase::MMRMEvent(uint32_t clk) {
   ClientLock lock(disp_mutex_);
-
+  DTRACE_SCOPED();
   if (clk < mmrm_floor_clk_vote_) {
     DLOGW("Clk vote of %u is lower than floor clock %d. Bail.", clk, mmrm_floor_clk_vote_);
     return;

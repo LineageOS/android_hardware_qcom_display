@@ -1003,6 +1003,7 @@ DisplayError DisplayBuiltIn::ClearLUTs() {
 }
 
 void DisplayBuiltIn::MMRMEvent(uint32_t clk) {
+  DTRACE_SCOPED();
   DisplayBase::MMRMEvent(clk);
 }
 
