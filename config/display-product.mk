@@ -20,6 +20,7 @@ PRODUCT_PACKAGES += \
     libgralloc.qti \
     libdisplayconfig.qti \
     libdisplayconfig.vendor \
+    libdisplayconfig.qti.vendor \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
     vendor.display.config@1.2.vendor \
@@ -29,8 +30,8 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.6.vendor \
     vendor.display.config@1.7.vendor \
     vendor.display.config@1.8.vendor \
-    vendor.display.config@1.9.vendor
-
+    vendor.display.config@1.9.vendor \
+    vendor.display.config@2.0.vendor
 
 #Qdcm calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml

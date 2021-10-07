@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -626,8 +626,20 @@ void HWCDisplay::BuildLayerStack() {
 #ifdef FEATURE_WIDE_COLOR
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
+    bool is_secure = false;
+    const private_handle_t *handle =
+        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
+    if (handle) {
+      // TZ Protected Buffer - L1
+      // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
+      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER ||
+          handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
+        is_secure = true;
+      }
+    }
+
     if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
-        !hwc_layer->SupportLocalConversion(working_primaries)) {
+        !hwc_layer->SupportLocalConversion(working_primaries) && !is_secure) {
       layer->flags.skip = true;
     }
     if (layer->flags.skip) {
@@ -1955,22 +1967,6 @@ void HWCDisplay::MarkLayersForClientComposition() {
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
-}
-
-int HWCDisplay::SetPanelBrightness(int level) {
-  int ret = 0;
-  if (display_intf_) {
-    ret = display_intf_->SetPanelBrightness(level);
-    validated_ = false;
-  } else {
-    ret = -EINVAL;
-  }
-
-  return ret;
-}
-
-int HWCDisplay::GetPanelBrightness(int *level) {
-  return display_intf_->GetPanelBrightness(level);
 }
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {

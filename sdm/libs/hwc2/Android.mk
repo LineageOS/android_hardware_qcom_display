@@ -12,54 +12,20 @@ LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
-                                 -std=c++11 -fcolor-diagnostics\
+                                 -fcolor-diagnostics\
                                  -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libc++ liblog libgrallocutils libui \
-                                 libgpu_tonemapper libhidlbase libhidltransport \
-                                 vendor.display.config@1.0 \
+                                 libgpu_tonemapper libhidlbase libhidltransport libdisplayconfig.qti \
+                                 vendor.display.config@2.0 \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \
                                  android.hardware.graphics.allocator@2.0 \
                                  android.hardware.graphics.composer@2.2 \
 
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_2)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2 vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_3)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3 vendor.display.config@1.2 \
-                                 vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_6)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6 vendor.display.config@1.5 \
-                                 vendor.display.config@1.4 vendor.display.config@1.3 \
-                                 vendor.display.config@1.2 vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_7)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7 \
-                                 vendor.display.config@1.6 vendor.display.config@1.5 \
-                                 vendor.display.config@1.4 vendor.display.config@1.3 \
-                                 vendor.display.config@1.2 vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_8)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1 vendor.display.config@1.2 \
-                                 vendor.display.config@1.3 vendor.display.config@1.4 \
-                                 vendor.display.config@1.5 vendor.display.config@1.6 \
-                                 vendor.display.config@1.7 vendor.display.config@1.8
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_9)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1 vendor.display.config@1.2 \
-                                 vendor.display.config@1.3 vendor.display.config@1.4 \
-                                 vendor.display.config@1.5 vendor.display.config@1.6 \
-                                 vendor.display.config@1.7 vendor.display.config@1.8 \
-                                 vendor.display.config@1.9
-endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \

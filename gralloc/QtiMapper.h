@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
+#include <vendor/qti/hardware/display/mapper/1.1/IQtiMapper.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -39,7 +40,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace mapper {
-namespace V1_0 {
+namespace V1_1 {
 namespace implementation {
 
 using ::android::hardware::Return;
@@ -59,13 +60,14 @@ using ::android::sp;
 using gralloc::BufferManager;
 
 using IMapper_2_1 = android::hardware::graphics::mapper::V2_1::IMapper;
+using ::vendor::qti::hardware::display::mapper::V1_1::IQtiMapper;
 using BufferDescriptorInfo_2_0 =
 android::hardware::graphics::mapper::V2_0::IMapper::BufferDescriptorInfo;
 using BufferDescriptorInfo_2_1 =
 android::hardware::graphics::mapper::V2_1::IMapper::BufferDescriptorInfo;
 using IMapperBufferDescriptor = android::hardware::graphics::mapper::V2_0::BufferDescriptor;
 
-class QtiMapper : public IMapper_2_1 {
+class QtiMapper : public IQtiMapper {
  public:
   QtiMapper();
   // Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
@@ -86,7 +88,7 @@ class QtiMapper : public IMapper_2_1 {
   Return<void> getTransportSize(void* buffer, IMapper_2_1::getTransportSize_cb hidl_cb) override;
   Return<void> createDescriptor_2_1(const BufferDescriptorInfo_2_1& descriptorInfo,
                                     createDescriptor_2_1_cb _hidl_cb) override;
-#ifdef ENABLE_QTI_MAPPER_EXTENSION
+  // Method from V1_0::IQtiMapper
   Return<void> getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb _hidl_cb) override;
   Return<void> getInterlacedFlag(void *buffer, getInterlacedFlag_cb _hidl_cb) override;
   Return<void> getCustomDimensions(void *buffer, getCustomDimensions_cb _hidl_cb) override;
@@ -97,7 +99,23 @@ class QtiMapper : public IMapper_2_1 {
   Return<void> getColorSpace(void *buffer, getColorSpace_cb _hidl_cb) override;
   Return<void> getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb _hidl_cb) override;
   Return<Error> setSingleBufferMode(void *buffer, bool enable) override;
-#endif
+  Return<void> getCustomFormatFlags(int32_t format, uint64_t usage,
+                                    getCustomFormatFlags_cb _hidl_cb) override;
+
+  // Meethod from V1_1::IQtiMapper
+  // Getters for fields present in private handle structure.
+  Return<void> getFd(void *buffer, getFd_cb _hidl_cb) override;
+  Return<void> getWidth(void *buffer, getWidth_cb _hidl_cb) override;
+  Return<void> getHeight(void *buffer, getHeight_cb _hidl_cb) override;
+  Return<void> getOffset(void *buffer, getOffset_cb _hidl_cb) override;
+  Return<void> getSize(void *buffer, getSize_cb _hidl_cb) override;
+  Return<void> getFormat(void *buffer, getFormat_cb _hidl_cb) override;
+  Return<void> getPrivateFlags(void *buffer, getPrivateFlags_cb _hidl_cb) override;
+  Return<void> getUnalignedWidth(void *buffer, getUnalignedWidth_cb _hidl_cb) override;
+  Return<void> getUnalignedHeight(void *buffer, getUnalignedHeight_cb _hidl_cb) override;
+  Return<void> getLayerCount(void *buffer, getLayerCount_cb _hidl_cb) override;
+  Return<void> getId(void *buffer, getId_cb _hidl_cb) override;
+  Return<void> getUsageFlags(void *buffer, getUsageFlags_cb _hidl_cb) override;
 
  private:
   BufferManager *buf_mgr_ = nullptr;
@@ -110,8 +128,9 @@ class QtiMapper : public IMapper_2_1 {
 };
 
 extern "C" IMapper_2_1 *HIDL_FETCH_IMapper(const char *name);
+extern "C" IQtiMapper *HIDL_FETCH_IQtiMapper(const char *name);
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace mapper
 }  // namespace display
 }  // namespace hardware

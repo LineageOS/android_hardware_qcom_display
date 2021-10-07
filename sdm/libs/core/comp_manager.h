@@ -31,6 +31,7 @@
 #include <bitset>
 #include <map>
 #include <set>
+#include <string>
 
 #include "strategy.h"
 #include "resource_default.h"
@@ -86,7 +87,7 @@ class CompManager {
 
   void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
   void UpdateStrategyConstraints(bool is_primary, bool disabled);
-  const char* StringDisplayList(const std::map<int32_t, bool>& displays);
+  std::string StringDisplayList(const std::map<int32_t, bool>& displays);
 
   struct DisplayCompositionContext {
     Strategy *strategy = NULL;

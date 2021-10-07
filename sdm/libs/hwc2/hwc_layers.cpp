@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, 2021 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -241,7 +241,8 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
 
   // TZ Protected Buffer - L1
-  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
+  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) ||
+          (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
   bool secure_camera = secure && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
   bool secure_display = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
   if (secure != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
@@ -270,6 +271,11 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
   layer_buffer->handle_id = handle->id;
 
+  if (layer_buffer->flags.video && secure) {
+    layer_buffer->last_secure_buffer.clear();
+    layer_buffer->last_secure_buffer.push_back(std::make_tuple(buffer_fd_,
+        handle->id, handle->size));
+  }
   return HWC2::Error::None;
 }
 
@@ -784,13 +790,6 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
   private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
-  IGC_t igc = {};
-  LayerIGC layer_igc = layer_buffer->igc;
-  if (getMetaData(handle, GET_IGC, &igc) == 0) {
-    if (SetIGC(igc, &layer_igc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
-  }
 
   float fps = 0;
   uint32_t frame_rate = layer->frame_rate;
@@ -819,11 +818,10 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     s3d_format = GetS3DFormat(s3d);
   }
 
-  if ((layer_igc != layer_buffer->igc) || (interlace != layer_buffer->flags.interlace) ||
+  if ((interlace != layer_buffer->flags.interlace) ||
       (frame_rate != layer->frame_rate) || (s3d_format != layer_buffer->s3d_format)) {
     // Layer buffer metadata has changed.
     needs_validate_ = true;
-    layer_buffer->igc = layer_igc;
     layer->frame_rate = frame_rate;
     layer_buffer->s3d_format = s3d_format;
     layer_buffer->flags.interlace = interlace;
@@ -847,23 +845,6 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
 
   return kErrorNone;
 }
-
-DisplayError HWCLayer::SetIGC(IGC_t source, LayerIGC *target) {
-  switch (source) {
-    case IGC_NotSpecified:
-      *target = kIGCNotSpecified;
-      break;
-    case IGC_sRGB:
-      *target = kIGCsRGB;
-      break;
-    default:
-      DLOGE("Unsupported IGC: %d", source);
-      return kErrorNotSupported;
-  }
-
-  return kErrorNone;
-}
-
 
 
 bool HWCLayer::SupportLocalConversion(ColorPrimaries working_primaries) {

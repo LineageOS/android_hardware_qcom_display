@@ -50,16 +50,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_allocator.cpp gr_buf_mgr.cpp gr_ion_alloc.cpp
 include $(BUILD_SHARED_LIBRARY)
 
-
-qti_mapper_version := $(shell \
-    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/mapper/1.0" ];\
-    then echo QTI_MAPPER_1_0; fi)
-
-qti_allocator_version := $(shell \
-    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/allocator/1.0" ];\
-    then echo QTI_ALLOCATOR_1_0; fi)
-
-
 #mapper
 include $(CLEAR_VARS)
 LOCAL_MODULE                  := android.hardware.graphics.mapper@2.0-impl-qti-display
@@ -76,7 +66,9 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
                                   libgralloccore \
                                   libsync \
                                   android.hardware.graphics.mapper@2.0 \
-                                  android.hardware.graphics.mapper@2.1
+                                  android.hardware.graphics.mapper@2.1 \
+                                  vendor.qti.hardware.display.mapper@1.0 \
+                                  vendor.qti.hardware.display.mapper@1.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := QtiMapper.cpp
