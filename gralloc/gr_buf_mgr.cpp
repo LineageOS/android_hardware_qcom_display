@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, 2021 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -178,7 +178,7 @@ Error BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
-    ALOGE("Could not find handle: %p id: %" PRIu64, hnd, hnd->id);
+    ALOGE("Could not find handle: %p", hnd);
     return Error::BAD_BUFFER;
   } else {
     if (buf->DecRef()) {
