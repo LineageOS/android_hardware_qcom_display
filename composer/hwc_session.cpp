@@ -3082,6 +3082,8 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
   SCOPE_LOCK(system_locker_);
+  // Wait until all commands are flushed.
+  std::lock_guard<std::mutex> hwc_lock(command_seq_mutex_);
   {
     SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
