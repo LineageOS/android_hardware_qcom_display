@@ -227,7 +227,7 @@ class HWDeviceDRM : public HWInterface {
   void SetTUIState();
   DisplayError ConfigureCWBDither(void *payload, uint32_t conn_id,
                                   sde_drm::DRMCWbCaptureMode mode);
-  void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
+  void SetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
