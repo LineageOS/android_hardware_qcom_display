@@ -124,6 +124,7 @@
 #define DISABLE_SDR_HISTOGRAM                DISPLAY_PROP("disable_sdr_histogram")
 // Disable SDR dimming support
 #define DISABLE_SDR_DIMMING                  DISPLAY_PROP("disable_sdr_dimming")
+#define FORCE_TONEMAPPING                    DISPLAY_PROP("force_tonemapping")
 
 // RC
 #define ENABLE_ROUNDED_CORNER                DISPLAY_PROP("enable_rounded_corner")
