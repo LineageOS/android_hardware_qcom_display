@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2020 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -44,11 +44,15 @@ struct DemuraInputConfig {
   bool secure_session = false;
   std::string brightness_path;
   std::bitset<RESOURCE_BITSET> resources;
+  int secure_hfc_fd = -1;
+  size_t secure_hfc_size = 0;
+  uint64_t panel_id = 0;
 };
 
 // Demura specific param as strings
 const std::string kDemuraFeatureParamActive = "Active";
 const std::string kDemuraFeatureParamCorrectionBuffer = "CorrectionBuffer";
+const std::string kDemuraFeatureParamPanelId = "PanelId";
 
 using DemuraIntf = GenericIntf<const std::string&, const std::string&, GenericPayload>;
 }  // namespace sdm

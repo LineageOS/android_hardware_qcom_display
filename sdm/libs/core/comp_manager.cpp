@@ -768,11 +768,9 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   return false;
 }
 
-DisplayError CompManager::FreeDemuraFetchResources(Handle display_ctx) {
+DisplayError CompManager::FreeDemuraFetchResources(const uint32_t &display_id) {
   SCOPE_LOCK(locker_);
-  DisplayCompositionContext *display_comp_ctx =
-      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  return resource_intf_->FreeDemuraFetchResources(display_comp_ctx->display_resource_ctx);
+  return resource_intf_->FreeDemuraFetchResources(display_id);
 }
 
 DisplayError CompManager::GetDemuraFetchResourceCount(

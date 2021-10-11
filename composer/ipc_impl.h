@@ -37,10 +37,25 @@
 
 #include <vendor/qti/hardware/display/demura/2.0/IDemuraFileFinder.h>
 
+#include <thread>
+
+#include "qrtr_client_interface.h"
+#include "vm_interface.h"
+#include "utils/sys.h"
+#include "membuf_wrapper.h"
+
 namespace sdm {
 
 using ::android::sp;
 using ::vendor::qti::hardware::display::demura::V2_0::IDemuraFileFinder;
+
+#define MEMBUF_CLIENT_LIB_NAME "libmemutils.so"
+
+#define CREATE_MEMBUF_INTERFACE_NAME "CreateMemBufInterface"
+#define DESTROY_MEMBUF_INTERFACE_NAME "DestroyMemBufInterface"
+
+typedef int (*GetMemBufInterface)(MemBuf **mem_buf_hnd);
+typedef int (*PutMemBufInterface)();
 
 class IPCImpl: public IPCIntf, QRTRCallbackInterface {
  public:
@@ -53,13 +68,23 @@ class IPCImpl: public IPCIntf, QRTRCallbackInterface {
   void OnServerReady();
   void OnServerExit();
   int OnResponse(Response *rsp);
+  static void SpawnOnServerReady(int client_id);
 
  private:
+  int ProcessExportBuffers(const GenericPayload &in, GenericPayload *out);
   static DynLib qrtr_client_lib_;
   static CreateQrtrClientIntf create_qrtr_client_intf_;
   static DestroyQrtrClientIntf destroy_qrtr_client_intf_;
   static QRTRClientInterface *qrtr_client_intf_;
   bool init_done_ = false;
+  static std::mutex vm_lock_;
+  static int client_id_;
+  static bool server_ready_;
+  static std::map<int, IPCVmCallbackIntf*> callbacks_;
+  static MemBuf *mem_buf_;
+  static DynLib mem_buf_client_lib_;
+  static GetMemBufInterface GetMemBuf;
+  static PutMemBufInterface PutMembuf;
 };
 }  // namespace sdm
 

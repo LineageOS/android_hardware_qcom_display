@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -70,6 +70,11 @@ inline T1 FloorToMultipleOf(const T1 &value, const T2 &factor) {
 template <class T1, class T2>
 inline T1 CeilToMultipleOf(const T1 &value, const T2 &factor) {
   return (T1)((value + (factor - 1)) & (~(factor - 1)));
+}
+
+template <class Type>
+inline Type ALIGN(Type x, Type align) {
+  return (x + align - 1) & ~(align - 1);
 }
 
 namespace sdm {
