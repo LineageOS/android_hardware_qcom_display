@@ -86,6 +86,7 @@ class DRMPlane {
   void ResetColorLUTState(DRMTonemapLutType lut_type, bool update_state, drmModeAtomicReq *req);
   void ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req);
   void ResetCache(drmModeAtomicReq *req);
+  void ResetPlanesLUT(drmModeAtomicReq *req);
   void GetIndex(uint8_t *index) { *index = plane_type_info_.pipe_idx; }
   void GetRect(uint8_t *rect) { *rect = plane_type_info_.master_plane_id ? 1 : 0; }
 
@@ -138,6 +139,7 @@ class DRMPlaneManager {
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
   void ResetCache(drmModeAtomicReq *req, uint32_t crtc_id);
+  void ResetPlanesLUT(drmModeAtomicReq *req);
   void MapPlaneToCrtc(std::map<uint32_t, uint32_t> *plane_to_crtc);
   void GetPlaneIdsFromDescriptions(FetchResourceList &descriptions,
                                    std::vector<uint32_t> *plane_ids);

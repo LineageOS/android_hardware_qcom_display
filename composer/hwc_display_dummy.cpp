@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -88,6 +88,29 @@ HWC2::Error HWCDisplayDummy::GetActiveConfig(hwc2_config_t *out_config) {
 
 HWC2::Error HWCDisplayDummy::UpdatePowerMode(HWC2::PowerMode mode) {
   current_power_mode_ = mode;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayDummy::SetVsyncEnabled(HWC2::Vsync enabled) {
+  bool state = false;
+  if (enabled == HWC2::Vsync::Enable) {
+    state = true;
+  }
+  vsync_enable_ = state;
+  return HWC2::Error::None;
+}
+
+bool HWCDisplayDummy::VsyncEnablePending() {
+  return vsync_enable_;
+}
+
+HWC2::Error HWCDisplayDummy::SetClientTarget(buffer_handle_t target,
+                                             shared_ptr<Fence> acquire_fence,
+                                             int32_t dataspace, hwc_region_t damage) {
+  client_target_handle_ = target;
+  client_acquire_fence_ = acquire_fence;
+  client_dataspace_     = dataspace;
+  client_damage_region_ = damage;
   return HWC2::Error::None;
 }
 

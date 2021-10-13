@@ -285,10 +285,13 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   layer_buffer->flags.secure_display = secure_display;
 
   layer_buffer->acquire_fence = acquire_fence;
-  if (buffer_fd_ >= 0) {
-    ::close(buffer_fd_);
-  }
+
+  int buffer_fd = buffer_fd_;
   buffer_fd_ = ::dup(handle->fd);
+  if (buffer_fd >= 0) {
+    ::close(buffer_fd);
+  }
+
   layer_buffer->planes[0].fd = buffer_fd_;
   layer_buffer->planes[0].offset = 0;
   layer_buffer->planes[0].stride = UINT32(handle->width);

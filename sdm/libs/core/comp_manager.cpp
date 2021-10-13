@@ -226,18 +226,21 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
   error = resource_intf_->ReconfigureDisplay(display_comp_ctx->display_resource_ctx,
                                              display_attributes, hw_panel_info, mixer_attributes);
   if (error != kErrorNone) {
+    DLOGW("ReconfigureDisplay returned error=%d", error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
                                   display_comp_ctx->display_resource_ctx, default_qos_data);
   if (error != kErrorNone) {
+    DLOGW("GetDefaultQosData Data returned error=%d", error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdCheckEnforceSplit,
                                   display_comp_ctx->display_resource_ctx, display_attributes.fps);
   if (error != kErrorNone) {
+    DLOGW("CheckEnforceSplit returned error=%d", error);
     return error;
   }
 
@@ -765,11 +768,9 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   return false;
 }
 
-DisplayError CompManager::FreeDemuraFetchResources(Handle display_ctx) {
+DisplayError CompManager::FreeDemuraFetchResources(const uint32_t &display_id) {
   SCOPE_LOCK(locker_);
-  DisplayCompositionContext *display_comp_ctx =
-      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  return resource_intf_->FreeDemuraFetchResources(display_comp_ctx->display_resource_ctx);
+  return resource_intf_->FreeDemuraFetchResources(display_id);
 }
 
 DisplayError CompManager::GetDemuraFetchResourceCount(
@@ -792,6 +793,7 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
 }
 
 DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
+  DTRACE_SCOPED();
   if (resource_intf_) {
     DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);

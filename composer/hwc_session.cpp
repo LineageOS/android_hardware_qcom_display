@@ -496,7 +496,7 @@ int32_t HWCSession::CreateLayer(hwc2_display_t display,
 int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_t *format,
                                          hwc2_display_t *out_display_id) {
   // TODO(user): Handle concurrency with HDMI
-
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (!out_display_id || !width || !height || !format) {
     return  HWC2_ERROR_BAD_PARAMETER;
   }
@@ -510,6 +510,14 @@ int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_
     return HWC2_ERROR_NONE;
   }
 
+  {
+    //On Non-QSSI builds we have to disable virtual display to avoid jank
+    Locker::ScopeLock lock_disp(locker_[active_builtin_disp_id]);
+    if (hwc_display_[active_builtin_disp_id]->GetDrawMethod() != kDrawUnifiedWithGPUTarget) {
+      DLOGW("Draw method is not UnifiedWithGPUTarget, failing Virtual Display Creation.");
+      return HWC2_ERROR_UNSUPPORTED;
+    }
+  }
   auto status = CreateVirtualDisplayObj(width, height, format, out_display_id);
   if (status == HWC2::Error::None) {
     DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d", *out_display_id, width, height);
@@ -1136,7 +1144,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buff
 }
 
 int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
-  if (display >= HWCCallbacks::kNumDisplays) {
+  if (display >= HWCCallbacks::kNumDisplays || !hwc_display_[display]) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -1181,9 +1189,30 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
+  // async_powermode supported for power on and off
+  bool override_mode = async_powermode_ && display_ready_.test(UINT32(display)) &&
+                       async_power_mode_triggered_;
+  HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
 
-  bool override_mode = async_powermode_ && display_ready_.test(UINT32(display));
+  if (last_power_mode == mode) {
+    return HWC2_ERROR_NONE;
+  }
+
+  if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+    override_mode = false;
+  }
+
   if (!override_mode) {
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+    bool needs_validation = false;
+    {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+      needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
+                          mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
+                          active_builtin_disp_id < HWCCallbacks::kNumDisplays);
+
+    }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
@@ -1271,6 +1300,9 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     if (secure_sessions.any()) {
       DLOGE("Secure session is active, cannot create virtual display.");
       return HWC2::Error::Unsupported;
+    } else if (IsVirtualDisplayConnected()) {
+      DLOGE("Previous virtual session is active, cannot create virtual display.");
+      return HWC2::Error::Unsupported;
     } else if (IsPluggableDisplayConnected()) {
       DLOGE("External session is active, cannot create virtual display.");
       return HWC2::Error::Unsupported;
@@ -1322,6 +1354,15 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
 
 bool HWCSession::IsPluggableDisplayConnected() {
   for (auto &map_info : map_info_pluggable_) {
+    if (hwc_display_[map_info.client_id]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool HWCSession::IsVirtualDisplayConnected() {
+  for (auto &map_info : map_info_virtual_) {
     if (hwc_display_[map_info.client_id]) {
       return true;
     }
@@ -3159,7 +3200,7 @@ void HWCSession::DisplayPowerReset() {
 
   hwc2_display_t vsync_source = callbacks_.GetVsyncSource();
   // adb shell stop sets vsync source as max display
-  if (vsync_source != HWCCallbacks::kNumDisplays) {
+  if (vsync_source != HWCCallbacks::kNumDisplays && hwc_display_[vsync_source]) {
     status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
     if (status != HWC2::Error::None) {
       DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);

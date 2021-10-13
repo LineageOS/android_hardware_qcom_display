@@ -48,6 +48,27 @@ namespace sdm {
 typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
 typedef UtilsFactoryIntf* (*GetUtilsFactory)();
 
+class CoreIPCVmCallbackImpl : public IPCVmCallbackIntf {
+ public:
+  CoreIPCVmCallbackImpl(std::shared_ptr<IPCIntf> ipc_intf,
+                        std::shared_ptr<DemuraParserManagerIntf> pm_intf_);
+  void Init();
+  void OnServerReady();
+  void OnServerExit();
+  void Deinit();
+  static void OnServerReadyThread(CoreIPCVmCallbackImpl *obj);
+  virtual ~CoreIPCVmCallbackImpl() {}
+
+ private:
+  int SendProperties();
+  int ExportDemuraCalibBuffer();
+  IPCExportBufOutParams export_buf_out_params_ = {};
+  int cb_hnd_out_ = 0;
+  std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
+  std::shared_ptr<DemuraParserManagerIntf> pm_intf_ = nullptr;
+  bool server_ready_ = false;
+};
+
 class CoreImpl : public CoreInterface {
  public:
   // This class implements display core interface revision 1.0.
@@ -73,10 +94,11 @@ class CoreImpl : public CoreInterface {
   virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info);
   virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays);
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format);
+  virtual DisplayError ReserveDemuraResources();
 
  protected:
-  DisplayError ReserveDemuraResources();
   void InitializeSDMUtils();
+  void ReleaseDemuraResources();
 
   Locker locker_;
   BufferAllocator *buffer_allocator_ = NULL;
@@ -92,6 +114,12 @@ class CoreImpl : public CoreInterface {
   SocketHandler *socket_handler_ = NULL;
   HWDisplaysInfo hw_displays_info_ = {};
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
+  CoreIPCVmCallbackImpl* vm_cb_intf_ = nullptr;
+  std::vector<uint64_t> *panel_ids_;
+  std::shared_ptr<DemuraParserManagerIntf> pm_intf_ = nullptr;
+  bool reserve_done_  = false;
+  char *raw_mapped_buffer_ = nullptr;
+  std::vector<uint32_t> demura_display_ids_;
 };
 
 }  // namespace sdm

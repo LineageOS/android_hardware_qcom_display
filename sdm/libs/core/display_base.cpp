@@ -223,13 +223,18 @@ DisplayError DisplayBase::Deinit() {
   {  // Scope for lock
     ClientLock lock(disp_mutex_);
     ClearColorInfo();
-    comp_manager_->UnregisterDisplay(display_comp_ctx_);
     if (IsPrimaryDisplayLocked()) {
       hw_intf_->UnsetScaleLutConfig();
     }
   }
   HWEventsInterface::Destroy(hw_events_intf_);
   HWInterface::Destroy(hw_intf_);
+
+  {  // Scope for lock
+    ClientLock lock(disp_mutex_);
+    comp_manager_->UnregisterDisplay(display_comp_ctx_);
+  }
+
   if (rc_panel_feature_init_) {
     rc_core_->Deinit();
     rc_panel_feature_init_ = false;
@@ -3628,6 +3633,7 @@ void DisplayBase::CheckMMRMState() {
   if (!mmrm_updated_) {
     return;
   }
+  DTRACE_SCOPED();
   DLOGI("Handling updated MMRM request");
   mmrm_updated_ = false;
   bool reduced_clk = (mmrm_requested_clk_ < hw_resource_info_.max_sde_clk) ? true : false;
@@ -3660,7 +3666,7 @@ void DisplayBase::CheckMMRMState() {
 
 void DisplayBase::MMRMEvent(uint32_t clk) {
   ClientLock lock(disp_mutex_);
-
+  DTRACE_SCOPED();
   if (clk < mmrm_floor_clk_vote_) {
     DLOGW("Clk vote of %u is lower than floor clock %d. Bail.", clk, mmrm_floor_clk_vote_);
     return;

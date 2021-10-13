@@ -117,6 +117,7 @@ namespace sdm {
 std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
 HWCwbConfig HWDeviceDRM::cwb_config_ = {};
 std::mutex HWDeviceDRM::cwb_state_lock_;
+bool HWDeviceDRM::reset_planes_luts_ = true;
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -956,6 +957,7 @@ DisplayError HWDeviceDRM::GetNumDisplayAttributes(uint32_t *count) {
 DisplayError HWDeviceDRM::GetDisplayAttributes(uint32_t index,
                                                HWDisplayAttributes *display_attributes) {
   if (index >= display_attributes_.size()) {
+    DLOGW("Index > display_attributes_.size(). Return.");
     return kErrorParameters;
   }
   *display_attributes = display_attributes_[index];
@@ -1186,7 +1188,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
 DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
 
-  if (!first_cycle_ || tui_state_ != kTUIStateNone || last_power_mode_ != DRMPowerMode::OFF) {
+  if (first_cycle_ || tui_state_ != kTUIStateNone || last_power_mode_ != DRMPowerMode::OFF) {
     pending_power_state_ = kPowerStateDoze;
     return kErrorDeferred;
   }
@@ -1337,10 +1339,16 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
 #ifdef TRUSTED_VM
   if (first_cycle_) {
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
     drm_atomic_intf_->Perform(sde_drm::DRMOps::RESET_PANEL_FEATURES, 0 /* argument is not used */);
   }
 #endif
+
+  if (reset_planes_luts_) {
+    // Used in 2 cases:
+    // 1. Since driver doesnt clear the SSPP luts during the adb shell stop/start, clear once
+    // 2. On TUI start also, need to clear the SSPP luts.
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_LUT, token_.crtc_id);
+  }
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
     Layer &layer = hw_layers_info->hw_layers.at(i);
@@ -1809,6 +1817,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   }
 
   panel_compression_changed_ = 0;
+  reset_planes_luts_ = false;
   first_cycle_ = false;
   update_mode_ = false;
   hw_layers_info->updates_mask = 0;
@@ -1832,6 +1841,12 @@ DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   ResetROI();
   bool sync_commit = (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd ||
                       secure_display_active_);
+
+  // TODO(user): Handle via flush call
+#ifdef TRUSTED_VM
+  sync_commit = true;
+#endif
+
   int ret = NullCommit(sync_commit /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
@@ -2161,30 +2176,26 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  uint32_t max_input_width = hw_resource_.hw_dest_scalar_info.max_input_width;
-  uint32_t dual_max_input_width = max_input_width - DEST_SCALAR_OVERFETCH_SIZE;
-  if (mixer_attributes_.split_type == kDualSplit &&
-     (mixer_attributes.width > dual_max_input_width)) {
-    DLOGW("Input width exceeds width limit in dual LM mode. input_width %d width_limit %d",
-          mixer_attributes.width, dual_max_input_width);
-    return kErrorNotSupported;
-  }
-
-  if (display_attributes_[index].is_device_split) {
-    max_input_width *= 2;
-  }
-
-  if (mixer_attributes.width > max_input_width) {
-    DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
-          max_input_width);
-    return kErrorNotSupported;
-  }
-
   uint32_t topology_num_split = 0;
   GetTopologySplit(display_attributes_[index].topology, &topology_num_split);
   if (mixer_attributes.width % topology_num_split != 0) {
     DLOGW("Uneven LM split: topology:%d supported_split:%d mixer_width:%d",
-           display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
+          display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
+    return kErrorNotSupported;
+  }
+
+  uint32_t max_input_width = hw_resource_.hw_dest_scalar_info.max_input_width;
+  uint32_t split_max_input_width = max_input_width - DEST_SCALAR_OVERFETCH_SIZE;
+  uint32_t lm_split_width = mixer_attributes.width / topology_num_split;
+  if (topology_num_split > 1 && lm_split_width > split_max_input_width) {
+    DLOGW("Input width exceeds width limit in split LM mode. input_width %d width_limit %d",
+          lm_split_width, split_max_input_width);
+    return kErrorNotSupported;
+  }
+
+  if (mixer_attributes.width > max_input_width * topology_num_split) {
+    DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
+          max_input_width * topology_num_split);
     return kErrorNotSupported;
   }
 
@@ -2232,6 +2243,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
 
 DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
   if (!mixer_attributes) {
+    DLOGW("mixer_attributes invalid. Return.");
     return kErrorParameters;
   }
 

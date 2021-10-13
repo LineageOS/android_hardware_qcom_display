@@ -28,8 +28,10 @@
 #include <utils/debug.h>
 #include <utils/locker.h>
 #include <utils/utils.h>
+#include <sys/mman.h>
 #include <map>
 #include <vector>
+#include <thread>
 
 #include "color_manager.h"
 #include "core_impl.h"
@@ -107,10 +109,17 @@ DisplayError CoreImpl::Init() {
   }
 
   // Must only call after GetDisplaysStatus
+#ifndef TRUSTED_VM
   if (ReserveDemuraResources() != kErrorNone) {
     comp_mgr_.SetDemuraStatus(false);
   }
-
+  if (pm_intf_) {
+    vm_cb_intf_ = new CoreIPCVmCallbackImpl(ipc_intf_, pm_intf_);
+    if (vm_cb_intf_) {
+      vm_cb_intf_->Init();
+    }
+  }
+#endif
   signal(SIGPIPE, SIG_IGN);
   return kErrorNone;
 
@@ -122,9 +131,27 @@ CleanupOnError:
   return error;
 }
 
+void CoreImpl::ReleaseDemuraResources() {
+  GenericPayload dummy;
+  if (pm_intf_) {
+    int ret = pm_intf_->SetParameter(kDemuraParserManagerParamReleaseParsers, dummy);
+    if (ret < 0) {
+        DLOGW("Failed to release demura parsers");
+    }
+  }
+
+  for (auto &it : demura_display_ids_)
+    comp_mgr_.FreeDemuraFetchResources(it);
+}
+
 DisplayError CoreImpl::Deinit() {
   SCOPE_LOCK(locker_);
+  if (vm_cb_intf_) {
+    vm_cb_intf_->Deinit();
+    delete vm_cb_intf_;
+  }
 
+  ReleaseDemuraResources();
   ColorManagerProxy::Deinit();
 
   comp_mgr_.Deinit();
@@ -286,6 +313,9 @@ void CoreImpl::InitializeSDMUtils() {
 DisplayError CoreImpl::ReserveDemuraResources() {
   DisplayError err = kErrorNone;
   int enable = 0;
+  if (reserve_done_)
+    return kErrorNone;
+
   Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
   if (!enable) {
     comp_mgr_.SetDemuraStatus(false);
@@ -295,7 +325,6 @@ DisplayError CoreImpl::ReserveDemuraResources() {
     DLOGI("Demura is enabled");
     comp_mgr_.SetDemuraStatus(true);
   }
-
   std::map<uint32_t, uint8_t> required_demura_fetch_cnt;  // display_id, count
   if ((err = hw_info_intf_->GetRequiredDemuraFetchResourceCount(&required_demura_fetch_cnt)) !=
       kErrorNone) {
@@ -364,6 +393,7 @@ DisplayError CoreImpl::ReserveDemuraResources() {
         DLOGE("Failed to reserve resources error = %d", err);
         return err;
       }
+      demura_display_ids_.push_back(req.first);
     }
   }
 
@@ -375,13 +405,13 @@ DisplayError CoreImpl::ReserveDemuraResources() {
   }
 
   panel_feature_factory_intf_ = get_factory_f_ptr();
-  std::shared_ptr<DemuraParserManagerIntf> pm_intf =
-                                panel_feature_factory_intf_->CreateDemuraParserManager(ipc_intf_);
-  if (!pm_intf) {
+  pm_intf_ = panel_feature_factory_intf_->CreateDemuraParserManager(ipc_intf_,
+                                buffer_allocator_);
+  if (!pm_intf_) {
     DLOGE("Failed to get Parser Manager intf");
     return kErrorResources;
   }
-  if (pm_intf->Init() != 0) {
+  if (pm_intf_->Init() != 0) {
     DLOGE("Failed to init Parser Manager intf");
     return kErrorResources;
   }
@@ -403,12 +433,162 @@ DisplayError CoreImpl::ReserveDemuraResources() {
     DLOGI("Detected panel_id = %" PRIu64 " (0x%" PRIx64 ")", id, id);
   }
 
-  if ((ret = pm_intf->SetParameter(kDemuraParserManagerParamPanelIds, in))) {
+  if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamPanelIds, in))) {
     DLOGE("Failed to set the panel ids to the parser manager");
     return kErrorResources;
   }
 
+  reserve_done_ = true;
   return err;
 }
+
+// LCOV_EXCL_START
+CoreIPCVmCallbackImpl::CoreIPCVmCallbackImpl(std::shared_ptr<IPCIntf> ipc_intf,
+                                        std::shared_ptr<DemuraParserManagerIntf> pm_intf)
+  : ipc_intf_(ipc_intf), pm_intf_(pm_intf) {
+}
+
+void CoreIPCVmCallbackImpl::Init() {
+  if (!ipc_intf_) {
+    DLOGW("IPC interface is NULL");
+    return;
+  }
+  GenericPayload in_reg;
+  int *cb_hnd_out = nullptr;
+  CoreIPCVmCallbackImpl **cb_intf = nullptr;
+  int ret = in_reg.CreatePayload<CoreIPCVmCallbackImpl *>(cb_intf);
+  if (ret) {
+    DLOGE("failed to create the payload for in_reg. Error:%d", ret);
+    return;
+  }
+  *cb_intf = this;
+  GenericPayload out_reg;
+  ret = out_reg.CreatePayload<int>(cb_hnd_out);
+  if (ret) {
+    DLOGE("failed to create the payload for out_reg. Error:%d", ret);
+    return;
+  }
+  if ((ret = ipc_intf_->ProcessOps(kIpcOpsRegisterVmCallback, in_reg, &out_reg))) {
+    DLOGE("Failed to register vm callback, error = %d", ret);
+    return;
+  }
+  cb_hnd_out_ = *cb_hnd_out;
+}
+
+void CoreIPCVmCallbackImpl::Deinit() {
+  if (!ipc_intf_) {
+    DLOGW("IPC interface is NULL");
+    return;
+  }
+  GenericPayload in_unreg;
+  int *cb_hnd_in = nullptr;
+  int ret = in_unreg.CreatePayload<int>(cb_hnd_in);
+  if (ret) {
+    DLOGE("failed to create the payload for in_unreg. Error:%d", ret);
+    return;
+  }
+  *cb_hnd_in = cb_hnd_out_;
+  if ((ret = ipc_intf_->ProcessOps(kIpcOpsUnRegisterVmCallback, in_unreg, nullptr))) {
+    DLOGE("Failed to unregister vm callback, error = %d", ret);
+    return;
+  }
+  server_ready_ = false;
+}
+
+void CoreIPCVmCallbackImpl::OnServerReady() {
+  if (server_ready_) {
+    DLOGE("Server is ready");
+    return;
+  }
+  server_ready_ = true;
+  std::thread(CoreIPCVmCallbackImpl::OnServerReadyThread, this).detach();
+}
+
+void CoreIPCVmCallbackImpl::OnServerReadyThread(CoreIPCVmCallbackImpl *obj) {
+    if (obj->SendProperties()) {
+      DLOGE("Failed to send Properties");
+    }
+    if (obj->ExportDemuraCalibBuffer()) {
+      DLOGE("Failed to export Calibration buffer");
+    }
+}
+
+int CoreIPCVmCallbackImpl::SendProperties() {
+  if (!ipc_intf_) {
+    DLOGW("IPC interface is NULL");
+    return -EINVAL;
+  }
+
+  GenericPayload in;
+  int ret = 0, enable, count = 0;
+  IPCSetPropertyParams *prop_configs = nullptr;
+  ret = in.CreatePayload<IPCSetPropertyParams>(prop_configs);
+  if (ret) {
+    DLOGW("failed to create the payload. Error:%d", ret);
+    return ret;
+  }
+
+  Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
+  if (enable) {
+    std::snprintf(prop_configs->props.property_list[count].prop_name,
+                  sizeof prop_configs->props.property_list[count].prop_name,
+                  "%s", ENABLE_DEMURA);
+    std::snprintf(prop_configs->props.property_list[count].value,
+                  sizeof prop_configs->props.property_list[count].value,
+                  "%d", enable);
+    count++;
+  }
+  Debug::Get()->GetProperty(ENABLE_SPR, &enable);
+  if (enable) {
+    std::snprintf(prop_configs->props.property_list[count].prop_name,
+                  sizeof prop_configs->props.property_list[count].prop_name,
+                  "%s", ENABLE_SPR);
+    std::snprintf(prop_configs->props.property_list[count].value,
+                  sizeof prop_configs->props.property_list[count].value,
+                  "%d", enable);
+    count++;
+  }
+
+  if (count) {
+    prop_configs->props.count = count;
+    if ((ret = ipc_intf_->SetParameter(kIpcParamSetProperties, in))) {
+      DLOGW("Failed to set properties, error = %d", ret);
+      return ret;
+    }
+    DLOGI("Sent Properties successful");
+  }
+
+  return 0;
+}
+
+int CoreIPCVmCallbackImpl::ExportDemuraCalibBuffer() {
+  int enable = 0;
+  Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
+  if (!enable && !pm_intf_)
+    return -EINVAL;
+  GenericPayload dummy;
+  int ret = 0;
+  if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamExportCalibBuffers, dummy))) {
+    DLOGE("Failed to export calibration buffers");
+    return ret;
+  }
+  DLOGI("Export buffer successful");
+  return 0;
+}
+
+void CoreIPCVmCallbackImpl::OnServerExit() {
+  GenericPayload dummy;
+  int ret = 0;
+
+  server_ready_ = false;
+  if (!pm_intf_)
+    return;
+  if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamFreeCalibBuffers, dummy))) {
+    DLOGE("Failed to export calibration buffers");
+    return;
+  }
+  DLOGI("Free Export buffers successful");
+}
+// LCOV_EXCL_STOP
 
 }  // namespace sdm

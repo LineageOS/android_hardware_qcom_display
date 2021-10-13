@@ -411,6 +411,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
       if (hw_panel_info_.mode != kModeCommand) {
         SetQOSData(qos_data);
         SetVMReqState();
+        SetIdlePCState();
         DisplayError err = Flush(NULL);
         if (err != kErrorNone) {
           return err;
@@ -427,6 +428,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
       if (hw_panel_info_.mode != kModeCommand || pending_power_state_ == kPowerStateOff) {
         SetQOSData(qos_data);
         SetVMReqState();
+        SetIdlePCState();
         DisplayError err = Flush(NULL);
         if (err != kErrorNone) {
           return err;

@@ -98,6 +98,32 @@ class DppsInfo {
   DppsInterface *(*GetDppsInterface)() = NULL;
 };
 
+class DisplayIPCVmCallbackImpl : public IPCVmCallbackIntf {
+ public:
+  DisplayIPCVmCallbackImpl(BufferAllocator *buffer_allocator,
+                               std::shared_ptr<IPCIntf> ipc_intf,
+                               uint64_t panel_id, uint32_t width, uint32_t height);
+  void Init();
+  void Deinit();
+  void OnServerReady();
+  void OnServerExit();
+  void ExportHFCBuffer();
+  void FreeExportBuffer();
+  virtual ~DisplayIPCVmCallbackImpl() {}
+
+ private:
+  IPCExportBufOutParams export_buf_out_params_ = {};
+  BufferAllocator *buffer_allocator_ {};
+  int *cb_hnd_out_ = nullptr;
+  std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
+  BufferInfo buffer_info_hfc_ = {};
+  uint64_t panel_id_ = 0;
+  bool server_ready_ = false;
+  uint32_t hfc_buffer_width_ = 0;
+  uint32_t hfc_buffer_height_ = 0;
+  recursive_mutex cb_mutex_;
+};
+
 class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
  public:
   DisplayBuiltIn(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
@@ -145,6 +171,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
   DisplayError PrePrepare(LayerStack *layer_stack) override;
   DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) override;
+  DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -200,6 +227,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDppsFeatureLocked(void *payload, size_t size);
   DisplayError HandleDemuraLayer(LayerStack *layer_stack);
   void NotifyDppsHdrPresent(LayerStack *layer_stack);
+  void ProcessSecureEvent();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -248,6 +276,11 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   HWDisplayMode last_panel_mode_ = kModeDefault;
   bool hdr_present_ = false;
   bool qsync_enabled_ = false;
+  uint32_t hfc_buffer_width_ = 0;
+  uint32_t hfc_buffer_height_ = 0;
+  int hfc_buffer_fd_ = -1;
+  uint32_t hfc_buffer_size_ = 0;
+  DisplayIPCVmCallbackImpl *vm_cb_intf_ = nullptr;
 };
 
 }  // namespace sdm
