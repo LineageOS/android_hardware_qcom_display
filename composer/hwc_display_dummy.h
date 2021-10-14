@@ -53,6 +53,9 @@ class HWCDisplayDummy : public HWCDisplay {
                                       int32_t dataspace, hwc_region_t damage);
   virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
                              int active_config_index, uint32_t num_configs);
+  virtual HWC2::Error SetActiveConfigWithConstraints(
+      hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
+      VsyncPeriodChangeTimeline *out_timeline);
  private:
   HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                   HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
