@@ -3035,18 +3035,7 @@ DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::SetDimmingBlLut(void *payload, size_t size) {
-  if (!payload || size != sizeof(DRMPPFeatureInfo)) {
-    DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
-        sizeof(DRMPPFeatureInfo));
-      return kErrorParameters;
-  }
-
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
-  return kErrorNone;
-}
-
-DisplayError HWDeviceDRM::EnableDimmingBacklightEvent(void *payload, size_t size) {
+DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
   if (!payload || size != sizeof(DRMPPFeatureInfo)) {
     DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
         sizeof(DRMPPFeatureInfo));

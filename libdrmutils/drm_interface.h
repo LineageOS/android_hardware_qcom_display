@@ -813,6 +813,8 @@ enum DRMPPFeatureID {
   kFeatureVigGamut,
   kFeatureCWBDither,
   kFeatureDimmingBlLut,
+  kFeatureDimmingDynCtrl,
+  kFeatureDimmingMinBl,
   kPPFeaturesMax,
 };
 

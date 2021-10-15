@@ -183,6 +183,8 @@ enum struct DRMProperty {
   NOISE_LAYER_V1,
   DSC_MODE,
   DIMMING_BL_LUT,
+  DIMMING_DYN_CTRL,
+  DIMMING_MIN_BL,
 
   // Insert above
   MAX

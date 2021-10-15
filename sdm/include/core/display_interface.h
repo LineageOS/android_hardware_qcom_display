@@ -1071,24 +1071,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_level) = 0;
 
-  /*! @brief Method to set display dimming backlight LUT.
+  /*! @brief Method to set display dimming config.
 
-    @param[in] payload of dimming backlight LUT struct.
+    @param[in] payload of dimming config.
     @param[in] size of the payload.
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
-
- /*! @brief Method to enable/disable dimming backlight event.
-
-    @param[in] payload to enable/disable dimming backlight event.
-    @param[in] size of the payload.
-
-    @return \link DisplayError \endlink
-  */
-
-  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
+  virtual DisplayError SetDimmingConfig(void *payload, size_t size) = 0;
 
   /*! @brief Method to trigger a screen refresh and mark needs validate.
 

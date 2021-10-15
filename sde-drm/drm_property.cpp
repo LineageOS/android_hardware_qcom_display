@@ -178,6 +178,8 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "noise_layer_v1") { return DRMProperty::NOISE_LAYER_V1; }
   if (name == "dsc_mode") { return DRMProperty::DSC_MODE; }
   if (name == "dimming_bl_lut") { return DRMProperty::DIMMING_BL_LUT; }
+  if (name == "dimming_dyn_ctrl") { return DRMProperty::DIMMING_DYN_CTRL; }
+  if (name == "dimming_min_bl") { return DRMProperty::DIMMING_MIN_BL; }
 
   return DRMProperty::INVALID;
 }
