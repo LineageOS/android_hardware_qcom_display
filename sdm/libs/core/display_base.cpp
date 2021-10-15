@@ -647,7 +647,6 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
   DTRACE_SCOPED();
-  int level = 0;
   DisplayError error = kErrorNotSupported;
 
 
@@ -669,9 +668,6 @@ DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
     hw_config.right_pipe.lut_info.clear();
   }
 
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
-    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
-  }
   error = comp_manager_->ForceToneMapConfigure(display_comp_ctx_, &disp_layer_stack_);
   if (error == kErrorNone) {
     validated_ = true;
@@ -739,11 +735,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   comp_manager_->GenerateROI(display_comp_ctx_, &disp_layer_stack_);
 
   CheckMMRMState();
-
-  int level = 0;
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
-    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
-  }
 
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &disp_layer_stack_);
@@ -1372,6 +1363,11 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
       secure_event_ == kTUITransitionUnPrepare) {
     secure_event_ = kSecureEventMax;
+  }
+
+  int level = 0;
+  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
   }
 
   PostCommitLayerParams();
