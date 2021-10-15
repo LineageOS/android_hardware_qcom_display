@@ -1395,8 +1395,9 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
 
 HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
   DTRACE_SCOPED();
-  // Block on output buffer fence.
-  if (layer_stack_.output_buffer != nullptr) {
+  // Block on output buffer fence if client is internal.
+  // External clients will wait on their thread.
+  if (layer_stack_.output_buffer != nullptr && (cwb_state_.cwb_client != kCWBClientExternal)) {
     auto &fence = layer_stack_.output_buffer->release_fence;
     display_intf_->GetOutputBufferAcquireFence(&fence);
   }

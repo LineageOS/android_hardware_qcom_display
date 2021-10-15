@@ -67,6 +67,7 @@ shared_ptr<Fence> HWCSession::retire_fence_[HWCCallbacks::kNumDisplays];
 int HWCSession::commit_error_[HWCCallbacks::kNumDisplays] = { 0 };
 Locker HWCSession::display_config_locker_;
 Locker HWCSession::system_locker_;
+std::mutex HWCSession::command_seq_mutex_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 static const uint32_t kBrightnessScaleMax = 100;
@@ -3081,6 +3082,8 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
   SCOPE_LOCK(system_locker_);
+  // Wait until all commands are flushed.
+  std::lock_guard<std::mutex> hwc_lock(command_seq_mutex_);
   {
     SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
@@ -3160,6 +3163,8 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
 }
 
 void HWCSession::DisplayPowerReset() {
+  // Wait until all commands are flushed.
+  std::lock_guard<std::mutex> lock(command_seq_mutex_);
   // Acquire lock on all displays.
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY;
     display < HWCCallbacks::kNumDisplays; display++) {

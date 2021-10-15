@@ -566,6 +566,8 @@ Return<void> QtiComposerClient::executeCommands(uint32_t inLength,
                                                 executeCommands_cb _hidl_cb) {
   std::lock_guard<std::mutex> lock(mCommandMutex);
 
+  std::lock_guard<std::mutex> hwc_lock(hwc_session_->command_seq_mutex_);
+
   bool outChanged = false;
   uint32_t outLength = 0;
   hidl_vec<hidl_handle> outHandles;
@@ -789,6 +791,9 @@ Return<void> QtiComposerClient::executeCommands_2_2(uint32_t inLength,
                                                     executeCommands_2_2_cb _hidl_cb) {
   std::lock_guard<std::mutex> lock(mCommandMutex);
 
+  // This lock ensures that Client gets exclusive access to hwc display.
+  // Failing which return to SF will be blocked leading to fence timeouts.
+  std::lock_guard<std::mutex> hwc_lock(hwc_session_->command_seq_mutex_);
   bool outChanged = false;
   uint32_t outLength = 0;
   hidl_vec<hidl_handle> outHandles;
@@ -905,6 +910,7 @@ Return<void> QtiComposerClient::executeCommands_2_3(uint32_t inLength,
   // TODO(user): Implement combinedly w.r.t executeCommands_2_2
   std::lock_guard<std::mutex> lock(mCommandMutex);
 
+  std::lock_guard<std::mutex> hwc_lock(hwc_session_->command_seq_mutex_);
   bool outChanged = false;
   uint32_t outLength = 0;
   hidl_vec<hidl_handle> outHandles;

@@ -336,6 +336,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
+  static std::mutex command_seq_mutex_;
   static std::bitset<kClientMax> clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
   static shared_ptr<Fence> retire_fence_[HWCCallbacks::kNumDisplays];
   static int commit_error_[HWCCallbacks::kNumDisplays];

@@ -3388,7 +3388,9 @@ HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence)
   auto status = HWC2::Error::None;
 
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  if (readback_configured_ && output_buffer_.release_fence) {
+  if (readback_configured_ && (cwb_state_.cwb_client == kCWBClientExternal)) {
+    display_intf_->GetOutputBufferAcquireFence(release_fence);
+  } else if (readback_configured_ && output_buffer_.release_fence) {
     *release_fence = output_buffer_.release_fence;
     DLOGI("Successfully retrieved readback buffer fence for cwb clinet %d on tappoint %d",
           cwb_state_.cwb_client, cwb_config_.tap_point);
