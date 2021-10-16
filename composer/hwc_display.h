@@ -455,6 +455,12 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void IsMultiDisplay(bool is_multi_display) {
     is_multi_display_ = is_multi_display;
   }
+  virtual HWC2::Error SetDimmingEnable(int int_enabled) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetDimmingMinBl(int min_bl) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   static uint32_t throttling_refresh_rate_;

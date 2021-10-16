@@ -1260,6 +1260,14 @@ int32_t HWCSession::SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled)
   return CallDisplayFunction(display, &HWCDisplay::SetVsyncEnabled, enabled);
 }
 
+int32_t HWCSession::SetDimmingEnable(hwc2_display_t display, int32_t int_enabled) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDimmingEnable, int_enabled);
+}
+
+int32_t HWCSession::SetDimmingMinBl(hwc2_display_t display, int32_t min_bl) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDimmingMinBl, min_bl);
+}
+
 int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support) {
   if (!out_support) {
     return HWC2_ERROR_BAD_PARAMETER;
@@ -1807,6 +1815,30 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       int port_id = 0;
       status = GetDisplayPortId(disp_id, &port_id);
       output_parcel->writeInt32(port_id);
+    }
+    break;
+
+    case qService::IQService::SET_DIMMING_ENABLE: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int enable = input_parcel->readInt32();
+      status = SetDimmingEnable(disp_id, enable);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
+    case qService::IQService::SET_DIMMING_MIN_BL: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int min_bl = input_parcel->readInt32();
+      status = SetDimmingMinBl(disp_id, min_bl);
+      output_parcel->writeInt32(status);
     }
     break;
 

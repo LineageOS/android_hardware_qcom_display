@@ -83,6 +83,8 @@ public:
       NOTIFY_TUI_TRANSITION = 51,              // Notify TUI transition prepare/start/stop
       GET_DISPLAY_PORT_ID = 52,                // Get the port id for a given display
       SET_NOISE_PLUGIN_OVERRIDE = 53,          // Override NoisePlugIn parameters
+      SET_DIMMING_ENABLE = 54,                 // Set display dimming enablement
+      SET_DIMMING_MIN_BL = 55,                 // Set display dimming minimal backlight value
       COMMAND_LIST_END = 400,
     };
 

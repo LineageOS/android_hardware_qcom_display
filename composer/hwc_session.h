@@ -261,6 +261,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
   int32_t SetDisplayBrightnessScale(const android::Parcel *input_parcel);
   int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
+  int32_t SetDimmingEnable(hwc2_display_t display, int32_t int_enabled);
+  int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,

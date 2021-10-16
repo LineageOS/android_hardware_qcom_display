@@ -178,6 +178,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
   DisplayError SetDimmingConfig(void *payload, size_t size);
+  DisplayError SetDimmingEnable(int int_enabled);
+  DisplayError SetDimmingMinBl(int min_bl);
   void ScreenRefresh();
   virtual bool CheckResourceState(bool *res_exhausted);
   virtual bool GameEnhanceSupported();
