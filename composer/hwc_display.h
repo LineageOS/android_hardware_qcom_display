@@ -302,7 +302,6 @@ class HWCDisplay : public DisplayEventHandler {
   }
   bool IsFirstCommitDone() { return !first_cycle_; }
   virtual void ProcessActiveConfigChange();
-  DisplayDrawMethod GetDrawMethod() { return draw_method_; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
