@@ -171,7 +171,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
   DisplayError PrePrepare(LayerStack *layer_stack) override;
   DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) override;
-  DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) override;
+  DisplayError PostHandleSecureEvent(SecureEvent secure_event) override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -225,7 +225,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDppsFeatureLocked(void *payload, size_t size);
   DisplayError HandleDemuraLayer(LayerStack *layer_stack);
   void NotifyDppsHdrPresent(LayerStack *layer_stack);
-  void ProcessSecureEvent();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;

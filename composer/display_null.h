@@ -118,6 +118,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
   MAKE_NO_OP(HandleSecureEvent(SecureEvent, bool *))
+  MAKE_NO_OP(PostHandleSecureEvent(SecureEvent))
   MAKE_NO_OP(SetQSyncMode(QSyncMode))
   MAKE_NO_OP(ControlIdlePowerCollapse(bool, bool))
   MAKE_NO_OP(SetDisplayDppsAdROI(void *))

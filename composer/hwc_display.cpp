@@ -3126,6 +3126,10 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   return kErrorNone;
 }
 
+DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
+  return display_intf_->PostHandleSecureEvent(secure_event);
+}
+
 int HWCDisplay::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
                                        uint32_t *y_pixels) {
   if (!x_pixels || !y_pixels) {
