@@ -170,8 +170,16 @@ int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates);
 // Sets the specified min and max luminance values.
 int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum);
 
-// Sets display standy mode
-extern "C" int setStandByMode(int mode);
+// Informs HWC about TWM entry/exit based on which NULL Display is connected
+// or disconnected.
+// mode   -> 0 for exit sequence, 1 for entry sequence.
+// is_twm ->
+//    0 for regular ambient mode
+//    1 for TWM with framework shutdown mode (If display is in ON state, then
+//      this would put display in DOZE state).
+//      Using 0 for mode value and 1 for is_twm is not valid, it may lead to
+//      state inconsistency between Android Framework and HAL.
+int setStandByMode(int mode, int is_twm);
 
 // Get Panel Resolution
 extern "C" int getPanelResolution(int *width, int *height);
