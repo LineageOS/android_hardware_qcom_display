@@ -837,4 +837,10 @@ DisplayError CompManager::GetDefaultQosData(Handle display_ctx, HWQosData *qos_d
                                  display_comp_ctx->display_resource_ctx, qos_data);
 }
 
+DisplayError CompManager::HandleCwbFrequencyBoost(bool isRequest) {
+  DisplayError error = kErrorNone;
+  error = resource_intf_->Perform(ResourceInterface::kCmdSetCwbBoost, &isRequest);
+  return error;
+}
+
 }  // namespace sdm

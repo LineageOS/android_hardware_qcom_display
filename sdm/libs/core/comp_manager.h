@@ -112,6 +112,7 @@ class CompManager {
   DisplayError GetHDR10PlusCapability(bool *hdr_plus_support);
   DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError GetDefaultQosData(Handle display_ctx, HWQosData *qos_data);
+  DisplayError HandleCwbFrequencyBoost(bool isRequest);
 
  private:
   static const int kMaxThermalLevel = 3;
