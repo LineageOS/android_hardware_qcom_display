@@ -2006,8 +2006,19 @@ android::status_t HWCSession::SetDisplayMode(const android::Parcel *input_parcel
     return -ENODEV;
   }
 
+  hwc2_config_t current_config = 0, new_config = 0;
+  android::status_t status = -EINVAL;
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveConfig(&current_config);
   uint32_t mode = UINT32(input_parcel->readInt32());
-  return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::SET_DISPLAY_MODE, mode);
+  status = hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::SET_DISPLAY_MODE, mode);
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveConfig(&new_config);
+
+  //In case of config change, notify client with the new configuration
+  if (new_config != current_config) {
+    NotifyDisplayAttributes(HWC_DISPLAY_PRIMARY, new_config);
+  }
+
+  return status;
 }
 
 android::status_t HWCSession::SetMaxMixerStages(const android::Parcel *input_parcel) {

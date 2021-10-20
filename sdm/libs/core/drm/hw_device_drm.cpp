@@ -1823,10 +1823,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
 
   if (vrefresh_) {
     // Update current mode index if refresh rate is changed
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+      if ((current_mode.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (current_mode.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+          (current_mode.cur_panel_mode == connector_info_.modes[mode_index].cur_panel_mode) &&
           (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
         SetDisplaySwitchMode(mode_index);
         break;
