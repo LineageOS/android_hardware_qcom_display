@@ -161,6 +161,18 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
+DisplayError HWTVDRM::Flush(HWLayersInfo *hw_layers_info) {
+  if (hw_panel_info_.hdr_enabled) {
+    memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
+    hdr_metadata_.hdr_supported = 1;
+    hdr_metadata_.hdr_state = HDR_DISABLE;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id,
+                              &hdr_metadata_);
+  }
+
+  return HWDeviceDRM::Flush(hw_layers_info);
+}
+
 DisplayError HWTVDRM::Deinit() {
   if (hw_panel_info_.hdr_enabled) {
     memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
