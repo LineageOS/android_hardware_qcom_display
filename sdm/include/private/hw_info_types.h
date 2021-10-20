@@ -826,7 +826,8 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_back_porch = 0;   //!< Vertical back porch of panel
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t clock_khz = 0;      //!< Stores the pixel clock of panel in khz
-  HWTopology topology = kUnknown;  //!< Stores the topology information.
+  HWTopology topology = kUnknown;   //!< Stores the topology information.
+  uint32_t topology_num_split = 1;  //!< Stores the topology split number information.
 
   bool operator !=(const HWDisplayAttributes &display_attributes) {
     return ((is_device_split != display_attributes.is_device_split) ||
@@ -843,7 +844,8 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
             (v_total != display_attributes.v_total) ||
             (is_yuv != display_attributes.is_yuv) ||
             (clock_khz != display_attributes.clock_khz) ||
-            (topology != display_attributes.topology));
+            (topology != display_attributes.topology) ||
+            (topology_num_split != display_attributes.topology_num_split));
   }
 
   bool operator ==(const HWDisplayAttributes &display_attributes) {

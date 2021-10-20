@@ -196,7 +196,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   }
 
   hw_resource->num_blending_stages = 1;
-  hw_resource->max_pipe_width = 2560;
+  hw_resource->max_pipe_width = 5120;
   hw_resource->max_cursor_size = 128;
   hw_resource->max_scale_down = 1;
   hw_resource->max_scale_up = 1;
