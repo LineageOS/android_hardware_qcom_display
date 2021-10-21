@@ -56,7 +56,7 @@ ifneq (,$(DISPLAY_FEATURE_MAX_ROT_SESSION))
     common_flags += -DTARGET_SPECIFIC_MAX_ROT_SESSION=$(DISPLAY_FEATURE_MAX_ROT_SESSION)
 endif
 
-ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifneq (,$(call is-vendor-board-qcom))
 # This check is to pick the kernel headers from the right location.
 # If the macro above is defined, we make the assumption that we have the kernel
 # available in the build tree.
