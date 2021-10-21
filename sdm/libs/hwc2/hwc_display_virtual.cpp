@@ -265,7 +265,7 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
     output_buffer_->planes[0].offset = output_handle->offset;
     output_buffer_->planes[0].stride = UINT32(output_handle->width);
   }
-  validated_.reset(type_);
+
   return HWC2::Error::None;
 }
 
