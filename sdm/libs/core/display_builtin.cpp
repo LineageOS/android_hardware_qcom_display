@@ -799,12 +799,6 @@ void DisplayBuiltIn::PingPongTimeout() {
   hw_intf_->DumpDebugData();
 }
 
-void DisplayBuiltIn::ThermalEvent(int64_t thermal_level) {
-  event_handler_->HandleEvent(kThermalEvent);
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
-}
-
 void DisplayBuiltIn::IdlePowerCollapse() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_handler_->HandleEvent(kIdlePowerCollapse);
