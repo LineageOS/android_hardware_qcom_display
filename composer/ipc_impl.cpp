@@ -1,5 +1,5 @@
 /*
- *Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ *Copyright (c) 2020-2022, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -132,7 +132,7 @@ int IPCImpl::Deinit() {
 int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
   int ret = 0;
   switch(param) {
-  case kIpcParamSetBacklight: {
+  case kIpcParamBacklight: {
     if (qrtr_client_intf_) {
       IPCBacklightParams *backlight_params = nullptr;
       uint32_t sz = 0;
@@ -150,7 +150,7 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       return qrtr_client_intf_->SendCommand(cmd);
     }
   } break;
-  case kIpcParamSetDisplayConfigs: {
+  case kIpcParamDisplayConfigs: {
     if (qrtr_client_intf_) {
       IPCDisplayConfigParams *disp_configs = nullptr;
       uint32_t sz = 0;
@@ -174,7 +174,7 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       return qrtr_client_intf_->SendCommand(cmd);
     }
   } break;
-  case kIpcParamSetProperties: {
+  case kIpcParamProperties: {
     if (qrtr_client_intf_) {
       IPCSetPropertyParams *prop_configs = nullptr;
       uint32_t sz = 0;
@@ -196,6 +196,26 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       return qrtr_client_intf_->SendCommand(cmd);
     }
   } break;
+
+  case kIpcParamPanelBoot: {
+    if (qrtr_client_intf_) {
+      IPCPanelBootParams *panel_boot_params = nullptr;
+      uint32_t sz = 0;
+      Command cmd = {};
+      if ((ret = in.GetPayload(panel_boot_params, &sz))) {
+        DLOGE("Failed to get input payload for panel_boot_params error = %d", ret);
+        return ret;
+      }
+      CmdSetPanelBootParam &cmd_set_panel_boot_param = cmd.cmd_set_panel_boot_param;
+      cmd.id = kCmdSetPanelBootParams;
+      strlcpy(cmd_set_panel_boot_param.panel_boot_string,
+              panel_boot_params->panel_boot_string.c_str(),
+              sizeof(cmd_set_panel_boot_param.panel_boot_string));
+      DLOGI("Sending boot params %s", cmd_set_panel_boot_param.panel_boot_string);
+      return qrtr_client_intf_->SendCommand(cmd);
+    }
+  } break;
+
   default:
     break;
   }

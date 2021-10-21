@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018, 2022 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -31,6 +31,7 @@
 #include <vector>
 #include <utility>
 #include <map>
+#include <string>
 
 namespace sdm {
 
@@ -46,6 +47,7 @@ class HWInfoInterface {
   virtual DisplayError GetRequiredDemuraFetchResourceCount(
                        std::map<uint32_t, uint8_t> *required_demura_fetch_cnt) = 0;
   virtual DisplayError GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) = 0;
+  virtual DisplayError GetPanelBootParamString(std::string *panel_boot_param_string) = 0;
  protected:
   virtual ~HWInfoInterface() { }
 };
