@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1038,6 +1038,39 @@ DisplayError HWInfoDRM::GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) {
     }
   }
 
+  return kErrorNone;
+}
+
+DisplayError HWInfoDRM::GetPanelBootParamString(std::string *panel_boot_param_string) {
+  if (!panel_boot_param_string) {
+    return kErrorResources;
+  }
+  (*panel_boot_param_string) = "";
+  char read_str[kMaxStringLength] = {0};
+  string node_str_base = "/sys/module/msm_drm/parameters/";
+  int panel_id = 0;
+  while (1) {
+    string disp_str = ("dsi_display" + std::to_string(panel_id));
+    string node_str = (node_str_base + disp_str);
+    int fd = Sys::open_(node_str.c_str(), O_RDONLY);
+    if (fd < 0) {
+      break;
+    }
+    if (Sys::pread_(fd, read_str, sizeof(read_str), 0) > 0) {
+      string str_temp(read_str);
+      str_temp.erase(std::remove(str_temp.begin(), str_temp.end(), '\n'), str_temp.end());
+      str_temp.erase(std::remove(str_temp.begin(), str_temp.end(), '\r'), str_temp.end());
+      if (!str_temp.empty()) {
+        (*panel_boot_param_string) += panel_id ? " ": "";
+        (*panel_boot_param_string) += (disp_str + "=" + str_temp);
+      }
+      memset(read_str, 0, sizeof(read_str));
+    }
+    Sys::close_(fd);
+    panel_id++;
+  }
+
+  DLOGI("Panel Boot param string %s", panel_boot_param_string->c_str());
   return kErrorNone;
 }
 
