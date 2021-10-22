@@ -598,7 +598,9 @@ DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data, SyncPoints 
 
 DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
   if (doze_poms_switch_done_ || pending_poms_switch_ || bit_clk_rate_) {
-    return kErrorNotSupported;
+    DLOGW("Bailing. Pending operations: doze_poms_switch_done_=%d, pending_poms_switch_=%d,"
+     "bit_clk_rate_=%d", doze_poms_switch_done_, pending_poms_switch_, bit_clk_rate_);
+    return kErrorDeferred;
   }
 
   HWDeviceDRM::SetDisplayAttributes(index);
