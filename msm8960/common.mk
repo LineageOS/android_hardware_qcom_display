@@ -33,7 +33,7 @@ common_deps  :=
 kernel_includes :=
 
 # Executed only on QCOM BSPs
-ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifneq (,$(call is-vendor-board-qcom))
     common_flags += -DQCOM_BSP
     common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
