@@ -753,7 +753,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
   uint32_t height = UINT(hnd->height);
   int format = hnd->format;
   uint64_t usage = hnd->usage;
-  int32_t interlaced = 0;
+  int32_t interlaced = hnd->flags;
   int plane_count = 0;
   int unaligned_width = INT(hnd->unaligned_width);
   int unaligned_height = INT(hnd->unaligned_height);
@@ -761,65 +761,11 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
 
   memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
 
-  // Check if UBWC buffer has been rendered in linear format.
-  int linear_format = 0;
-  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_LINEAR_FORMAT, &linear_format) ==
-      Error::NONE) {
-    format = INT(linear_format);
-  }
-
-  // Check metadata if the geometry has been updated.
-  CropRectangle_t crop;
-  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
-                       &crop) == Error::NONE) {
-    BufferInfo info(crop.right, crop.bottom, format, usage);
-    err = GetAlignedWidthAndHeight(info, &width, &height);
-    if (err) {
-      return err;
-    }
-  }
-
-  // Check metadata for interlaced content.
-  int interlace_flag = 0;
-  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_PP_PARAM_INTERLACED,
-                       &interlace_flag) == Error::NONE) {
-    if (interlace_flag) {
-      interlaced = LAYOUT_INTERLACED_FLAG;
-    }
-  }
-
   PlaneLayoutInfo plane_info[8] = {};
   // Get the chroma offsets from the handle width/height. We take advantage
   // of the fact the width _is_ the stride
-  err = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info);
-  if (err == 0) {
-    if (interlaced &&
-        (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC || IsUbwcFlexFormat(format))) {
-      CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, &plane_info[0], &ycbcr[0]);
-      unsigned int uv_stride = 0, uv_height = 0, uv_size = 0;
-      unsigned int alignment = 4096;
-      uint64_t field_base;
-      height = (height + 1) >> 1;
-#ifndef QMAA
-      uv_stride = MMM_COLOR_FMT_UV_STRIDE(MMM_COLOR_FMT_NV12_UBWC, INT(width));
-      uv_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, INT(height));
-#endif
-      uv_size = ALIGN((uv_stride * uv_height), alignment);
-      field_base = hnd->base + plane_info[1].offset + uv_size;
-      memset(ycbcr[1].reserved, 0, sizeof(ycbcr[1].reserved));
-      CopyPlaneLayoutInfotoAndroidYcbcr(field_base, plane_count, &plane_info[4], &ycbcr[1]);
-    } else {
-      CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, plane_info, ycbcr);
-      switch (format) {
-        case static_cast<int>(PixelFormat::YCRCB_420_SP):
-        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-        case HAL_PIXEL_FORMAT_NV21_ZSL:
-          std::swap(ycbcr->cb, ycbcr->cr);
-      }
-    }
-  }
+  err = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info, hnd,
+                        ycbcr);
   return err;
 }
 
@@ -1641,7 +1587,8 @@ int GetBufferType(int inputFormat) {
 
 // Here width and height are aligned width and aligned height.
 int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
-                    int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info) {
+                    int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info,
+                    const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
   int err = 0;
   unsigned int y_stride, c_stride, y_height, c_height, y_size, c_size, mmm_color_format;
   uint64_t yOffset, cOffset, crOffset, cbOffset;
@@ -1658,6 +1605,25 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
           __FUNCTION__, width, height, format, result);
     }
     return result;
+  }
+
+  // Check if UBWC buffer has been rendered in linear format.
+  int linear_format = 0;
+  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_LINEAR_FORMAT, &linear_format) ==
+      Error::NONE) {
+    format = INT(linear_format);
+  }
+
+  // Check metadata if the geometry has been updated.
+  CropRectangle_t crop;
+  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
+                       &crop) == Error::NONE) {
+    BufferInfo info(crop.right, crop.bottom, format, usage);
+    err = GetAlignedWidthAndHeight(info, reinterpret_cast<unsigned int *>(&width),
+                                   reinterpret_cast<unsigned int *>(&height));
+    if (err) {
+      return err;
+    }
   }
 
   switch (format) {
@@ -1898,6 +1864,34 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       *plane_count = 0;
       ALOGD("%s: Invalid format passed: 0x%x", __FUNCTION__, format);
       err = -EINVAL;
+  }
+  if (err == 0 && hnd != nullptr && ycbcr != nullptr) {
+    if ((flags & LAYOUT_INTERLACED_FLAG) &&
+        (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC || IsUbwcFlexFormat(format))) {
+      CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, *plane_count, plane_info, ycbcr);
+      unsigned int uv_stride = 0, uv_height = 0, uv_size = 0;
+      unsigned int alignment = 4096;
+      uint64_t field_base;
+      height = (height + 1) >> 1;
+#ifndef QMAA
+      uv_stride = MMM_COLOR_FMT_UV_STRIDE(MMM_COLOR_FMT_NV12_UBWC, INT(width));
+      uv_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, INT(height));
+#endif
+      uv_size = ALIGN((uv_stride * uv_height), alignment);
+      field_base = hnd->base + plane_info[1].offset + uv_size;
+      memset(ycbcr[1].reserved, 0, sizeof(ycbcr[1].reserved));
+      CopyPlaneLayoutInfotoAndroidYcbcr(field_base, *plane_count, &plane_info[4], &ycbcr[1]);
+    } else {
+      CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, *plane_count, plane_info, ycbcr);
+      switch (format) {
+        case static_cast<int>(PixelFormat::YCRCB_420_SP):
+        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+        case HAL_PIXEL_FORMAT_NV21_ZSL:
+          std::swap(ycbcr->cb, ycbcr->cr);
+      }
+    }
   }
   return err;
 }

@@ -195,7 +195,7 @@ static Error getYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr y
   PlaneLayoutInfo plane_info[8] = {};
   // Get the chroma offsets from the handle width/height. We take advantage
   // of the fact the width _is_ the stride
-  ret = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info);
+  ret = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info, hnd);
   if (ret == 0) {
     if (interlaced && format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) {
       CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, &plane_info[0], &ycbcr[0]);
