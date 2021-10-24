@@ -1426,7 +1426,7 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
     if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)
-        && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        && format != HAL_PIXEL_FORMAT_YCbCr_420_888 && !(usage & GRALLOC_USAGE_PRIVATE_10BIT)) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
@@ -1454,6 +1454,12 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
         }
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
+      }
+    } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
+      if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010;
       }
     } else if (usage & BufferUsage::COMPOSER_OVERLAY) {
       // XXX: If we still haven't set a format, default to RGBA8888
