@@ -64,6 +64,20 @@ case "$target" in
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_qsync_idle 1
         ;;
+        506)
+        # Set property for Diwali
+        # SOC ID for Diwali is 506
+        setprop vendor.gralloc.use_dma_buf_heaps 1
+        setprop vendor.display.enable_posted_start_dyn 2
+        setprop vendor.display.enable_allow_idle_fallback 1
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_rotator_ui 1
+        setprop vendor.display.enable_spec_fence 1
+        setprop vendor.display.thermal.version 1
+        setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 2
+        setprop vendor.display.enable_qsync_idle 1
+        ;;
     esac
     ;;
     "lahaina")
