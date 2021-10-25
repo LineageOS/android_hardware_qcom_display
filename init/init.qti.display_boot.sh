@@ -52,6 +52,7 @@ case "$target" in
         setprop vendor.display.enable_spec_fence 1
         setprop vendor.display.thermal.version 1
         setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 3
         ;;
         530|531|540)
         setprop vendor.gralloc.use_dma_buf_heaps 1
