@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -241,8 +241,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
 
   // TZ Protected Buffer - L1
-  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) ||
-          (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
+  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
   bool secure_camera = secure && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
   bool secure_display = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
   if (secure != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
@@ -271,11 +270,6 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
   layer_buffer->handle_id = handle->id;
 
-  if (layer_buffer->flags.video && secure) {
-    layer_buffer->last_secure_buffer.clear();
-    layer_buffer->last_secure_buffer.push_back(std::make_tuple(buffer_fd_,
-        handle->id, handle->size));
-  }
   return HWC2::Error::None;
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014, 2016-2017, 2021 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014, 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -279,10 +279,6 @@ struct LayerBuffer {
                                 //! < UBWC Compression ratio,stats. Stored as a vector of pair of
                                 //! of (tile size, #of tiles)
   uint64_t handle_id = 0;
-
-  std::vector<std::tuple<int, uint64_t , size_t>> last_secure_buffer;
-                                //! Last secure buffer info which is used to restore it when HDR
-                                //! session ends
 };
 
 // This enum represents buffer layout types.
