@@ -308,6 +308,21 @@ bool CpuCanRead(uint64_t usage) {
   return false;
 }
 
+bool AdrenoAlignmentRequired(uint64_t usage) {
+  if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+    // Certain formats may need to bypass adreno alignment requirements to
+    // support legacy apps. The following check is for those cases where it is mandatory
+    // to use adreno alignment
+    if (((usage & GRALLOC_USAGE_PRIVATE_VIDEO_HW) &&
+          ((usage & BufferUsage::VIDEO_DECODER) ||
+           (usage & BufferUsage::VIDEO_ENCODER))) ||
+          !CpuCanAccess(usage)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool CpuCanWrite(uint64_t usage) {
   if (usage & BufferUsage::CPU_WRITE_MASK) {
     // Application intends to use CPU for rendering
@@ -435,7 +450,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
           ALOGE("w or h is odd for the YV12 format");
           return 0;
         }
-        if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+        if (AdrenoAlignmentRequired(usage)) {
           if (AdrenoMemInfo::GetInstance() == nullptr) {
             ALOGE("Unable to get adreno instance");
             return 0;
@@ -1289,7 +1304,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, 128);
       break;
     case HAL_PIXEL_FORMAT_YV12:
-      if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+      if (AdrenoAlignmentRequired(usage)) {
         if (AdrenoMemInfo::GetInstance() == nullptr) {
           ALOGE("Unable to get adreno instance");
           return 0;
@@ -1827,7 +1842,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
         err = -EINVAL;
         return err;
       }
-      if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+      if (AdrenoAlignmentRequired(usage)) {
         if (AdrenoMemInfo::GetInstance() == nullptr) {
           ALOGE("Unable to get adreno instance");
           return 0;
