@@ -25,21 +25,32 @@
 #ifndef __IPC_INTERFACE_H__
 #define __IPC_INTERFACE_H__
 
+#include <utils/constants.h>
 #include <string>
+#include <map>
+#include <utility>
+#include <vector>
 
 #include "private/generic_intf.h"
 #include "private/generic_payload.h"
+#include "vm_interface.h"
 
 namespace sdm {
 
 enum IPCParams {
   kIpcParamSetBacklight,            //!< Send backlight params to SVM
   kIpcParamSetDisplayConfigs,       //!< Send display config information to SVM
+  kIpcParamSetProperties,           //!< Send display properties to SVM
+  kIpcParamSetDemuraBuffer,         //!< Cache the calibration and hfc buffers in composer
   kIPCParamMax,
 };
 
 enum IPCOps {
   kIpcOpsFilePath,
+  kIpcOpsExportBuffers,
+  kIpcOpsImportBuffers,
+  kIpcOpsRegisterVmCallback,
+  kIpcOpsUnRegisterVmCallback,
   kIPCOpMax
 };
 
@@ -49,10 +60,9 @@ struct IPCBacklightParams {
 };
 
 struct IPCDisplayConfigParams {
-  uint32_t x_pixels = 0;          //!< Total number of pixels in X-direction on the display panel.
-  uint32_t y_pixels = 0;          //!< Total number of pixels in Y-direction on the display panel.
+  uint32_t h_total = 0;           //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
+  uint32_t v_total = 0;           //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
   uint32_t fps = 0;               //!< Frame rate per second.
-  int config_idx = -1;            //!< Specifies the config index of the display resolution mode.
   bool is_primary = false;        //!< Flag specifies primary/secondary
   bool smart_panel = false;       //!< If the display config has smart panel.
 };
@@ -65,6 +75,50 @@ struct DemuraPaths {
   ~DemuraPaths() {}
   DemuraPaths(std::string config, std::string sig, std::string pk)
       : configPath(config), signaturePath(sig), publickeyPath(pk) {}
+};
+
+struct IPCSetPropertyParams {
+  Properties props;
+};
+
+struct IPCBufferInfo {
+  int fd;
+  uint32_t size;
+  uint32_t payload_sz;
+  uint64_t panel_id;
+  char file_name[128];
+};
+
+enum IPCBufferType {
+  kIpcBufferTypeDemuraCalib,
+  kIpcBufferTypeDemuraHFC,
+  kIpcBufferTypeMax,
+};
+
+class IPCVmCallbackIntf {
+ public:
+  virtual void OnServerReady() = 0;
+  virtual void OnServerExit() = 0;
+ protected:
+  virtual ~IPCVmCallbackIntf() {}
+};
+
+struct IPCImportBufInParams {
+  IPCBufferType req_buf_type = {};
+  uint64_t panel_id = 0;
+};
+
+struct IPCImportBufOutParams {
+  std::vector<IPCBufferInfo> buffers;
+};
+
+struct IPCExportBufInParams {
+  std::map<IPCBufferType, IPCBufferInfo> buffers = {};
+  uint64_t panel_id = 0;
+};
+
+struct IPCExportBufOutParams {
+  std::map<IPCBufferType, int> exported_fds = {};
 };
 
 using IPCIntf = sdm::GenericIntf<IPCParams, IPCOps, GenericPayload>;

@@ -55,7 +55,6 @@ namespace sdm {
 
 bool HWCDisplay::mmrm_restricted_ = false;
 uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
-constexpr uint32_t kVsyncTimeDriftNs = 1000000;
 CwbState HWCDisplay::cwb_state_ = {};
 std::mutex HWCDisplay::cwb_state_lock_;
 
@@ -69,7 +68,7 @@ bool NeedsToneMap(const LayerStack &layer_stack) {
 }
 
 bool IsTimeAfterOrEqualVsyncTime(int64_t time, int64_t vsync_time) {
-  return ((vsync_time != INT64_MAX) && ((time - (vsync_time - kVsyncTimeDriftNs)) >= 0));
+  return ((vsync_time != INT64_MAX) && ((time - vsync_time) >= 0));
 }
 
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
@@ -1252,6 +1251,20 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
     return HWC2::Error::BadParameter;
   }
   client_target_->SetLayerBuffer(target, acquire_fence);
+  client_target_handle_ = target;
+  client_acquire_fence_ = acquire_fence;
+  client_dataspace_     = dataspace;
+  client_damage_region_ = damage;
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplay::GetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                        int32_t dataspace, hwc_region_t damage) {
+  target        = client_target_handle_;
+  acquire_fence = client_acquire_fence_;
+  dataspace     = client_dataspace_;
+  damage        = client_damage_region_;
 
   return HWC2::Error::None;
 }
@@ -2417,6 +2430,22 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
           id_, sdm_id_, type_);
   }
+
+  if (active_secure_sessions_[kSecureCamera] != secure_sessions[kSecureCamera]) {
+    if (secure_sessions[kSecureCamera]) {
+      pending_power_mode_ = current_power_mode_;
+      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off, true /* teardown */);
+      if (error != HWC2::Error::None) {
+        DLOGE("SetPowerMode failed. Error = %d", error);
+      }
+    } else {
+      *power_on_pending = (pending_power_mode_ != HWC2::PowerMode::Off) ? true : false;
+    }
+
+    DLOGI("SecureCamera state changed from %d to %d for display %" PRId64 " %d-%d",
+          active_secure_sessions_.test(kSecureCamera), secure_sessions.test(kSecureCamera),
+          id_, sdm_id_, type_);
+  }
   active_secure_sessions_ = secure_sessions;
   return 0;
 }
@@ -2977,6 +3006,7 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
   if (current_config == config) {
+    SetActiveConfigIndex(config);
     return HWC2::Error::None;
   }
 
@@ -2994,6 +3024,16 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   DisplayConfigVariableInfo info = {};
   GetDisplayAttributesForConfig(INT(config), &info);
   active_refresh_rate_ = info.fps;
+
+  DisplayConfigVariableInfo current_config_info = {};
+  GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
+  // Set fb config if new resolution differs
+  if (info.x_pixels != current_config_info.x_pixels ||
+      info.y_pixels != current_config_info.y_pixels) {
+    if (SetFrameBufferConfig(info.x_pixels, info.y_pixels)) {
+      return HWC2::Error::BadParameter;
+    }
+  }
 
   return HWC2::Error::None;
 }
@@ -3348,7 +3388,9 @@ HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence)
   auto status = HWC2::Error::None;
 
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  if (readback_configured_ && output_buffer_.release_fence) {
+  if (readback_configured_ && (cwb_state_.cwb_client == kCWBClientExternal)) {
+    display_intf_->GetOutputBufferAcquireFence(release_fence);
+  } else if (readback_configured_ && output_buffer_.release_fence) {
     *release_fence = output_buffer_.release_fence;
     DLOGI("Successfully retrieved readback buffer fence for cwb clinet %d on tappoint %d",
           cwb_state_.cwb_client, cwb_config_.tap_point);

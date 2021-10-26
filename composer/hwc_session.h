@@ -261,6 +261,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
   int32_t SetDisplayBrightnessScale(const android::Parcel *input_parcel);
   int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
+  int32_t SetDimmingEnable(hwc2_display_t display, int32_t int_enabled);
+  int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
@@ -336,6 +338,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
+  static std::mutex command_seq_mutex_;
   static std::bitset<kClientMax> clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
   static shared_ptr<Fence> retire_fence_[HWCCallbacks::kNumDisplays];
   static int commit_error_[HWCCallbacks::kNumDisplays];
@@ -562,6 +565,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void HandlePendingPowerMode(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void HandlePendingHotplug(hwc2_display_t disp_id, const shared_ptr<Fence> &retire_fence);
   bool IsPluggableDisplayConnected();
+  bool IsVirtualDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
   void NotifyClientStatus(bool connected);
@@ -623,6 +627,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::unordered_map<int64_t, std::shared_ptr<IDisplayConfigCallback>> callback_clients_;
   uint64_t callback_client_id_ = 0;
   bool async_powermode_ = false;
+  bool async_power_mode_triggered_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;

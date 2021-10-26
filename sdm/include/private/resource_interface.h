@@ -84,7 +84,7 @@ class ResourceInterface {
   virtual DisplayError UpdateSyncHandle(Handle display_ctx, const SyncPoints &sync_points) = 0;
   virtual DisplayError Perform(int cmd, ...) = 0;
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) = 0;
-  virtual DisplayError FreeDemuraFetchResources(Handle display_ctx) = 0;
+  virtual DisplayError FreeDemuraFetchResources(const int32_t &display_id) = 0;
   virtual DisplayError GetDemuraFetchResourceCount(
                        std::map<uint32_t, uint8_t> *fetch_resource_cnt) = 0;
   virtual DisplayError ReserveDemuraFetchResources(const int32_t &display_id,

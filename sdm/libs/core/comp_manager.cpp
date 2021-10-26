@@ -226,18 +226,21 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
   error = resource_intf_->ReconfigureDisplay(display_comp_ctx->display_resource_ctx,
                                              display_attributes, hw_panel_info, mixer_attributes);
   if (error != kErrorNone) {
+    DLOGW("ReconfigureDisplay returned error=%d", error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
                                   display_comp_ctx->display_resource_ctx, default_qos_data);
   if (error != kErrorNone) {
+    DLOGW("GetDefaultQosData Data returned error=%d", error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdCheckEnforceSplit,
                                   display_comp_ctx->display_resource_ctx, display_attributes.fps);
   if (error != kErrorNone) {
+    DLOGW("CheckEnforceSplit returned error=%d", error);
     return error;
   }
 
@@ -287,6 +290,10 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle,
   // If a strategy fails after successfully allocating resources, then set safe mode
   if (display_comp_ctx->remaining_strategies != display_comp_ctx->max_strategies) {
     constraints->safe_mode = true;
+  }
+
+  if (secure_event_ == kTUITransitionStart) {
+    constraints->max_layers = 1;
   }
 
   uint32_t size_ff = 1;  // gpu target layer always present
@@ -400,7 +407,15 @@ DisplayError CompManager::Commit(Handle display_ctx, DispLayerStack *disp_layer_
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  return resource_intf_->Commit(display_comp_ctx->display_resource_ctx, disp_layer_stack);
+  DisplayError error = resource_intf_->Commit(display_comp_ctx->display_resource_ctx,
+                                              disp_layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+  if (secure_event_ == kTUITransitionStart) {
+    return GetDefaultQosData(display_ctx, &disp_layer_stack->info.qos_data);
+  }
+  return kErrorNone;
 }
 
 DisplayError CompManager::ReConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
@@ -701,6 +716,7 @@ void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event
     safe_mode_ = false;
   }
   safe_mode_ = (secure_event == kTUITransitionStart) ? true : safe_mode_;
+  secure_event_ = secure_event;
 }
 
 void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
@@ -752,11 +768,9 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   return false;
 }
 
-DisplayError CompManager::FreeDemuraFetchResources(Handle display_ctx) {
+DisplayError CompManager::FreeDemuraFetchResources(const uint32_t &display_id) {
   SCOPE_LOCK(locker_);
-  DisplayCompositionContext *display_comp_ctx =
-      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  return resource_intf_->FreeDemuraFetchResources(display_comp_ctx->display_resource_ctx);
+  return resource_intf_->FreeDemuraFetchResources(display_id);
 }
 
 DisplayError CompManager::GetDemuraFetchResourceCount(
@@ -779,6 +793,7 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
 }
 
 DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
+  DTRACE_SCOPED();
   if (resource_intf_) {
     DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -826,6 +841,13 @@ DisplayError CompManager::ForceToneMapConfigure(Handle display_ctx,
 
   return resource_intf_->ForceToneMapConfigure(display_comp_ctx->display_resource_ctx,
                                                disp_layer_stack);
+}
+
+DisplayError CompManager::GetDefaultQosData(Handle display_ctx, HWQosData *qos_data) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  return resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
+                                 display_comp_ctx->display_resource_ctx, qos_data);
 }
 
 }  // namespace sdm

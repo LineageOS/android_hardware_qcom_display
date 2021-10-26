@@ -206,6 +206,16 @@ void DRMPPManager::Init(const DRMPropertyManager &pm , uint32_t object_type) {
       pp_prop_map_[kFeatureDimmingBlLut].prop_enum = (DRMProperty)i;
       pp_prop_map_[kFeatureDimmingBlLut].prop_id = pm.GetPropertyId((DRMProperty)i);
       pp_prop_map_[kFeatureDimmingBlLut].version = i - (uint32_t)DRMProperty::DIMMING_BL_LUT;
+    } else if (i >= (uint32_t)DRMProperty::DIMMING_DYN_CTRL &&
+               i <= (uint32_t)DRMProperty::DIMMING_DYN_CTRL) {
+      pp_prop_map_[kFeatureDimmingDynCtrl].prop_enum = (DRMProperty)i;
+      pp_prop_map_[kFeatureDimmingDynCtrl].prop_id = pm.GetPropertyId((DRMProperty)i);
+      pp_prop_map_[kFeatureDimmingDynCtrl].version = i - (uint32_t)DRMProperty::DIMMING_DYN_CTRL;
+    } else if (i >= (uint32_t)DRMProperty::DIMMING_MIN_BL &&
+               i <= (uint32_t)DRMProperty::DIMMING_MIN_BL) {
+      pp_prop_map_[kFeatureDimmingMinBl].prop_enum = (DRMProperty)i;
+      pp_prop_map_[kFeatureDimmingMinBl].prop_id = pm.GetPropertyId((DRMProperty)i);
+      pp_prop_map_[kFeatureDimmingMinBl].version = i - (uint32_t)DRMProperty::DIMMING_MIN_BL;
     }
   }
   return;
@@ -242,6 +252,7 @@ void DRMPPManager::SetPPFeature(drmModeAtomicReq *req, uint32_t obj_id, DRMPPFea
     case kPropEnum:
       break;
     case kPropRange:
+      SetPPRangeProperty(req, obj_id, &pp_prop_map_[feature.id], feature);
       break;
     case kPropBlob:
       SetPPBlobProperty(req, obj_id, &pp_prop_map_[feature.id], feature);
@@ -252,6 +263,28 @@ void DRMPPManager::SetPPFeature(drmModeAtomicReq *req, uint32_t obj_id, DRMPPFea
   }
 
   return;
+}
+
+int DRMPPManager::SetPPRangeProperty(drmModeAtomicReq *req, uint32_t obj_id,
+                                    struct DRMPPPropInfo *prop_info,
+                                    DRMPPFeatureInfo &feature) {
+  int ret = DRM_ERR_INVALID;
+#ifdef PP_DRM_ENABLE
+  uint64_t value = 0;
+
+  if (!feature.payload) {
+    DRM_LOGE("invalid payload for feature %d", feature.id);
+    return ret;
+  }
+  value = *((uint64_t *)feature.payload);
+  ret = drmModeAtomicAddProperty(req, obj_id, prop_info->prop_id, value);
+  if (ret < 0) {
+    DRM_LOGE("failed to add property ret %d id %d value %llu", ret, prop_info->prop_id, value);
+  } else {
+    ret = 0;
+  }
+#endif
+  return ret;
 }
 
 int DRMPPManager::SetPPBlobProperty(drmModeAtomicReq *req, uint32_t obj_id,

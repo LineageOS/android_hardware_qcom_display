@@ -1395,8 +1395,9 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
 
 HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
   DTRACE_SCOPED();
-  // Block on output buffer fence.
-  if (layer_stack_.output_buffer != nullptr) {
+  // Block on output buffer fence if client is internal.
+  // External clients will wait on their thread.
+  if (layer_stack_.output_buffer != nullptr && (cwb_state_.cwb_client != kCWBClientExternal)) {
     auto &fence = layer_stack_.output_buffer->release_fence;
     display_intf_->GetOutputBufferAcquireFence(&fence);
   }
@@ -1534,6 +1535,30 @@ HWC2::Error HWCDisplayBuiltIn::SetAlternateDisplayConfig(bool set) {
 
   // Trigger refresh. This config gets applied on next commit.
   callbacks_->Refresh(id_);
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetDimmingEnable(int int_enabled) {
+  DLOGV("Display ID: %" PRId64 " enabled: %d", id_, int_enabled);
+  DisplayError error = display_intf_->SetDimmingEnable(int_enabled);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. enabled = %d, error = %d", int_enabled, error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
+  DLOGV("Display ID: %" PRId64 " min_bl: %d", id_, min_bl);
+  DisplayError error = display_intf_->SetDimmingMinBl(min_bl);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. min_bl = %d, error = %d", min_bl, error);
+    return HWC2::Error::BadDisplay;
+  }
 
   return HWC2::Error::None;
 }

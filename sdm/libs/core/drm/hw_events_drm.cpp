@@ -1022,6 +1022,7 @@ void HWEventsDRM::HandleBacklightEvent(char *data) {
 }
 
 void HWEventsDRM::HandleMMRM(char *data) {
+  DTRACE_SCOPED();
   char event_data[kMaxStringLength];
   int32_t size;
   struct drm_msm_event_resp *event_resp = NULL;

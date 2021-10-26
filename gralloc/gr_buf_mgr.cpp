@@ -1009,7 +1009,7 @@ Error BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
-    ALOGE("Could not find handle: %p id: %" PRIu64, hnd, hnd->id);
+    ALOGE("Could not find handle: %p", hnd);
     return Error::BAD_BUFFER;
   } else {
     if (buf->DecRef()) {

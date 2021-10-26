@@ -231,8 +231,7 @@ class HWDeviceDRM : public HWInterface {
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
-  DisplayError SetDimmingBlLut(void *payload, size_t size);
-  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
+  DisplayError SetDimmingConfig(void *payload, size_t size);
   DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
 
   class Registry {
@@ -307,9 +306,11 @@ class HWDeviceDRM : public HWInterface {
   uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.
   // Destination scaler blocks in use by all HWDeviceDRM instances.
   static std::atomic<uint32_t> hw_dest_scaler_blocks_used_;
+  static bool reset_planes_luts_;
 
   bool has_cwb_crop_ = false;       // virtual connector supports CWB ROI feature.
   bool has_dedicated_cwb_ = false;  // virtual connector supports dedicated CWB feature.
+  bool has_cwb_dither_ = false;     // virtual connector supports CWB Dither feature.
   static HWCwbConfig cwb_config_;
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
 

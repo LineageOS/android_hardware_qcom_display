@@ -28,6 +28,7 @@
 #include <utils/utils.h>
 #include <utils/formats.h>
 #include <core/buffer_allocator.h>
+#include <sys/mman.h>
 #include <iomanip>
 #include <algorithm>
 #include <functional>
@@ -145,13 +146,14 @@ DisplayError DisplayBuiltIn::Init() {
       DLOGE("SPR Failed to initialize. Error = %d", error);
       DisplayBase::Deinit();
       HWInterface::Destroy(hw_intf_);
+      HWEventsInterface::Destroy(hw_events_intf_);
       return error;
     }
 
     if (SetupDemura() != kErrorNone) {
       // Non-fatal but not expected, log error
       DLOGE("Demura failed to initialize, Error = %d", error);
-      comp_manager_->FreeDemuraFetchResources(display_comp_ctx_);
+      comp_manager_->FreeDemuraFetchResources(display_id_);
       comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
       if (demura_) {
         SetDemuraIntfStatus(false);
@@ -194,6 +196,11 @@ DisplayError DisplayBuiltIn::Deinit() {
   {
     ClientLock lock(disp_mutex_);
 
+    if (vm_cb_intf_) {
+      vm_cb_intf_->Deinit();
+      delete vm_cb_intf_;
+    }
+
     dpps_info_.Deinit();
 
     if (demura_) {
@@ -202,8 +209,6 @@ DisplayError DisplayBuiltIn::Deinit() {
       if (demura_->Deinit() != 0) {
         DLOGE("Unable to DeInit Demura on Display %d", display_id_);
       }
-
-      comp_manager_->FreeDemuraFetchResources(display_comp_ctx_);
     }
   }
   return DisplayBase::Deinit();
@@ -410,7 +415,6 @@ DisplayError DisplayBuiltIn::colorSamplingOff() {
 
 DisplayError DisplayBuiltIn::SetupSPR() {
   int spr_prop_value = 0;
-  // Enable SPR as default is disabled.
   Debug::GetProperty(ENABLE_SPR, &spr_prop_value);
 
   if (spr_prop_value) {
@@ -438,7 +442,7 @@ DisplayError DisplayBuiltIn::SetupSPR() {
 
 DisplayError DisplayBuiltIn::SetupDemura() {
   if (!comp_manager_->GetDemuraStatus()) {
-    comp_manager_->FreeDemuraFetchResources(display_comp_ctx_);
+    comp_manager_->FreeDemuraFetchResources(display_id_);
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
     return kErrorNone;
   }
@@ -451,7 +455,7 @@ DisplayError DisplayBuiltIn::SetupDemura() {
   }
 
   if (value > 0) {
-    comp_manager_->FreeDemuraFetchResources(display_comp_ctx_);
+    comp_manager_->FreeDemuraFetchResources(display_id_);
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
     return kErrorNone;
   } else if (value == 0) {
@@ -468,6 +472,42 @@ DisplayError DisplayBuiltIn::SetupDemura() {
       input_cfg.resources.set(i);
     }
 
+#ifdef TRUSTED_VM
+    int ret = 0;
+    GenericPayload out;
+    IPCImportBufOutParams *buf_out_params = nullptr;
+    if ((ret = out.CreatePayload<IPCImportBufOutParams>(buf_out_params))) {
+      DLOGE("Failed to create output payload error = %d", ret);
+      return kErrorUndefined;
+    }
+
+    GenericPayload in;
+    IPCImportBufInParams *buf_in_params = nullptr;
+    if ((ret = in.CreatePayload<IPCImportBufInParams>(buf_in_params))) {
+      DLOGE("Failed to create input payload error = %d", ret);
+      return kErrorUndefined;
+    }
+    buf_in_params->req_buf_type = kIpcBufferTypeDemuraHFC;
+
+    if ((ret = ipc_intf_->ProcessOps(kIpcOpsImportBuffers, in, &out))) {
+      DLOGE("Failed to kIpcOpsImportBuffers payload error = %d", ret);
+      return kErrorUndefined;
+    }
+    DLOGI("DemuraHFC buffer fd %d size %d", buf_out_params->buffers[0].fd,
+      buf_out_params->buffers[0].size);
+
+    if (buf_out_params->buffers[0].fd < 0) {
+      DLOGE("HFC buffer import error fd :%d ", buf_out_params->buffers[0].fd);
+      return kErrorUndefined;
+    }
+
+    input_cfg.secure_hfc_fd = buf_out_params->buffers[0].fd;
+    input_cfg.secure_hfc_size = buf_out_params->buffers[0].size;
+    input_cfg.panel_id = buf_out_params->buffers[0].panel_id;
+    input_cfg.secure_session = true;
+    hfc_buffer_fd_ = buf_out_params->buffers[0].fd;
+    hfc_buffer_size_ = buf_out_params->buffers[0].size;
+#endif
     demura_ = pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
 
     if (!demura_) {
@@ -492,9 +532,21 @@ DisplayError DisplayBuiltIn::SetupDemura() {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
     demura_intended_ = true;
     DLOGI("Enabled Demura Core!");
+
+#ifndef TRUSTED_VM
+    GenericPayload pl;
+    uint64_t *panel_id_ptr = nullptr;
+    int rc = 0;
+    if ((rc = pl.CreatePayload<uint64_t>(panel_id_ptr))) {
+      DLOGE("Failed to create payload for Paneld, error = %d", rc);
+    }
+    demura_->GetParameter(kDemuraFeatureParamPanelId, &pl);
+    vm_cb_intf_ = new DisplayIPCVmCallbackImpl(buffer_allocator_, ipc_intf_,
+        *panel_id_ptr, hfc_buffer_width_, hfc_buffer_height_);
+    vm_cb_intf_->Init();
+#endif
     return kErrorNone;
   }
-
   return kErrorUndefined;
 }
 
@@ -510,7 +562,7 @@ DisplayError DisplayBuiltIn::SetupDemuraLayer() {
     DLOGE("Failed to get BufferInfo, error = %d", ret);
     return kErrorResources;
   }
-
+#ifndef TRUSTED_VM
   demura_layer_.input_buffer.size = buffer->alloc_buffer_info.size;
   demura_layer_.input_buffer.buffer_id = buffer->alloc_buffer_info.id;
   demura_layer_.input_buffer.format = buffer->alloc_buffer_info.format;
@@ -520,6 +572,21 @@ DisplayError DisplayBuiltIn::SetupDemuraLayer() {
   demura_layer_.input_buffer.unaligned_height = buffer->alloc_buffer_info.aligned_height;
   demura_layer_.input_buffer.planes[0].fd = buffer->alloc_buffer_info.fd;
   demura_layer_.input_buffer.planes[0].stride = buffer->alloc_buffer_info.stride;
+  hfc_buffer_width_ = buffer->alloc_buffer_info.aligned_width;
+  hfc_buffer_height_ = buffer->alloc_buffer_info.aligned_height;
+#else
+  uint32_t aligned_width = ALIGN(static_cast<int>(buffer->buffer_config.width), 32);
+  uint32_t aligned_height = ALIGN(static_cast<int>(buffer->buffer_config.height), 32);
+  float bpp = GetBufferFormatBpp(kFormatRGB888);
+  uint32_t stride = static_cast<uint32_t>(aligned_width * bpp);
+  demura_layer_.input_buffer.size = hfc_buffer_size_;
+  demura_layer_.input_buffer.width = aligned_width;
+  demura_layer_.input_buffer.unaligned_width = aligned_width;
+  demura_layer_.input_buffer.height = aligned_height;
+  demura_layer_.input_buffer.unaligned_height = aligned_height;
+  demura_layer_.input_buffer.planes[0].fd = hfc_buffer_fd_;
+  demura_layer_.input_buffer.planes[0].stride = stride;
+#endif
   demura_layer_.input_buffer.planes[0].offset = 0;
   demura_layer_.input_buffer.flags.demura = 1;
   demura_layer_.composition = kCompositionDemura;
@@ -595,8 +662,14 @@ DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
   return DisplayBase::CommitLocked(layer_stack);
 }
 
-DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
-  DisplayBase::PostCommit(hw_layers_info);
+void DisplayBuiltIn::ProcessSecureEvent() {
+  if (vm_cb_intf_) {
+    if (secure_event_ == kTUITransitionStart)
+      vm_cb_intf_->ExportHFCBuffer();
+    if (secure_event_ == kTUITransitionEnd)
+      vm_cb_intf_->FreeExportBuffer();
+  }
+
   if (pending_brightness_) {
     Fence::Wait(retire_fence_);
     SetPanelBrightness(cached_brightness_);
@@ -612,6 +685,11 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
     // Send display config information to secondary VM on TUI session start
     SendDisplayConfigs();
   }
+}
+
+DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
+  DisplayBase::PostCommit(hw_layers_info);
+  ProcessSecureEvent();
 
   if (commit_event_enabled_) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
@@ -1003,6 +1081,7 @@ DisplayError DisplayBuiltIn::ClearLUTs() {
 }
 
 void DisplayBuiltIn::MMRMEvent(uint32_t clk) {
+  DTRACE_SCOPED();
   DisplayBase::MMRMEvent(clk);
 }
 
@@ -1902,6 +1981,7 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
   hw_layers_info.blend_cs = layer_stack->blend_cs;
+  hw_layers_info.wide_color_primaries.clear();
 
   int index = 0;
   for (auto &layer : layers) {
@@ -2149,10 +2229,9 @@ void DisplayBuiltIn::SendDisplayConfigs() {
     if (error != kErrorNone) {
       return;
     }
-    disp_configs->x_pixels = display_attributes_.x_pixels;
-    disp_configs->y_pixels = display_attributes_.y_pixels;
+    disp_configs->h_total = display_attributes_.h_total;
+    disp_configs->v_total = display_attributes_.v_total;
     disp_configs->fps = display_attributes_.fps;
-    disp_configs->config_idx = active_index;
     disp_configs->smart_panel = display_attributes_.smart_panel;
     disp_configs->is_primary = IsPrimaryDisplayLocked();
     if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
@@ -2213,4 +2292,158 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
   return error;
 }
 
+
+// LCOV_EXCL_START
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  ClientLock lock(disp_mutex_);
+  DisplayError error = DisplayBase::HandleSecureEvent(secure_event, needs_refresh);
+  if (error != kErrorNone) {
+    return error;
+  }
+  if (secure_event == kTUITransitionStart && hw_panel_info_.mode == kModeVideo) {
+    SendDisplayConfigs();
+  }
+
+  if (secure_event == kTUITransitionEnd && vm_cb_intf_) {
+    vm_cb_intf_->FreeExportBuffer();
+  }
+
+  return kErrorNone;
+}
+
+DisplayIPCVmCallbackImpl::DisplayIPCVmCallbackImpl(BufferAllocator *buffer_allocator,
+                                                       std::shared_ptr<IPCIntf> ipc_intf,
+                                                       uint64_t panel_id, uint32_t width,
+                                                       uint32_t height)
+  : buffer_allocator_(buffer_allocator),  ipc_intf_(ipc_intf), panel_id_(panel_id),
+    hfc_buffer_width_(width), hfc_buffer_height_(height) {}
+
+void DisplayIPCVmCallbackImpl::Init() {
+  if (!ipc_intf_) {
+    DLOGW("IPC interface is NULL");
+    return;
+  }
+  GenericPayload in_reg;
+  DisplayIPCVmCallbackImpl **cb_intf = nullptr;
+  int ret = in_reg.CreatePayload<DisplayIPCVmCallbackImpl *>(cb_intf);
+  if (ret) {
+    DLOGE("failed to create the payload for in_reg. Error:%d", ret);
+    return;
+  }
+  *cb_intf = this;
+  GenericPayload out_reg;
+  ret = out_reg.CreatePayload<int>(cb_hnd_out_);
+  if (ret) {
+    DLOGE("failed to create the payload for out_reg. Error:%d", ret);
+    return;
+  }
+  if ((ret = ipc_intf_->ProcessOps(kIpcOpsRegisterVmCallback, in_reg, &out_reg))) {
+    DLOGE("Failed to register vm callback, error = %d", ret);
+    return;
+  }
+}
+void DisplayIPCVmCallbackImpl::Deinit() {
+  if (!ipc_intf_) {
+    DLOGW("IPC interface is NULL");
+    return;
+  }
+  GenericPayload in_unreg;
+  int *cb_hnd_in = nullptr;
+  int ret = in_unreg.CreatePayload<int>(cb_hnd_in);
+  if (ret) {
+    DLOGE("failed to create the payload for in_unreg. Error:%d", ret);
+    return;
+  }
+  *cb_hnd_in = *cb_hnd_out_;
+  if ((ret = ipc_intf_->ProcessOps(kIpcOpsUnRegisterVmCallback, in_unreg, nullptr))) {
+    DLOGE("Failed to unregister vm callback, error = %d", ret);
+    return;
+  }
+}
+void DisplayIPCVmCallbackImpl::OnServerReady() {
+  lock_guard<recursive_mutex> obj(cb_mutex_);
+  server_ready_ = true;
+}
+
+void DisplayIPCVmCallbackImpl::ExportHFCBuffer() {
+  lock_guard<recursive_mutex> obj(cb_mutex_);
+  if (!server_ready_) {
+    DLOGW("Server not ready, Failed to export HFC buffers");
+    return;
+  }
+
+  if (!ipc_intf_ || !buffer_allocator_) {
+    DLOGE("Invalid parameters ipc_intf_ %p, buffer_allocator_ %p", ipc_intf_.get(),
+          buffer_allocator_);
+    return;
+  }
+
+  buffer_info_hfc_.buffer_config.width = hfc_buffer_width_;
+  buffer_info_hfc_.buffer_config.height = hfc_buffer_height_;
+  buffer_info_hfc_.buffer_config.format = kFormatRGB888;
+  buffer_info_hfc_.buffer_config.trusted_ui = true;
+  buffer_info_hfc_.buffer_config.buffer_count = 1;
+  int ret = buffer_allocator_->AllocateBuffer(&buffer_info_hfc_);
+  if (ret != 0) {
+    DLOGE("Fail to allocate hfc buffer");
+    return;
+  }
+
+  GenericPayload in;
+  IPCExportBufInParams *export_buf_in_params = nullptr;
+  ret = in.CreatePayload<IPCExportBufInParams>(export_buf_in_params);
+  if (ret) {
+    DLOGE("failed to create IPCExportBufInParams payload. Error:%d", ret);
+    buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
+    return;
+  }
+
+  IPCBufferInfo hfc_buf;
+  hfc_buf.fd = buffer_info_hfc_.alloc_buffer_info.fd;
+  hfc_buf.size = buffer_info_hfc_.alloc_buffer_info.size;
+  hfc_buf.panel_id = panel_id_;
+  export_buf_in_params->buffers.emplace(kIpcBufferTypeDemuraHFC, hfc_buf);
+
+  DLOGI("Allocated hfc buffer fd %d size %d panel id :%x", hfc_buf.fd, hfc_buf.size,
+    hfc_buf);
+
+  GenericPayload out;
+  IPCExportBufOutParams *export_buf_out_params = nullptr;
+  ret = out.CreatePayload<IPCExportBufOutParams>(export_buf_out_params);
+  if (ret) {
+    DLOGE("failed to create IPCExportBufOutParams payload. Error:%d", ret);
+    buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
+    return;
+  }
+
+  if ((ret = ipc_intf_->ProcessOps(kIpcOpsExportBuffers, in, &out))) {
+    DLOGE("Failed to export demura buffers, error = %d", ret);
+    buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
+    return;
+  }
+  export_buf_out_params_.exported_fds = export_buf_out_params->exported_fds;
+}
+
+void DisplayIPCVmCallbackImpl::FreeExportBuffer() {
+  lock_guard<recursive_mutex> obj(cb_mutex_);
+  if (export_buf_out_params_.exported_fds.empty()) {
+    DLOGW("No HFC buffer to Free");
+    return;
+  }
+
+  for (auto export_fd : export_buf_out_params_.exported_fds) {
+    if (export_fd.second) {
+      Sys::close_(export_fd.second);
+    }
+  }
+  export_buf_out_params_.exported_fds.clear();
+  buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
+  DLOGI("Free hfc export buffer and fd");
+}
+
+void DisplayIPCVmCallbackImpl::OnServerExit() {
+  lock_guard<recursive_mutex> obj(cb_mutex_);
+  server_ready_ = false;
+}
+// LCOV_EXCL_STOP
 }  // namespace sdm

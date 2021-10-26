@@ -28,6 +28,7 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
+#include <drm_interface.h>
 
 #include <iomanip>
 #include <map>
@@ -223,13 +224,18 @@ DisplayError DisplayBase::Deinit() {
   {  // Scope for lock
     ClientLock lock(disp_mutex_);
     ClearColorInfo();
-    comp_manager_->UnregisterDisplay(display_comp_ctx_);
     if (IsPrimaryDisplayLocked()) {
       hw_intf_->UnsetScaleLutConfig();
     }
   }
   HWEventsInterface::Destroy(hw_events_intf_);
   HWInterface::Destroy(hw_intf_);
+
+  {  // Scope for lock
+    ClientLock lock(disp_mutex_);
+    comp_manager_->UnregisterDisplay(display_comp_ctx_);
+  }
+
   if (rc_panel_feature_init_) {
     rc_core_->Deinit();
     rc_panel_feature_init_ = false;
@@ -491,6 +497,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
   hw_layers_info.blend_cs = layer_stack->blend_cs;
+  hw_layers_info.wide_color_primaries.clear();
 
   int index = 0;
   for (auto &layer : layers) {
@@ -641,7 +648,6 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
   DTRACE_SCOPED();
-  int level = 0;
   DisplayError error = kErrorNotSupported;
 
 
@@ -663,9 +669,6 @@ DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
     hw_config.right_pipe.lut_info.clear();
   }
 
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
-    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
-  }
   error = comp_manager_->ForceToneMapConfigure(display_comp_ctx_, &disp_layer_stack_);
   if (error == kErrorNone) {
     validated_ = true;
@@ -733,11 +736,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   comp_manager_->GenerateROI(display_comp_ctx_, &disp_layer_stack_);
 
   CheckMMRMState();
-
-  int level = 0;
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
-    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
-  }
 
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &disp_layer_stack_);
@@ -1073,6 +1071,9 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
   if (!ret) {
     DLOGD_IF(kTagDisplay, "RC top_height = %d, RC bot_height = %d", rc_out_config->top_height,
              rc_out_config->bottom_height);
+    if (rc_out_config->rc_needs_full_roi) {
+      DisablePartialUpdateOneFrameInternal();
+    }
     hw_layers_info.rc_config = true;
     hw_layers_info.rc_layers_info.top_width = rc_out_config->top_width;
     hw_layers_info.rc_layers_info.top_height = rc_out_config->top_height;
@@ -1123,6 +1124,7 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
   } else {
     DLOGI_IF(kTagDisplay, "Status of RC mask data: %d.", (*mask_status).rc_mask_state);
     if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
+      DisablePartialUpdateOneFrameInternal();
       DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
                display_id_, display_type_);
       error = kErrorNeedsValidate;
@@ -1362,6 +1364,11 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
       secure_event_ == kTUITransitionUnPrepare) {
     secure_event_ = kSecureEventMax;
+  }
+
+  int level = 0;
+  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
   }
 
   PostCommitLayerParams();
@@ -3548,6 +3555,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     if (err != kErrorNone) {
       return err;
     }
+    comp_manager_->GetDefaultQosData(display_comp_ctx_, &cached_qos_data_);
   } else if (secure_event == kTUITransitionPrepare) {
     DisplayState state = state_;
     err = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
@@ -3626,6 +3634,7 @@ void DisplayBase::CheckMMRMState() {
   if (!mmrm_updated_) {
     return;
   }
+  DTRACE_SCOPED();
   DLOGI("Handling updated MMRM request");
   mmrm_updated_ = false;
   bool reduced_clk = (mmrm_requested_clk_ < hw_resource_info_.max_sde_clk) ? true : false;
@@ -3658,7 +3667,7 @@ void DisplayBase::CheckMMRMState() {
 
 void DisplayBase::MMRMEvent(uint32_t clk) {
   ClientLock lock(disp_mutex_);
-
+  DTRACE_SCOPED();
   if (clk < mmrm_floor_clk_vote_) {
     DLOGW("Clk vote of %u is lower than floor clock %d. Bail.", clk, mmrm_floor_clk_vote_);
     return;
@@ -3826,27 +3835,65 @@ DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
   return err;
 }
 
-DisplayError DisplayBase::SetDimmingBlLut(void *payload, size_t size) {
+DisplayError DisplayBase::SetDimmingConfig(void *payload, size_t size) {
   ClientLock lock(disp_mutex_);
 
-  DisplayError err = hw_intf_->SetDimmingBlLut(payload, size);
+  DisplayError err = hw_intf_->SetDimmingConfig(payload, size);
   if (err) {
-    DLOGE("Failed to set dimming bl LUT %d", err);
+    DLOGE("Failed to set dimming config %d", err);
   } else {
-    DLOGI_IF(kTagDisplay, "Dimimng bl LUT is set successfully");
+    DLOGI_IF(kTagDisplay, "Dimimng config is set successfully");
     event_handler_->Refresh();
   }
   return err;
 }
 
-DisplayError DisplayBase::EnableDimmingBacklightEvent(void *payload, size_t size) {
-  ClientLock lock(disp_mutex_);
+DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
+  struct sde_drm::DRMPPFeatureInfo info = {};
+  GenericPayload payload;
+  bool *bl_ctrl = nullptr;
 
-  DisplayError err = hw_intf_->EnableDimmingBacklightEvent(payload, size);
-  if (err) {
-    DLOGE("Failed to set dimming backlight event %d", err);
+  int ret = payload.CreatePayload(bl_ctrl);
+  if (ret || !bl_ctrl) {
+    DLOGE("Create Payload failed with ret %d", ret);
+    return kErrorUndefined;
   }
-  return err;
+
+  *bl_ctrl = int_enabled? true : false;
+  info.id = sde_drm::kFeatureDimmingDynCtrl;
+  info.type = sde_drm::kPropRange;
+  info.version = 0;
+  info.payload = bl_ctrl;
+  info.payload_size = sizeof(bool);
+  info.is_event = false;
+
+  DLOGV_IF(kTagDisplay, "Display %d-%d set dimming enable %d", display_id_,
+    display_type_, int_enabled);
+  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+}
+
+DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
+  struct sde_drm::DRMPPFeatureInfo info = {};
+  GenericPayload payload;
+  int *bl = nullptr;
+
+  int ret = payload.CreatePayload(bl);
+  if (ret || !bl) {
+    DLOGE("Create Payload failed with ret %d", ret);
+    return kErrorUndefined;
+  }
+
+  *bl = min_bl;
+  info.id = sde_drm::kFeatureDimmingMinBl;
+  info.type = sde_drm::kPropRange;
+  info.version = 0;
+  info.payload = bl;
+  info.payload_size = sizeof(int);
+  info.is_event = false;
+
+  DLOGV_IF(kTagDisplay, "Display %d-%d set dimming min_bl %d", display_id_,
+    display_type_, min_bl);
+  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 /* this func is called by DC dimming feature only after PCC updates */

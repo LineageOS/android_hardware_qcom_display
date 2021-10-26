@@ -142,6 +142,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate);
   virtual HWC2::Error PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence);
   virtual HWC2::Error SetAlternateDisplayConfig(bool set);
+  virtual HWC2::Error SetDimmingEnable(int int_enabled);
+  virtual HWC2::Error SetDimmingMinBl(int min_bl);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

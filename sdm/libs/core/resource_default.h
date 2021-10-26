@@ -75,7 +75,7 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError Perform(int cmd, ...) { return kErrorNone; }
   DisplayError SetDisplayState(int32_t display_id, DisplayState state) { return kErrorNone; }
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) { return false; }
-  virtual DisplayError FreeDemuraFetchResources(Handle display_ctx) { return kErrorNone; }
+  virtual DisplayError FreeDemuraFetchResources(const int32_t &display_id) { return kErrorNone; }
   virtual DisplayError GetDemuraFetchResourceCount(
                        std::map<uint32_t, uint8_t> *fetch_resource_cnt) {
     return kErrorNone;

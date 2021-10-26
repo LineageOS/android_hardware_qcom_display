@@ -124,9 +124,12 @@ HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
   SetDrawMethod();
 
   auto status = HWC2::Error::None;
+  bool res_exhausted = false;
+  // If no resources are available for the current display, mark it for GPU by pass and continue to
+  // do invalidate until the resources are available
   if (active_secure_sessions_[kSecureDisplay] || display_paused_ ||
      (mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
-     current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
+     current_power_mode_ == HWC2::PowerMode::DozeSuspend)) || CheckResourceState(&res_exhausted)) {
     MarkLayersForGPUBypass();
     *exit_validate = true;
     return status;
@@ -192,10 +195,18 @@ HWC2::Error HWCDisplayPluggable::PostCommitLayerStack(shared_ptr<Fence> *out_ret
 
 HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
+  bool res_exhausted = false;
 
   if (!active_secure_sessions_[kSecureDisplay] && !display_paused_ &&
      !(mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
      current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
+    // Proceed only if any resources are available to be allocated for the current display,
+    // Otherwise keep doing invalidate
+    if (CheckResourceState(&res_exhausted)) {
+      Refresh();
+      return status;
+    }
+
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
       status = PostCommitLayerStack(out_retire_fence);

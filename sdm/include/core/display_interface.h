@@ -260,13 +260,16 @@ struct DisplayConfigFixedInfo {
 struct DisplayConfigGroupInfo {
   uint32_t x_pixels = 0;          //!< Total number of pixels in X-direction on the display panel.
   uint32_t y_pixels = 0;          //!< Total number of pixels in Y-direction on the display panel.
+  uint32_t h_total = 0;           //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
+  uint32_t v_total = 0;           //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
   float x_dpi = 0.0f;             //!< Dots per inch in X-direction.
   float y_dpi = 0.0f;             //!< Dots per inch in Y-direction.
   bool is_yuv = false;            //!< If the display output is in YUV format.
   bool smart_panel = false;       //!< If the display config has smart panel.
 
   bool operator==(const DisplayConfigGroupInfo& info) const {
-    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
+    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) &&
+            (h_total == info.h_total) && (v_total == info.v_total) && (x_dpi == info.x_dpi) &&
             (y_dpi == info.y_dpi) && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
   }
 };
@@ -276,7 +279,8 @@ struct DisplayConfigVariableInfo : public DisplayConfigGroupInfo {
   uint32_t vsync_period_ns = 0;   //!< VSync period in nanoseconds.
 
   bool operator==(const DisplayConfigVariableInfo& info) const {
-    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
+    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) &&
+            (h_total == info.h_total) && (v_total == info.v_total) && (x_dpi == info.x_dpi) &&
             (y_dpi == info.y_dpi) && (fps == info.fps) && (vsync_period_ns == info.vsync_period_ns)
             && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
   }
@@ -1067,24 +1071,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_level) = 0;
 
-  /*! @brief Method to set display dimming backlight LUT.
+  /*! @brief Method to set display dimming config.
 
-    @param[in] payload of dimming backlight LUT struct.
+    @param[in] payload of dimming config.
     @param[in] size of the payload.
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
-
- /*! @brief Method to enable/disable dimming backlight event.
-
-    @param[in] payload to enable/disable dimming backlight event.
-    @param[in] size of the payload.
-
-    @return \link DisplayError \endlink
-  */
-
-  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
+  virtual DisplayError SetDimmingConfig(void *payload, size_t size) = 0;
 
   /*! @brief Method to trigger a screen refresh and mark needs validate.
 
@@ -1211,6 +1205,22 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack) = 0;
+
+  /*! @brief Method to enable/disable display dimming feature.
+
+    @param[in] enable or disable
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingEnable(int int_enabled) = 0;
+
+  /*! @brief Method to set minimal backlight value for display dimming feature.
+
+    @param[in] minimal backlight value
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingMinBl(int min_bl) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

@@ -638,8 +638,8 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      c_size = (width * height) / 2 + 1;
       c_height = height >> 1;
+      c_size = width * c_height;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
@@ -672,8 +672,8 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       break;
 #endif
     case HAL_PIXEL_FORMAT_NV21_ZSL:
-      c_size = (width * height) / 2;
       c_height = height >> 1;
+      c_size = width * c_height;
       break;
     case HAL_PIXEL_FORMAT_Y16:
       c_size = c_stride = 0;
@@ -684,7 +684,7 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_height = 0;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      c_size = (width * height) + 1;
+      c_size = (width * height);
       c_height = height;
       break;
     default:
@@ -1259,17 +1259,13 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   switch (format) {
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      /*
-       * Todo: relook this alignment again
-       * Change made to unblock the software EIS feature from camera
-       * Currently using same alignment as camera doing
-       */
-      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
-      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
-      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12, width));
-      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12, height));
+      if (AdrenoMemInfo::GetInstance() == nullptr) {
+        ALOGW("%s: AdrenoMemInfo instance pointing to a NULL value.", __FUNCTION__);
+        return -1;
+      }
+      alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+      aligned_w = ALIGN(width, alignment);
       break;
 #endif
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
