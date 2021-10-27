@@ -35,6 +35,7 @@
 #include <cutils/trace.h>
 #include <sync/sync.h>
 #include "gr_utils.h"
+#include <QtiGralloc.h>
 
 namespace vendor {
 namespace qti {
@@ -45,6 +46,7 @@ namespace V1_1 {
 namespace implementation {
 
 using gralloc::BufferInfo;
+using MetadataType = ::android::hardware::graphics::mapper::V4_0::IMapper::MetadataType;
 
 QtiMapperExtensions::QtiMapperExtensions() {
   buf_mgr_ = BufferManager::GetInstance();
@@ -490,6 +492,18 @@ Return<void> QtiMapperExtensions::getMetadataBlob(void *src, getMetadataBlob_cb 
   }
   _hidl_cb(error, out);
   return Void();
+}
+
+Return<Error> QtiMapperExtensions::getMetaDataValue(void *src, const MetadataType &type, void *in) {
+  auto error = Error::BAD_BUFFER;
+  if (src != nullptr) {
+    if (type.name != GRALLOC4_STANDARD_METADATA_TYPE && type.name != qtigralloc::VENDOR_QTI) {
+      return Error::UNSUPPORTED;
+    }
+    error = static_cast<IMapperExtensions_1_0_Error>(
+        buf_mgr_->GetMetadataValue(static_cast<private_handle_t *>(src), type.value, in));
+  }
+  return error;
 }
 
 }  // namespace implementation
