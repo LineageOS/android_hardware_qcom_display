@@ -69,6 +69,7 @@ class QtiAllocator : public IQtiAllocator {
   // Methods from ::android::hidl::base::V1_0::IBase follow.
  private:
   BufferManager *buf_mgr_ = nullptr;
+  bool enable_logs_;
 };
 
 }  // namespace implementation

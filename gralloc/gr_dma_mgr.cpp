@@ -29,7 +29,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -63,6 +62,7 @@ DmaManager *DmaManager::dma_manager_ = NULL;
 DmaManager *DmaManager::GetInstance() {
   if (!dma_manager_) {
     dma_manager_ = new DmaManager();
+    dma_manager_->enable_logs_ = property_get_bool(ENABLE_LOGS_PROP, 0);
   }
   return dma_manager_;
 }
@@ -95,7 +95,7 @@ int DmaManager::AllocBuffer(AllocData *data) {
 
   data->fd = dma_dev_fd_;
   data->ion_handle = dma_dev_fd_;
-  ALOGD_IF(DEBUG, "libdma: Allocated buffer size:%u fd:%d", data->size, data->fd);
+  ALOGD_IF(enable_logs_, "libdma: Allocated buffer size:%u fd:%d", data->size, data->fd);
 
   return 0;
 }
@@ -104,7 +104,7 @@ int DmaManager::FreeBuffer(void *base, unsigned int size, unsigned int offset, i
                            int /*ion_handle*/) {
   ATRACE_CALL();
   int err = 0;
-  ALOGD_IF(DEBUG, "libdma: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
+  ALOGD_IF(enable_logs_, "libdma: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
 
   if (base) {
     err = UnmapBuffer(base, size, offset);
@@ -161,7 +161,8 @@ int DmaManager::MapBuffer(void **base, unsigned int size, unsigned int offset, i
     err = -errno;
     ALOGE("dma: Failed to map memory in the client: %s", strerror(errno));
   } else {
-    ALOGD_IF(DEBUG, "ion: Mapped buffer base:%p size:%u offset:%u fd:%d", addr, size, offset, fd);
+    ALOGD_IF(enable_logs_, "ion: Mapped buffer base:%p size:%u offset:%u fd:%d", addr, size, offset,
+             fd);
   }
 
   return err;
@@ -169,7 +170,7 @@ int DmaManager::MapBuffer(void **base, unsigned int size, unsigned int offset, i
 
 int DmaManager::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/) {
   ATRACE_CALL();
-  ALOGD_IF(DEBUG, "dma: Unmapping buffer  base:%p size:%u", base, size);
+  ALOGD_IF(enable_logs_, "dma: Unmapping buffer  base:%p size:%u", base, size);
 
   int err = 0;
   if (munmap(base, size)) {
@@ -216,7 +217,7 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       int secure_preview_only = 0;
       char property[PROPERTY_VALUE_MAX];
-      if (property_get("vendor.gralloc.secure_preview_only", property, NULL) > 0) {
+      if (property_get(SECURE_PREVIEW_ONLY_PROP, property, NULL) > 0) {
         secure_preview_only = atoi(property);
       }
       heap_name = "qcom,display";

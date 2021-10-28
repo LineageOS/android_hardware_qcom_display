@@ -2149,7 +2149,7 @@ bool CanAllocateZSLForSecureCamera() {
     return can_allocate;
   }
   char property[PROPERTY_VALUE_MAX];
-  property_get("vendor.gralloc.secure_preview_buffer_format", property, "0");
+  property_get(SECURE_PREVIEW_BUFFER_FORMAT_PROP, property, "0");
   if (!(strncmp(property, "420_sp", PROPERTY_VALUE_MAX))) {
     can_allocate = false;
   }

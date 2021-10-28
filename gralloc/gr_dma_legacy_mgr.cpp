@@ -29,7 +29,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -103,6 +102,7 @@ DmaLegacyManager *DmaLegacyManager::dma_legacy_manager_ = NULL;
 DmaLegacyManager *DmaLegacyManager::GetInstance() {
   if (!dma_legacy_manager_) {
     dma_legacy_manager_ = new DmaLegacyManager();
+    dma_legacy_manager_->enable_logs_ = property_get_bool(ENABLE_LOGS_PROP, 0);
   }
   return dma_legacy_manager_;
 }
@@ -137,7 +137,7 @@ int DmaLegacyManager::AllocBuffer(AllocData *data) {
 
   data->fd = dma_legacy_dev_fd_;
   data->ion_handle = dma_legacy_dev_fd_;
-  ALOGD_IF(DEBUG, "libdmalegacy: Allocated buffer size:%u fd:%d", data->size, data->fd);
+  ALOGD_IF(enable_logs_, "libdmalegacy: Allocated buffer size:%u fd:%d", data->size, data->fd);
 
   return 0;
 }
@@ -146,7 +146,7 @@ int DmaLegacyManager::FreeBuffer(void *base, unsigned int size, unsigned int off
                                  int /*ion_handle*/) {
   ATRACE_CALL();
   int err = 0;
-  ALOGD_IF(DEBUG, "libdmalegacy: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
+  ALOGD_IF(enable_logs_, "libdmalegacy: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
 
   if (base) {
     err = UnmapBuffer(base, size, offset);
@@ -203,7 +203,8 @@ int DmaLegacyManager::MapBuffer(void **base, unsigned int size, unsigned int off
     err = -errno;
     ALOGE("ion: Failed to map memory in the client: %s", strerror(errno));
   } else {
-    ALOGD_IF(DEBUG, "ion: Mapped buffer base:%p size:%u offset:%u fd:%d", addr, size, offset, fd);
+    ALOGD_IF(enable_logs_, "ion: Mapped buffer base:%p size:%u offset:%u fd:%d", addr, size, offset,
+             fd);
   }
 
   return err;
@@ -211,7 +212,7 @@ int DmaLegacyManager::MapBuffer(void **base, unsigned int size, unsigned int off
 
 int DmaLegacyManager::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/) {
   ATRACE_CALL();
-  ALOGD_IF(DEBUG, "ion: Unmapping buffer  base:%p size:%u", base, size);
+  ALOGD_IF(enable_logs_, "ion: Unmapping buffer  base:%p size:%u", base, size);
 
   int err = 0;
   if (munmap(base, size)) {
@@ -250,7 +251,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       int secure_preview_only = 0;
       char property[PROPERTY_VALUE_MAX];
-      if (property_get("vendor.gralloc.secure_preview_only", property, NULL) > 0) {
+      if (property_get(SECURE_PREVIEW_ONLY_PROP, property, NULL) > 0) {
         secure_preview_only = atoi(property);
       }
       is_default = false;

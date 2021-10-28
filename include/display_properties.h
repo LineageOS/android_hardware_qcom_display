@@ -161,7 +161,13 @@
 
 // Add all vendor.display properties above
 
+#define DISABLE_AHARDWARE_BUFFER_PROP        GRALLOC_PROP("disable_ahardware_buffer")
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+#define ENABLE_LOGS_PROP                     GRALLOC_PROP("enable_logs")
+#define SECURE_PREVIEW_BUFFER_FORMAT_PROP    GRALLOC_PROP("secure_preview_buffer_format")
+#define SECURE_PREVIEW_ONLY_PROP             GRALLOC_PROP("secure_preview_only")
+#define USE_DMA_BUF_HEAPS_PROP               GRALLOC_PROP("use_dma_buf_heaps")
+#define USE_SYSTEM_HEAP_FOR_SENSORS_PROP     GRALLOC_PROP("use_system_heap_for_sensors")
 
 // Add all vendor.gralloc.properties above
 

@@ -65,6 +65,7 @@ class DmaLegacyManager : public AllocInterface {
   int dma_legacy_dev_fd_ = FD_INIT;
   BufferAllocator buffer_allocator_;
   static DmaLegacyManager *dma_legacy_manager_;
+  bool enable_logs_ = false;
 };
 
 }  // namespace gralloc

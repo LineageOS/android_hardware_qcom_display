@@ -98,6 +98,7 @@ class QtiMapperExtensions : public IQtiMapperExtensions {
 
  private:
   BufferManager *buf_mgr_ = nullptr;
+  bool enable_logs_ = false;
 };
 
 }  // namespace implementation

@@ -30,15 +30,17 @@
  */
 
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#define DEBUG 0
 #include "QtiMapper4.h"
 
+#include <cutils/properties.h>
 #include <cutils/trace.h>
 #include <sync/sync.h>
 
 #include <vector>
 
 #include "gr_utils.h"
+
+static bool enable_logs = false;
 
 namespace vendor {
 namespace qti {
@@ -49,12 +51,13 @@ namespace V4_0 {
 namespace implementation {
 
 using gralloc::BufferInfo;
-
 using aidl::android::hardware::graphics::common::StandardMetadataType;
+
 QtiMapper::QtiMapper() {
   extensions_ = new QtiMapperExtensions();
   buf_mgr_ = BufferManager::GetInstance();
-  ALOGD_IF(DEBUG, "Created QtiMapper instance");
+  enable_logs = property_get_bool(ENABLE_LOGS_PROP, 0);
+  ALOGD_IF(enable_logs, "Created QtiMapper instance");
 }
 
 bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_4_0 &bd) {
@@ -70,8 +73,8 @@ bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_4_0 &bd) {
 
 Error QtiMapper::CreateDescriptor(const BufferDescriptorInfo_4_0 &descriptor_info,
                                   IMapperBufferDescriptor *descriptor) {
-  ALOGD_IF(DEBUG, "BufferDescriptorInfo: name %s wxh: %dx%d usage: 0x%" PRIu64
-                  " format: %d layer_count: %d",
+  ALOGD_IF(enable_logs, "BufferDescriptorInfo: name %s wxh: %dx%d usage: 0x%" PRIu64
+                        " format: %d layer_count: %d",
            descriptor_info.name.c_str(), descriptor_info.width, descriptor_info.height,
            descriptor_info.usage, static_cast<uint32_t>(descriptor_info.format),
            descriptor_info.layerCount);
@@ -125,7 +128,7 @@ Return<void> QtiMapper::importBuffer(const hidl_handle &raw_handle, importBuffer
     hidl_cb(error, nullptr);
     return Void();
   }
-  ALOGD_IF(DEBUG, "Imported handle: %p id: %" PRIu64, buffer_handle,
+  ALOGD_IF(enable_logs, "Imported handle: %p id: %" PRIu64, buffer_handle,
            QTI_HANDLE_CONST(buffer_handle)->id);
   hidl_cb(Error::NONE, buffer_handle);
   return Void();
@@ -246,7 +249,8 @@ Return<void> QtiMapper::getTransportSize(void *buffer, getTransportSize_cb hidl_
     num_ints = static_cast<uint32_t>(hnd->numInts);
     err = Error::NONE;
   }
-  ALOGD_IF(DEBUG, "GetTransportSize: num fds: %d num ints: %d err:%d", num_fds, num_ints, err);
+  ALOGD_IF(enable_logs, "GetTransportSize: num fds: %d num ints: %d err:%d", num_fds, num_ints,
+           err);
   hidl_cb(err, num_fds, num_ints);
   return Void();
 }
@@ -490,13 +494,13 @@ Return<void> QtiMapper::getMapperExtensions(QtiMapper::getMapperExtensions_cb hi
 // When we are in passthrough mode, this method is used
 // by hidl to obtain the SP HAL object
 extern "C" IMapper *HIDL_FETCH_IMapper(const char * /* name */) {
-  ALOGD_IF(DEBUG, "Fetching IMapper from QtiMapper");
+  ALOGD_IF(enable_logs, "Fetching IMapper from QtiMapper");
   auto mapper = new QtiMapper();
   return static_cast<IMapper *>(mapper);
 }
 
 extern "C" IQtiMapper *HIDL_FETCH_IQtiMapper(const char * /* name */) {
-  ALOGD_IF(DEBUG, "Fetching QtiMapper");
+  ALOGD_IF(enable_logs, "Fetching QtiMapper");
   return new QtiMapper();
 }
 
