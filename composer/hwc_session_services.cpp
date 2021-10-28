@@ -1157,10 +1157,14 @@ void HWCSession::CWB::ProcessRequests() {
 
       error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
                                              kCWBClientExternal);
-      if (error != HWC2::Error::None) {
-        status = -1;
-      } else {
+      if (error == HWC2::Error::None) {
         DLOGI("Successfully configured CWB buffer.");
+      } else if (error == HWC2::Error::NoResources || error == HWC2::Error::Unsupported ||
+                 error == HWC2::Error::BadDisplay) {  // if cwb request is made either when another
+        // display/client is performing CWB or when CWB tearing down then notify warning status -2.
+        status = -2;
+      } else {  // notify error status -1 to the CWB client
+        status = -1;
       }
     }
 
