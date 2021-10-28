@@ -19,7 +19,6 @@
 
 #include "EGLImageBuffer.h"
 #include <cutils/native_handle.h>
-#include <gralloc_priv.h>
 #include <ui/GraphicBuffer.h>
 #include <map>
 #include "EGLImageWrapper.h"

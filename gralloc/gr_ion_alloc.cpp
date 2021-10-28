@@ -43,7 +43,8 @@
 #include <string>
 
 #include "gr_utils.h"
-#include "gralloc_priv.h"
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 #include "gr_ion_alloc.h"
 
 namespace gralloc {
@@ -91,8 +92,8 @@ int IonAlloc::AllocBuffer(AllocData *data) {
   err = ion_alloc_fd(ion_dev_fd_, data->size, data->align, data->heap_id, flags, &fd);
   ATRACE_END();
   if (err) {
-    ALOGE("libion alloc failed ion_fd %d size %d align %d heap_id %x flags %x",
-          ion_dev_fd_, data->size, data->align, data->heap_id, flags);
+    ALOGE("libion alloc failed ion_fd %d size %d align %d heap_id %x flags %x", ion_dev_fd_,
+          data->size, data->align, data->heap_id, flags);
     return err;
   }
 
@@ -122,7 +123,7 @@ int IonAlloc::ImportBuffer(int fd) {
   return fd;
 }
 
-int IonAlloc::CleanBuffer(void */*base*/, unsigned int /*size*/, unsigned int /*offset*/,
+int IonAlloc::CleanBuffer(void * /*base*/, unsigned int /*size*/, unsigned int /*offset*/,
                           int /*handle*/, int op, int dma_buf_fd) {
   ATRACE_CALL();
   ATRACE_INT("operation id", op);

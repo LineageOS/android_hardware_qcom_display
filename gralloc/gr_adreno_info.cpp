@@ -34,7 +34,8 @@
 
 #include "gr_adreno_info.h"
 #include "gr_utils.h"
-#include "gralloc_priv.h"
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 
 using std::lock_guard;
 using std::mutex;
@@ -81,7 +82,7 @@ AdrenoMemInfo::AdrenoMemInfo() {
   property_get(DISABLE_UBWC_PROP, property, "0");
   if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
       !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
-     gfx_ubwc_disable_ = true;
+    gfx_ubwc_disable_ = true;
   }
 }
 
@@ -102,11 +103,11 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
 
   int bpp = 4;
   switch (format) {
-    case HAL_PIXEL_FORMAT_RGB_888:
+    case static_cast<int>(PixelFormat::RGB_888):
     case HAL_PIXEL_FORMAT_BGR_888:
       bpp = 3;
       break;
-    case HAL_PIXEL_FORMAT_RGB_565:
+    case static_cast<int>(PixelFormat::RGB_565):
     case HAL_PIXEL_FORMAT_BGR_565:
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
@@ -117,7 +118,7 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
   }
 
   surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t>(tile_enabled);
-  surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;    // Adreno unknown raster mode.
+  surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;  // Adreno unknown raster mode.
   int padding_threshold = 512;  // Threshold for padding surfaces.
   // the function below computes aligned width and aligned height
   // based on linear or macro tile mode selected.
@@ -151,7 +152,7 @@ void AdrenoMemInfo::AlignCompressedRGB(int width, int height, int format, unsign
                                        unsigned int *aligned_h) {
   if (LINK_adreno_compute_compressedfmt_aligned_width_and_height) {
     int bytesPerPixel = 0;
-    surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;   // Adreno unknown raster mode.
+    surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;  // Adreno unknown raster mode.
     int padding_threshold = 512;  // Threshold for padding surfaces.
 
     LINK_adreno_compute_compressedfmt_aligned_width_and_height(
@@ -164,15 +165,16 @@ void AdrenoMemInfo::AlignCompressedRGB(int width, int height, int format, unsign
   }
 }
 
-void AdrenoMemInfo::AlignGpuDepthStencilFormat(int width, int height, int format,
-                    int tile_enabled, unsigned int *aligned_w, unsigned int *aligned_h) {
+void AdrenoMemInfo::AlignGpuDepthStencilFormat(int width, int height, int format, int tile_enabled,
+                                               unsigned int *aligned_w, unsigned int *aligned_h) {
   surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t>(tile_enabled);
-  surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;    // Adreno unknown raster mode.
+  surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;  // Adreno unknown raster mode.
   int padding_threshold = 512;  // Threshold for padding surfaces.
   if (LINK_adreno_compute_fmt_aligned_width_and_height) {
-    LINK_adreno_compute_fmt_aligned_width_and_height(width, height, 0 /*plane_id*/,
-        GetGpuPixelFormat(format), 1 /*num_samples*/, tile_mode, raster_mode, padding_threshold,
-        reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
+    LINK_adreno_compute_fmt_aligned_width_and_height(
+        width, height, 0 /*plane_id*/, GetGpuPixelFormat(format), 1 /*num_samples*/, tile_mode,
+        raster_mode, padding_threshold, reinterpret_cast<int *>(aligned_w),
+        reinterpret_cast<int *>(aligned_h));
   } else {
     ALOGW("%s: Warning!! compute_fmt_aligned_width_and_height not found", __FUNCTION__);
   }
@@ -197,15 +199,15 @@ uint32_t AdrenoMemInfo::GetGpuPixelAlignment() {
 
 ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
   switch (hal_format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
+    case static_cast<int>(PixelFormat::RGBA_8888):
       return ADRENO_PIXELFORMAT_R8G8B8A8;
-    case HAL_PIXEL_FORMAT_RGBX_8888:
+    case static_cast<int>(PixelFormat::RGBX_8888):
       return ADRENO_PIXELFORMAT_R8G8B8X8;
-    case HAL_PIXEL_FORMAT_BGRA_8888:
+    case static_cast<int>(PixelFormat::BGRA_8888):
       return ADRENO_PIXELFORMAT_B8G8R8A8_UNORM;
-    case HAL_PIXEL_FORMAT_RGB_888:
+    case static_cast<int>(PixelFormat::RGB_888):
       return ADRENO_PIXELFORMAT_R8G8B8;
-    case HAL_PIXEL_FORMAT_RGB_565:
+    case static_cast<int>(PixelFormat::RGB_565):
       return ADRENO_PIXELFORMAT_B5G6R5;
     case HAL_PIXEL_FORMAT_BGR_565:
       return ADRENO_PIXELFORMAT_R5G6B5;
@@ -217,14 +219,14 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
       return ADRENO_PIXELFORMAT_R8_UNORM;
     case HAL_PIXEL_FORMAT_RG_88:
       return ADRENO_PIXELFORMAT_R8G8_UNORM;
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
-       return ADRENO_PIXELFORMAT_R10G10B10A2_UNORM;
+    case static_cast<int>(PixelFormat::RGBA_1010102):
+      return ADRENO_PIXELFORMAT_R10G10B10A2_UNORM;
     case HAL_PIXEL_FORMAT_RGBX_1010102:
-       return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
+      return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
     case HAL_PIXEL_FORMAT_ABGR_2101010:
-       return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
-       return ADRENO_PIXELFORMAT_R16G16B16A16_FLOAT;
+      return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
+    case static_cast<int>(PixelFormat::RGBA_FP16):
+      return ADRENO_PIXELFORMAT_R16G16B16A16_FLOAT;
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
       return ADRENO_PIXELFORMAT_NV12;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
@@ -236,15 +238,15 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       return ADRENO_PIXELFORMAT_P010;
-    case HAL_PIXEL_FORMAT_DEPTH_16:
+    case static_cast<int>(PixelFormat::DEPTH_16):
       return ADRENO_PIXELFORMAT_D16_UNORM;
-    case HAL_PIXEL_FORMAT_DEPTH_24:
+    case static_cast<int>(PixelFormat::DEPTH_24):
       return ADRENO_PIXELFORMAT_D24_UNORM_X8_UINT;
-    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
+    case static_cast<int>(PixelFormat::DEPTH_24_STENCIL_8):
       return ADRENO_PIXELFORMAT_D24_UNORM_S8_UINT;
-    case HAL_PIXEL_FORMAT_DEPTH_32F:
+    case static_cast<int>(PixelFormat::DEPTH_32F):
       return ADRENO_PIXELFORMAT_D32_FLOAT;
-    case HAL_PIXEL_FORMAT_STENCIL_8:
+    case static_cast<int>(PixelFormat::STENCIL_8):
       return ADRENO_PIXELFORMAT_S8_UINT;
     case HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_4x4_KHR:
       return ADRENO_PIXELFORMAT_ASTC_4X4;
@@ -261,7 +263,7 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_6x5_KHR:
       return ADRENO_PIXELFORMAT_ASTC_6X5;
     case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR:
-       return ADRENO_PIXELFORMAT_ASTC_6X5_SRGB;
+      return ADRENO_PIXELFORMAT_ASTC_6X5_SRGB;
     case HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_6x6_KHR:
       return ADRENO_PIXELFORMAT_ASTC_6X6;
     case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR:
@@ -318,12 +320,13 @@ uint32_t AdrenoMemInfo::AdrenoGetMetadataBlobSize() {
 }
 
 int AdrenoMemInfo::AdrenoInitMemoryLayout(void *metadata_blob, int width, int height, int depth,
-  int format, int num_samples, int isUBWC, uint64_t usage, uint32_t num_planes) {
+                                          int format, int num_samples, int isUBWC, uint64_t usage,
+                                          uint32_t num_planes) {
   if (LINK_adreno_init_memory_layout) {
-    surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t> (isUBWC);
+    surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t>(isUBWC);
     return LINK_adreno_init_memory_layout(metadata_blob, width, height, depth,
-                                          GetGpuPixelFormat(format), num_samples,
-                                          tile_mode, usage, num_planes);
+                                          GetGpuPixelFormat(format), num_samples, tile_mode, usage,
+                                          num_planes);
   }
   return -1;
 }

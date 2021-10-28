@@ -123,7 +123,8 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
   if (buf == nullptr) {
     return HWC2::Error::BadParameter;
   }
-  const private_handle_t *output_handle = static_cast<const private_handle_t *>(buf);
+  const private_handle_t *output_handle =
+      static_cast<const private_handle_t *>(buf);
 
   if (output_handle) {
     int output_handle_format, output_handle_flags = 0;
@@ -131,8 +132,8 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
     buffer_allocator_->GetFormat((void *)output_handle, output_handle_format);
     ColorMetaData color_metadata = {};
 
-    if (output_handle_format == HAL_PIXEL_FORMAT_RGBA_8888) {
-      output_handle_format = HAL_PIXEL_FORMAT_RGBX_8888;
+    if (output_handle_format == static_cast<int>(PixelFormat::RGBA_8888)) {
+      output_handle_format = static_cast<int>(PixelFormat::RGBX_8888);
     }
 
     LayerBufferFormat new_sdm_format =

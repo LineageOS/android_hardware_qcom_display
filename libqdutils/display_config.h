@@ -31,9 +31,6 @@
 #define _DISPLAY_CONFIG_H
 
 #include <vector>
-
-#include <gralloc_priv.h>
-#include <qdMetaData.h>
 #include <hardware/hwcomposer.h>
 
 // This header is for clients to use to set/get global display configuration.

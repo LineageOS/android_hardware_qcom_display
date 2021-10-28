@@ -32,7 +32,8 @@
 #include <mutex>
 
 #include "gr_camera_info.h"
-#include "gralloc_priv.h"
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 
 using std::lock_guard;
 using std::mutex;
@@ -121,13 +122,13 @@ CamxPixelFormat CameraInfo::GetCameraPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
       format = CAMERA_PIXEL_FORMAT_MULTIPLANAR_FLEX;
       break;
-    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
+    case static_cast<int>(PixelFormat::RAW_OPAQUE):
       format = CAMERA_PIXEL_FORMAT_RAW_OPAQUE;
       break;
-    case HAL_PIXEL_FORMAT_RAW10:
+    case static_cast<int>(PixelFormat::RAW10):
       format = CAMERA_PIXEL_FORMAT_RAW10;
       break;
-    case HAL_PIXEL_FORMAT_RAW12:
+    case static_cast<int>(PixelFormat::RAW12):
       format = CAMERA_PIXEL_FORMAT_RAW12;
       break;
     default:

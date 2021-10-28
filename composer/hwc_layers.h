@@ -23,8 +23,8 @@
 /* This class translates HWC2 Layer functions to the SDM LayerStack
  */
 
-#include "gr_utils.h"
 #include <QtiGralloc.h>
+#include <QtiGrallocDefs.h>
 #include <core/layer_stack.h>
 #include <core/layer_buffer.h>
 #include <utils/utils.h>
@@ -46,6 +46,7 @@ using PerFrameMetadataKey =
     android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
 using vendor::qti::hardware::display::composer::V3_1::IQtiComposerClient;
 using android::hardware::graphics::common::V1_2::Dataspace;
+using android::hardware::graphics::common::V1_2::PixelFormat;
 
 namespace sdm {
 
@@ -90,7 +91,7 @@ class HWCLayer {
   HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
                                        const float *metadata);
   HWC2::Error SetLayerPerFrameMetadataBlobs(uint32_t num_elements, const PerFrameMetadataKey *keys,
-                                            const uint32_t *sizes, const uint8_t* metadata);
+                                            const uint32_t *sizes, const uint8_t *metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
   HWC2::Error SetLayerType(IQtiComposerClient::LayerType type);
   HWC2::Error SetLayerFlag(IQtiComposerClient::LayerFlag flag);
@@ -121,9 +122,7 @@ class HWCLayer {
   shared_ptr<Fence> GetReleaseFence();
   void SetReleaseFence(const shared_ptr<Fence> &release_fence);
   bool IsLayerCompatible() { return compatible_; }
-  void IgnoreSdrContentMetadata(bool disable) {
-    ignore_sdr_content_md_ = disable;
-  }
+  void IgnoreSdrContentMetadata(bool disable) { ignore_sdr_content_md_ = disable; }
 
  private:
   Layer *layer_ = nullptr;
@@ -134,7 +133,7 @@ class HWCLayer {
   static std::atomic<hwc2_layer_t> next_id_;
   shared_ptr<Fence> release_fence_;
   HWCBufferAllocator *buffer_allocator_ = NULL;
-  int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
+  int32_t dataspace_ = HAL_DATASPACE_UNKNOWN;
   LayerTransform layer_transform_ = {};
   LayerRect dst_rect_ = {};
   bool single_buffer_ = false;

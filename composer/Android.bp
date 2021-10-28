@@ -38,12 +38,9 @@ cc_binary {
         "libhardware_legacy",
         "libsdmcore",
         "libqservice",
-        "libqdutils",
-        "libqdMetaData",
         "libdisplaydebug",
         "libsdmutils",
         "libui",
-        "libgrallocutils",
         "libgpu_tonemapper",
         "libEGL",
         "libGLESv2",
@@ -65,6 +62,9 @@ cc_binary {
         "android.hardware.common-V2-ndk_platform",
         "vendor.qti.hardware.display.config-V4-ndk_platform",
         "vendor.qti.hardware.display.demura@2.0",
+        "vendor.qti.hardware.display.mapperextensions@1.1",
+        "vendor.qti.hardware.display.mapperextensions@1.2",
+	"libgrallocutils",
     ],
 
     static_libs: [

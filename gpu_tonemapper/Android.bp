@@ -13,7 +13,6 @@ cc_library_shared {
         "libGLESv3",
         "libgrallocutils",
         "libhidlbase",
-        "libqdMetaData",
         "libui",
         "libutils",
         "liblog",

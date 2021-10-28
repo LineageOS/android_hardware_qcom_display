@@ -48,7 +48,8 @@
 #include <vector>
 
 #include "gr_utils.h"
-#include "gralloc_priv.h"
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 #include "gr_dma_mgr.h"
 
 #define SIZE_2MB 0x200000
@@ -198,7 +199,7 @@ int DmaManager::SecureMemPerms(AllocData *data) {
 
   ret = vmmem->LendDmabuf(data->fd, vm_perms);
   return ret;
-  }
+}
 
 void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_heap_name,
                              std::vector<std::string> *dma_vm_names, unsigned int *alloc_type,
@@ -235,7 +236,7 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
     } else {
       heap_name = "qcom,secure-pixel";
     }
-    type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
+    type |= qtigralloc::PRIV_FLAGS_SECURE_BUFFER;
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
     // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED
     // for tursted UI use case and align the size to 2MB
@@ -253,12 +254,11 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
     }
   }
 
-
 #endif
 
   *alloc_type = type;
   *dma_heap_name = heap_name;
 
   return;
-  }
+}
 }  // namespace gralloc

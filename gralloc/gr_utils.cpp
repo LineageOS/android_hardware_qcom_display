@@ -50,15 +50,15 @@
 
 #define ASTC_BLOCK_SIZE 16
 
-#define ONLY_GPU_CPU_USAGE_MASK (BufferUsage::GPU_TEXTURE | BufferUsage::GPU_RENDER_TARGET | \
-                                 BufferUsage::GPU_DATA_BUFFER | BufferUsage::RENDERSCRIPT | \
-                                 BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)
+#define ONLY_GPU_CPU_USAGE_MASK                                                                 \
+    (BufferUsage::GPU_TEXTURE | BufferUsage::GPU_RENDER_TARGET | BufferUsage::GPU_DATA_BUFFER | \
+     BufferUsage::RENDERSCRIPT | BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)
 
-#define NON_GPU_CPU_USAGE_MASK (BufferUsage::COMPOSER_CLIENT_TARGET | \
-                                BufferUsage::COMPOSER_OVERLAY | BufferUsage::COMPOSER_CURSOR | \
-                                BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT | \
-                                BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | \
-                                GRALLOC_USAGE_PRIVATE_CDSP | GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
+#define NON_GPU_CPU_USAGE_MASK                                                                \
+    (BufferUsage::COMPOSER_CLIENT_TARGET | BufferUsage::COMPOSER_OVERLAY |                    \
+     BufferUsage::COMPOSER_CURSOR | BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT | \
+     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | GRALLOC_USAGE_PRIVATE_CDSP |    \
+     GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
 
 using aidl::android::hardware::graphics::common::Dataspace;
 using aidl::android::hardware::graphics::common::PlaneLayout;
@@ -83,31 +83,31 @@ static inline unsigned int MMM_COLOR_FMT_RGB_STRIDE_IN_PIXELS(unsigned int color
 bool IsYuvFormat(int format) {
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<int>(PixelFormat::YCBCR_422_SP):
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case static_cast<int>(PixelFormat::YCRCB_420_SP):
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
-    case HAL_PIXEL_FORMAT_RAW16:
-    case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_RAW12:
-    case HAL_PIXEL_FORMAT_RAW10:
-    case HAL_PIXEL_FORMAT_YV12:
-    case HAL_PIXEL_FORMAT_Y8:
+    case static_cast<int>(PixelFormat::RAW16):
+    case static_cast<int>(PixelFormat::Y16):
+    case static_cast<int>(PixelFormat::RAW12):
+    case static_cast<int>(PixelFormat::RAW10):
+    case static_cast<int>(PixelFormat::YV12):
+    case static_cast<int>(PixelFormat::Y8):
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
     // Below formats used by camera and VR
-    case HAL_PIXEL_FORMAT_BLOB:
-    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
+    case static_cast<int>(PixelFormat::BLOB):
+    case static_cast<int>(PixelFormat::RAW_OPAQUE):
     case HAL_PIXEL_FORMAT_NV12_HEIF:
     case HAL_PIXEL_FORMAT_CbYCrY_422_I:
-    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX :
+    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
@@ -121,18 +121,18 @@ bool IsYuvFormat(int format) {
 
 bool IsUncompressedRGBFormat(int format) {
   switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_RGB_888:
-    case HAL_PIXEL_FORMAT_RGB_565:
+    case static_cast<int>(PixelFormat::RGBA_8888):
+    case static_cast<int>(PixelFormat::RGBX_8888):
+    case static_cast<int>(PixelFormat::RGB_888):
+    case static_cast<int>(PixelFormat::RGB_565):
     case HAL_PIXEL_FORMAT_BGR_565:
-    case HAL_PIXEL_FORMAT_BGRA_8888:
+    case static_cast<int>(PixelFormat::BGRA_8888):
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
     case HAL_PIXEL_FORMAT_R_8:
     case HAL_PIXEL_FORMAT_RG_88:
     case HAL_PIXEL_FORMAT_BGRX_8888:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<int>(PixelFormat::RGBA_1010102):
     case HAL_PIXEL_FORMAT_ARGB_2101010:
     case HAL_PIXEL_FORMAT_RGBX_1010102:
     case HAL_PIXEL_FORMAT_XRGB_2101010:
@@ -140,7 +140,7 @@ bool IsUncompressedRGBFormat(int format) {
     case HAL_PIXEL_FORMAT_ABGR_2101010:
     case HAL_PIXEL_FORMAT_BGRX_1010102:
     case HAL_PIXEL_FORMAT_XBGR_2101010:
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case static_cast<int>(PixelFormat::RGBA_FP16):
     case HAL_PIXEL_FORMAT_BGR_888:
       return true;
     default:
@@ -190,11 +190,11 @@ bool IsCompressedRGBFormat(int format) {
 
 bool IsGpuDepthStencilFormat(int format) {
   switch (format) {
-    case HAL_PIXEL_FORMAT_DEPTH_16:
-    case HAL_PIXEL_FORMAT_DEPTH_24:
-    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
-    case HAL_PIXEL_FORMAT_DEPTH_32F:
-    case HAL_PIXEL_FORMAT_STENCIL_8:
+    case static_cast<int>(PixelFormat::DEPTH_16):
+    case static_cast<int>(PixelFormat::DEPTH_24):
+    case static_cast<int>(PixelFormat::DEPTH_24_STENCIL_8):
+    case static_cast<int>(PixelFormat::DEPTH_32F):
+    case static_cast<int>(PixelFormat::STENCIL_8):
       return true;
     default:
       break;
@@ -207,9 +207,9 @@ bool IsCameraCustomFormat(int format, uint64_t usage) {
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX:
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
-    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
-    case HAL_PIXEL_FORMAT_RAW10:
-    case HAL_PIXEL_FORMAT_RAW12:
+    case static_cast<int>(PixelFormat::RAW_OPAQUE):
+    case static_cast<int>(PixelFormat::RAW10):
+    case static_cast<int>(PixelFormat::RAW12):
       if (usage & GRALLOC_USAGE_HW_COMPOSER) {
         ALOGW("%s: HW_Composer flag is set for camera custom format: 0x%x, Usage: 0x%" PRIx64,
               __FUNCTION__, format, usage);
@@ -268,14 +268,14 @@ bool IsUbwcFlexFormat(int format) {
 uint32_t GetBppForUncompressedRGB(int format) {
   uint32_t bpp = 0;
   switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case static_cast<int>(PixelFormat::RGBA_FP16):
       bpp = 8;
       break;
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_BGRA_8888:
+    case static_cast<int>(PixelFormat::RGBA_8888):
+    case static_cast<int>(PixelFormat::RGBX_8888):
+    case static_cast<int>(PixelFormat::BGRA_8888):
     case HAL_PIXEL_FORMAT_BGRX_8888:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<int>(PixelFormat::RGBA_1010102):
     case HAL_PIXEL_FORMAT_ARGB_2101010:
     case HAL_PIXEL_FORMAT_RGBX_1010102:
     case HAL_PIXEL_FORMAT_XRGB_2101010:
@@ -285,11 +285,11 @@ uint32_t GetBppForUncompressedRGB(int format) {
     case HAL_PIXEL_FORMAT_XBGR_2101010:
       bpp = 4;
       break;
-    case HAL_PIXEL_FORMAT_RGB_888:
+    case static_cast<int>(PixelFormat::RGB_888):
     case HAL_PIXEL_FORMAT_BGR_888:
       bpp = 3;
       break;
-    case HAL_PIXEL_FORMAT_RGB_565:
+    case static_cast<int>(PixelFormat::RGB_565):
     case HAL_PIXEL_FORMAT_BGR_565:
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
@@ -384,13 +384,13 @@ int GetBpp(int format) {
     case HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_4x4_KHR:
     case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR:
     case HAL_PIXEL_FORMAT_RAW8:
-    case HAL_PIXEL_FORMAT_Y8:
+    case static_cast<int>(PixelFormat::Y8):
       return 1;
-    case HAL_PIXEL_FORMAT_RAW16:
-    case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<int>(PixelFormat::RAW16):
+    case static_cast<int>(PixelFormat::Y16):
+    case static_cast<int>(PixelFormat::YCBCR_422_SP):
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_I:
+    case static_cast<int>(PixelFormat::YCBCR_422_I):
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
     case HAL_PIXEL_FORMAT_CbYCrY_422_I:
       return 2;
@@ -435,28 +435,31 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
   } else {
     // Below switch should be for only YUV/custom formats
     switch (format) {
-      case HAL_PIXEL_FORMAT_RAW16:
-      case HAL_PIXEL_FORMAT_Y16:size = alignedw * alignedh * 2;
+      case static_cast<int>(PixelFormat::RAW16):
+      case static_cast<int>(PixelFormat::Y16):
+        size = alignedw * alignedh * 2;
         break;
-      case HAL_PIXEL_FORMAT_RAW10:
-      case HAL_PIXEL_FORMAT_RAW12:size = ALIGN(alignedw * alignedh, SIZE_4K);
+      case static_cast<int>(PixelFormat::RAW10):
+      case static_cast<int>(PixelFormat::RAW12):
+        size = ALIGN(alignedw * alignedh, SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_RAW8:
-      case HAL_PIXEL_FORMAT_Y8:size = alignedw * alignedh * 1;
+      case static_cast<int>(PixelFormat::Y8):
+        size = alignedw * alignedh * 1;
         break;
-        // adreno formats
+      // adreno formats
       case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:  // NV21
         size = ALIGN(alignedw * alignedh, SIZE_4K);
-        size += (unsigned int) ALIGN(2 * ALIGN(width / 2, 32) * ALIGN(height / 2, 32), SIZE_4K);
+        size += (unsigned int)ALIGN(2 * ALIGN(width / 2, 32) * ALIGN(height / 2, 32), SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:  // NV12
         // The chroma plane is subsampled,
         // but the pitch in bytes is unchanged
         // The GPU needs 4K alignment, but the video decoder needs 8K
         size = ALIGN(alignedw * alignedh, SIZE_8K);
-        size += ALIGN(alignedw * (unsigned int) ALIGN(height / 2, 32), SIZE_8K);
+        size += ALIGN(alignedw * (unsigned int)ALIGN(height / 2, 32), SIZE_8K);
         break;
-      case HAL_PIXEL_FORMAT_YV12:
+      case static_cast<int>(PixelFormat::YV12):
         if ((width & 1) || (height & 1)) {
           ALOGE("w or h is odd for the YV12 format");
           return 0;
@@ -469,10 +472,10 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
           alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
         }
         size = alignedw * alignedh + (ALIGN(alignedw / 2, alignment) * (alignedh / 2)) * 2;
-        size = ALIGN(size, (unsigned int) SIZE_4K);
+        size = ALIGN(size, (unsigned int)SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+      case static_cast<int>(PixelFormat::YCRCB_420_SP):
         size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2 + 1, SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_P010:
@@ -480,13 +483,13 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
 #ifndef QMAA
       case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-        mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 :
-                                                                  MMM_COLOR_FMT_P010;
+        mmm_color_format =
+            (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
         size = MMM_COLOR_FMT_BUFFER_SIZE(mmm_color_format, width, height);
         break;
-      case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+      case static_cast<int>(PixelFormat::YCBCR_422_SP):
       case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-      case HAL_PIXEL_FORMAT_YCbCr_422_I:
+      case static_cast<int>(PixelFormat::YCBCR_422_I):
       case HAL_PIXEL_FORMAT_YCrCb_422_I:
       case HAL_PIXEL_FORMAT_CbYCrY_422_I:
         if (width & 1) {
@@ -497,20 +500,20 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
-                                                                  MMM_COLOR_FMT_NV12;
+        mmm_color_format =
+            (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 : MMM_COLOR_FMT_NV12;
         size = MMM_COLOR_FMT_BUFFER_SIZE(mmm_color_format, width, height);
         break;
       case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
         size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV21, width, height);
         break;
-      case HAL_PIXEL_FORMAT_BLOB:
+      case static_cast<int>(PixelFormat::BLOB):
         if (height != 1) {
-          ALOGE("%s: Buffers with HAL_PIXEL_FORMAT_BLOB must have height 1 ", __FUNCTION__);
+          ALOGE("%s: Buffers with PixelFormat::BLOB must have height 1 ", __FUNCTION__);
           return 0;
         }
-        size = (unsigned int) width;
+        size = (unsigned int)width;
         break;
       case HAL_PIXEL_FORMAT_NV12_HEIF:
         size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_512, width, height);
@@ -519,14 +522,15 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
         y_plane = ALIGN(width, 512) * ALIGN(height, 512);
-        uv_plane = ALIGN(width, 512) * ALIGN(((height+1)>>1), 256);
+        uv_plane = ALIGN(width, 512) * ALIGN(((height + 1) >> 1), 256);
         size = y_plane + uv_plane;
         break;
 #endif
       case HAL_PIXEL_FORMAT_NV21_ZSL:
         size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2, SIZE_4K);
         break;
-      default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
+      default:
+        ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
         return 0;
     }
   }
@@ -663,11 +667,12 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
   y_size = y_stride * y_height;
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case static_cast<int>(PixelFormat::YCRCB_420_SP):
+      c_size = (width * height) / 2 + 1;
       c_height = height >> 1;
       c_size = width * c_height;
       break;
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<int>(PixelFormat::YCBCR_422_SP):
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
       if (unaligned_width & 1) {
         ALOGE("width is odd for the YUV422_SP format");
@@ -679,8 +684,8 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      mmm_color_format = (info.usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
-                                                                     MMM_COLOR_FMT_NV12;
+      mmm_color_format =
+          (info.usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 : MMM_COLOR_FMT_NV12;
       c_height = MMM_COLOR_FMT_UV_SCANLINES(mmm_color_format, height);
       c_size = c_stride * c_height;
       break;
@@ -701,11 +706,11 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_height = height >> 1;
       c_size = width * c_height;
       break;
-    case HAL_PIXEL_FORMAT_Y16:
+    case static_cast<int>(PixelFormat::Y16):
       c_size = c_stride = 0;
       c_height = 0;
       break;
-    case HAL_PIXEL_FORMAT_Y8:
+    case static_cast<int>(PixelFormat::Y8):
       c_size = c_stride = 0;
       c_height = 0;
       break;
@@ -753,14 +758,16 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
 
   // Check if UBWC buffer has been rendered in linear format.
   int linear_format = 0;
-  if (getMetaData(const_cast<private_handle_t *>(hnd), GET_LINEAR_FORMAT, &linear_format) == 0) {
+  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_LINEAR_FORMAT, &linear_format) ==
+      Error::NONE) {
     format = INT(linear_format);
   }
 
   // Check metadata if the geometry has been updated.
-  BufferDim_t buffer_dim;
-  if (getMetaData(const_cast<private_handle_t *>(hnd), GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
-    BufferInfo info(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format, usage);
+  CropRectangle_t crop;
+  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
+                       &crop) == Error::NONE) {
+    BufferInfo info(crop.right, crop.bottom, format, usage);
     err = GetAlignedWidthAndHeight(info, &width, &height);
     if (err) {
       return err;
@@ -769,8 +776,8 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
 
   // Check metadata for interlaced content.
   int interlace_flag = 0;
-  if (getMetaData(const_cast<private_handle_t *>(hnd), GET_PP_PARAM_INTERLACED, &interlace_flag) ==
-      0) {
+  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_PP_PARAM_INTERLACED,
+                       &interlace_flag) == Error::NONE) {
     if (interlace_flag) {
       interlaced = LAYOUT_INTERLACED_FLAG;
     }
@@ -781,8 +788,8 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
   // of the fact the width _is_ the stride
   err = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info);
   if (err == 0) {
-    if (interlaced && (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC ||
-        IsUbwcFlexFormat(format))) {
+    if (interlaced &&
+        (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC || IsUbwcFlexFormat(format))) {
       CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, &plane_info[0], &ycbcr[0]);
       unsigned int uv_stride = 0, uv_height = 0, uv_size = 0;
       unsigned int alignment = 4096;
@@ -799,7 +806,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
     } else {
       CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, plane_info, ycbcr);
       switch (format) {
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+        case static_cast<int>(PixelFormat::YCRCB_420_SP):
         case HAL_PIXEL_FORMAT_YCrCb_422_SP:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
@@ -815,14 +822,14 @@ int GetRawPlaneInfo(int32_t format, int32_t width, int32_t height, PlaneLayoutIn
   int32_t step = 0;
 
   switch (format) {
-    case HAL_PIXEL_FORMAT_RAW16:
+    case static_cast<int32_t>(PixelFormat::RAW16):
       step = 2;
       break;
     case HAL_PIXEL_FORMAT_RAW8:
       step = 1;
       break;
-    case HAL_PIXEL_FORMAT_RAW12:
-    case HAL_PIXEL_FORMAT_RAW10:
+    case static_cast<int32_t>(PixelFormat::RAW12):
+    case static_cast<int32_t>(PixelFormat::RAW10):
       step = 0;
       break;
     default:
@@ -843,7 +850,7 @@ int GetRawPlaneInfo(int32_t format, int32_t width, int32_t height, PlaneLayoutIn
   plane_info[0].step = step;
   plane_info[0].stride = width;
   plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth);
-  if (format == HAL_PIXEL_FORMAT_RAW16) {
+  if (format == static_cast<int32_t>(PixelFormat::RAW16)) {
     plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth * GetBpp(format));
   }
   plane_info[0].scanlines = height;
@@ -868,18 +875,18 @@ bool IsUBwcSupported(int format) {
   // Existing HAL formats with UBWC support
   switch (format) {
     case HAL_PIXEL_FORMAT_BGR_565:
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
+    case static_cast<int>(PixelFormat::RGBA_8888):
+    case static_cast<int>(PixelFormat::RGBX_8888):
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<int>(PixelFormat::RGBA_1010102):
     case HAL_PIXEL_FORMAT_RGBX_1010102:
-    case HAL_PIXEL_FORMAT_DEPTH_16:
-    case HAL_PIXEL_FORMAT_DEPTH_24:
-    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
-    case HAL_PIXEL_FORMAT_DEPTH_32F:
-    case HAL_PIXEL_FORMAT_STENCIL_8:
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case static_cast<int>(PixelFormat::DEPTH_16):
+    case static_cast<int>(PixelFormat::DEPTH_24):
+    case static_cast<int>(PixelFormat::DEPTH_24_STENCIL_8):
+    case static_cast<int>(PixelFormat::DEPTH_32F):
+    case static_cast<int>(PixelFormat::STENCIL_8):
+    case static_cast<int>(PixelFormat::RGBA_FP16):
       return true;
     default:
       break;
@@ -943,10 +950,11 @@ bool IsUBwcEnabled(int format, uint64_t usage) {
   // App during buffer allocation via NDK API AHardwareBuffer_allocate for
   // DEPTH/STENCIL8 formats, so skip the check for it.
   if ((((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) ||
-       (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) ||
-       (usage & BufferUsage::COMPOSER_CLIENT_TARGET)) && IsUBwcSupported(format))
-       || IsTileRendered(format)) {
-      bool enable = true;
+        (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) ||
+        (usage & BufferUsage::COMPOSER_CLIENT_TARGET)) &&
+       IsUBwcSupported(format)) ||
+      IsTileRendered(format)) {
+    bool enable = true;
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
     if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
       if (AdrenoMemInfo::GetInstance()) {
@@ -1047,11 +1055,11 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
   uint32_t bpp = 0;
   switch (format) {
     case HAL_PIXEL_FORMAT_BGR_565:
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<int>(PixelFormat::RGBA_8888):
+    case static_cast<int>(PixelFormat::RGBX_8888):
+    case static_cast<int>(PixelFormat::RGBA_1010102):
     case HAL_PIXEL_FORMAT_RGBX_1010102:
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case static_cast<int>(PixelFormat::RGBA_FP16):
       bpp = GetBppForUncompressedRGB(format);
       size = alignedw * alignedh * bpp;
       size += GetRgbUBwcMetaBufferSize(width, height, bpp);
@@ -1072,8 +1080,8 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
-      size = GetBatchSize(format) * MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_UBWC,
-                                                              width, height);
+      size =
+          GetBatchSize(format) * MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_UBWC, width, height);
       break;
 #endif
     default:
@@ -1092,11 +1100,11 @@ unsigned int GetRgbMetaSize(int format, uint32_t width, uint32_t height, uint64_
   uint32_t bpp = GetBppForUncompressedRGB(format);
   switch (format) {
     case HAL_PIXEL_FORMAT_BGR_565:
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<int>(PixelFormat::RGBA_8888):
+    case static_cast<int>(PixelFormat::RGBX_8888):
+    case static_cast<int>(PixelFormat::RGBA_1010102):
     case HAL_PIXEL_FORMAT_RGBX_1010102:
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case static_cast<int>(PixelFormat::RGBA_FP16):
       meta_size = GetRgbUBwcMetaBufferSize(width, height, bpp);
       break;
     default:
@@ -1115,7 +1123,7 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
   }
 
   // linear buffer, nothing to do further
-  if (!(hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED)) {
+  if (!(hnd->flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED)) {
     *rgb_data = reinterpret_cast<void *>(hnd->base);
     return err;
   }
@@ -1127,14 +1135,14 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
 }
 
 int GetCustomDimensions(private_handle_t *hnd, int *stride, int *height) {
-  BufferDim_t buffer_dim;
+  CropRectangle_t crop;
   int interlaced = 0;
   *stride = hnd->width;
   *height = hnd->height;
-  if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
-    *stride = buffer_dim.sliceWidth;
-    *height = buffer_dim.sliceHeight;
-  } else if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
+  if (GetMetaDataValue(hnd, (int64_t)StandardMetadataType::CROP, &crop) == Error::NONE) {
+    *stride = crop.right;
+    *height = crop.bottom;
+  } else if (GetMetaDataValue(hnd, QTI_PP_PARAM_INTERLACED, &interlaced) == Error::NONE) {
     if (interlaced && IsUBwcFormat(hnd->format)) {
       unsigned int alignedw = 0, alignedh = 0;
       // Get re-aligned height for single ubwc interlaced field and
@@ -1178,7 +1186,7 @@ Error GetColorSpaceFromColorMetaData(ColorMetaData color_metadata, uint32_t *col
 
 void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
   ColorMetaData color_metadata;
-  if (getMetaData(hnd, GET_COLOR_METADATA, &color_metadata) == 0) {
+  if (GetMetaDataValue(hnd, QTI_COLOR_METADATA, &color_metadata) == Error::NONE) {
     switch (color_metadata.colorPrimaries) {
       case ColorPrimaries_BT709_5:
         *color_space = HAL_CSC_ITU_R_709;
@@ -1194,13 +1202,13 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
         ALOGW("Unknown Color primary = %d", color_metadata.colorPrimaries);
         break;
     }
-  } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
+  } else if (GetMetaDataValue(hnd, QTI_COLORSPACE, color_space) != Error::NONE) {
     *color_space = 0;
   }
 }
 
 int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
-                              unsigned int *alignedh) {
+                             unsigned int *alignedh) {
   int width = info.width;
   int height = info.height;
   int format = info.format;
@@ -1262,7 +1270,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     }
 #ifndef QMAA
     if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER)) &&
-        (format == HAL_PIXEL_FORMAT_RGBA_8888)) {
+        (format == static_cast<int>(PixelFormat::RGBA_8888))) {
       int mmm_format = MMM_COLOR_FMT_RGBA8888;
       if (ubwc_enabled) {
         mmm_format = MMM_COLOR_FMT_RGBA8888_UBWC;
@@ -1307,7 +1315,15 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Below should be only YUV family
   switch (format) {
 #ifndef QMAA
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case static_cast<int>(PixelFormat::YCRCB_420_SP):
+      /*
+       * Todo: relook this alignment again
+       * Change made to unblock the software EIS feature from camera
+       * Currently using same alignment as camera doing
+       */
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
       if (AdrenoMemInfo::GetInstance() == nullptr) {
         ALOGW("%s: AdrenoMemInfo instance pointing to a NULL value.", __FUNCTION__);
@@ -1320,15 +1336,15 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
       aligned_w = ALIGN(width, alignment);
       break;
-    case HAL_PIXEL_FORMAT_RAW16:
-    case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_Y8:
+    case static_cast<int>(PixelFormat::RAW16):
+    case static_cast<int>(PixelFormat::Y16):
+    case static_cast<int>(PixelFormat::Y8):
       aligned_w = ALIGN(width, 16);
       break;
-    case HAL_PIXEL_FORMAT_RAW12:
+    case static_cast<int>(PixelFormat::RAW12):
       aligned_w = ALIGN(width * 12 / 8, 16);
       break;
-    case HAL_PIXEL_FORMAT_RAW10:
+    case static_cast<int>(PixelFormat::RAW10):
       aligned_w = ALIGN(width * 10 / 8, 16);
       break;
     case HAL_PIXEL_FORMAT_RAW8:
@@ -1337,7 +1353,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
       aligned_w = ALIGN(width, 128);
       break;
-    case HAL_PIXEL_FORMAT_YV12:
+    case static_cast<int>(PixelFormat::YV12):
       if (AdrenoAlignmentRequired(usage)) {
         if (AdrenoMemInfo::GetInstance() == nullptr) {
           ALOGE("Unable to get adreno instance");
@@ -1349,24 +1365,24 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
         aligned_w = ALIGN(width, 16);
       }
       break;
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<int>(PixelFormat::YCBCR_422_SP):
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_I:
+    case static_cast<int>(PixelFormat::YCBCR_422_I):
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       aligned_w = ALIGN(width, 16);
       break;
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-      mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 :
-                                                                MMM_COLOR_FMT_P010;
+      mmm_color_format =
+          (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(mmm_color_format, width) / 2);
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(mmm_color_format, height));
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
-                                                                MMM_COLOR_FMT_NV12;
+      mmm_color_format =
+          (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 : MMM_COLOR_FMT_NV12;
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(mmm_color_format, width));
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(mmm_color_format, height));
       break;
@@ -1374,7 +1390,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
       break;
-    case HAL_PIXEL_FORMAT_BLOB:
+    case static_cast<int>(PixelFormat::BLOB):
       break;
     case HAL_PIXEL_FORMAT_NV12_HEIF:
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12_512, width));
@@ -1401,76 +1417,6 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   return 0;
 }
 
-int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
-                    uint32_t *num_planes) {
-  if (!hnd || !stride || !offset || !num_planes) {
-    return -EINVAL;
-  }
-
-  struct android_ycbcr yuvPlaneInfo[2] = {};
-  *num_planes = 1;
-
-  if (IsUncompressedRGBFormat(hnd->format)) {
-    uint32_t bpp = GetBppForUncompressedRGB(hnd->format);
-    stride[0] = static_cast<uint32_t>(hnd->width * bpp);
-    return 0;
-  }
-
-  (*num_planes)++;
-  int ret = GetYUVPlaneInfo(hnd, yuvPlaneInfo);
-  if (ret < 0) {
-    ALOGE("%s failed", __FUNCTION__);
-    return ret;
-  }
-
-  // We are only returning buffer layout for progressive or single field formats.
-  struct android_ycbcr yuvInfo = yuvPlaneInfo[0];
-  stride[0] = static_cast<uint32_t>(yuvInfo.ystride);
-  offset[0] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.y) - hnd->base);
-  stride[1] = static_cast<uint32_t>(yuvInfo.cstride);
-  switch (hnd->format) {
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-    case HAL_PIXEL_FORMAT_NV12_HEIF:
-    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
-    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
-    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
-    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
-      offset[1] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
-      break;
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-      offset[1] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cr) - hnd->base);
-      break;
-    case HAL_PIXEL_FORMAT_YV12:
-      offset[1] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cr) - hnd->base);
-      stride[2] = static_cast<uint32_t>(yuvInfo.cstride);
-      offset[2] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
-      (*num_planes)++;
-      break;
-    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
-      *num_planes = 1;
-      break;
-    default:
-      ALOGW("%s: Unsupported format", __FUNCTION__);
-      ret = -EINVAL;
-  }
-
-  if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
-    std::fill(offset, offset + 4, 0);
-  }
-
-  return 0;
-}
-
 int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                     unsigned int *alignedw, unsigned int *alignedh,
                                     GraphicsMetadata *graphics_metadata) {
@@ -1479,7 +1425,7 @@ int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
     return err;
   }
 
-  AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
+  AdrenoMemInfo *adreno_mem_info = AdrenoMemInfo::GetInstance();
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
   uint64_t adreno_usage = info.usage;
   // If gralloc disables UBWC based on any of the checks,
@@ -1501,8 +1447,7 @@ int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   // Using depth to pass layer_count here
   int ret = adreno_mem_info->AdrenoInitMemoryLayout(graphics_metadata->data, info.width,
                                                     info.height, info.layer_count, /* depth */
-                                                    info.format, 1, tile_mode,
-                                                    adreno_usage, 1);
+                                                    info.format, 1, tile_mode, adreno_usage, 1);
   if (ret != 0) {
     ALOGE("%s Graphics metadata init failed", __FUNCTION__);
     *size = 0;
@@ -1518,8 +1463,8 @@ bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
     return false;
   }
 
-  if ((usage & BufferUsage::PROTECTED) && ((usage & BufferUsage::CAMERA_OUTPUT) ||
-      (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY))) {
+  if ((usage & BufferUsage::PROTECTED) &&
+      ((usage & BufferUsage::CAMERA_OUTPUT) || (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY))) {
     return false;
   }
 
@@ -1530,7 +1475,7 @@ bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
 }
 
 bool GetAdrenoSizeAPIStatus() {
-  AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
+  AdrenoMemInfo *adreno_mem_info = AdrenoMemInfo::GetInstance();
   if (adreno_mem_info) {
     return adreno_mem_info->AdrenoSizeAPIAvaliable();
   }
@@ -1568,52 +1513,44 @@ uint64_t GetHandleFlags(int format, uint64_t usage) {
   uint64_t priv_flags = 0;
 
   if (usage & BufferUsage::VIDEO_ENCODER) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_VIDEO_ENCODER;
+    priv_flags |= qtigralloc::PRIV_FLAGS_VIDEO_ENCODER;
   }
 
   if (usage & BufferUsage::CAMERA_OUTPUT) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_CAMERA_WRITE;
+    priv_flags |= qtigralloc::PRIV_FLAGS_CAMERA_WRITE;
   }
 
   if (usage & BufferUsage::CAMERA_INPUT) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_CAMERA_READ;
-  }
-
-  if (usage & BufferUsage::COMPOSER_OVERLAY) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_DISP_CONSUMER;
+    priv_flags |= qtigralloc::PRIV_FLAGS_CAMERA_READ;
   }
 
   if (usage & BufferUsage::GPU_TEXTURE) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_HW_TEXTURE;
+    priv_flags |= qtigralloc::PRIV_FLAGS_HW_TEXTURE;
   }
 
   if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
+    priv_flags |= qtigralloc::PRIV_FLAGS_SECURE_DISPLAY;
   }
 
   if (IsUBwcEnabled(format, usage)) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
-    priv_flags |= private_handle_t::PRIV_FLAGS_TILE_RENDERED;
+    priv_flags |= qtigralloc::PRIV_FLAGS_UBWC_ALIGNED;
+    priv_flags |= qtigralloc::PRIV_FLAGS_TILE_RENDERED;
     if (IsUBwcPISupported(format, usage)) {
-      priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI;
+      priv_flags |= qtigralloc::PRIV_FLAGS_UBWC_ALIGNED_PI;
     }
-  }
-
-  if (usage & (BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_CPU_RENDERED;
   }
 
   if ((usage & (BufferUsage::VIDEO_ENCODER | BufferUsage::VIDEO_DECODER |
                 BufferUsage::CAMERA_OUTPUT | BufferUsage::GPU_RENDER_TARGET))) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_NON_CPU_WRITER;
+    priv_flags |= qtigralloc::PRIV_FLAGS_NON_CPU_WRITER;
   }
 
   if (!UseUncached(format, usage)) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_CACHED;
+    priv_flags |= qtigralloc::PRIV_FLAGS_CACHED;
   }
 
   if (IsTileRendered(format)) {
-    priv_flags |= private_handle_t::PRIV_FLAGS_TILE_RENDERED;
+    priv_flags |= qtigralloc::PRIV_FLAGS_TILE_RENDERED;
   }
 
   return priv_flags;
@@ -1622,19 +1559,20 @@ uint64_t GetHandleFlags(int format, uint64_t usage) {
 int GetImplDefinedFormat(uint64_t usage, int format) {
   int gr_format = format;
 
-  // If input format is HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED then based on
+  // If input format is PixelFormat::IMPLEMENTATION_DEFINED then based on
   // the usage bits, gralloc assigns a format.
-  if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
-      format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)
-        && format != HAL_PIXEL_FORMAT_YCbCr_420_888 && !(usage & GRALLOC_USAGE_PRIVATE_10BIT)) {
+  if (format == static_cast<int>(PixelFormat::IMPLEMENTATION_DEFINED) ||
+      format == static_cast<int>(PixelFormat::YCBCR_420_888)) {
+    if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) &&
+        format != static_cast<int>(PixelFormat::YCBCR_420_888) &&
+        !(usage & GRALLOC_USAGE_PRIVATE_10BIT)) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
       } else if (usage & GRALLOC_USAGE_PRIVATE_HEIF) {
         gr_format = HAL_PIXEL_FORMAT_NV12_HEIF;
-      } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+      } else if (format == static_cast<int>(PixelFormat::YCBCR_420_888)) {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
@@ -1644,12 +1582,12 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
         // Assumed ZSL if both producer and consumer camera flags set
         gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
       } else {
-        gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+        gr_format = static_cast<int>(PixelFormat::YCRCB_420_SP);  // NV21
       }
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
-      if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+      if (format == static_cast<int>(PixelFormat::YCBCR_420_888)) {
         if ((usage & BufferUsage::PROTECTED) && (!CanAllocateZSLForSecureCamera())) {
-          gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+          gr_format = static_cast<int>(PixelFormat::YCRCB_420_SP);  // NV21
         } else {
           gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
         }
@@ -1664,8 +1602,8 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       }
     } else if (usage & BufferUsage::COMPOSER_OVERLAY) {
       // XXX: If we still haven't set a format, default to RGBA8888
-      gr_format = HAL_PIXEL_FORMAT_RGBA_8888;
-    } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+      gr_format = static_cast<int>(PixelFormat::RGBA_8888);
+    } else if (format == static_cast<int>(PixelFormat::YCBCR_420_888)) {
       // If no other usage flags are detected, default the
       // flexible YUV format to NV21_ZSL
       gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;
@@ -1679,16 +1617,15 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
   return gr_format;
 }
 
-int GetCustomFormatFlags(int format, uint64_t usage,
-                        int *custom_format, uint64_t *priv_flags) {
+int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags) {
   *custom_format = GetImplDefinedFormat(usage, format);
   *priv_flags = GetHandleFlags(*custom_format, usage);
 
   if (usage & GRALLOC_USAGE_PROTECTED) {
-    *priv_flags |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
+    *priv_flags |= qtigralloc::PRIV_FLAGS_SECURE_BUFFER;
   }
 
-  *priv_flags |= private_handle_t::PRIV_FLAGS_USES_ION;
+  *priv_flags |= qtigralloc::PRIV_FLAGS_USES_ION;
 
   return 0;
 }
@@ -1721,11 +1658,11 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
   switch (format) {
     // Semiplanar
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<int32_t>(PixelFormat::YCBCR_422_SP):
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
     case HAL_PIXEL_FORMAT_NV12_HEIF:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case static_cast<int32_t>(PixelFormat::YCRCB_420_SP):
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
@@ -1739,15 +1676,15 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[1].v_subsampling = v_subsampling;
       break;
 
-    case HAL_PIXEL_FORMAT_RAW16:
-    case HAL_PIXEL_FORMAT_RAW12:
-    case HAL_PIXEL_FORMAT_RAW10:
+    case static_cast<int32_t>(PixelFormat::RAW16):
+    case static_cast<int32_t>(PixelFormat::RAW12):
+    case static_cast<int32_t>(PixelFormat::RAW10):
     case HAL_PIXEL_FORMAT_RAW8:
       *plane_count = 1;
       GetRawPlaneInfo(format, info.width, info.height, plane_info);
       break;
 
-    case HAL_PIXEL_FORMAT_Y8:
+    case static_cast<int32_t>(PixelFormat::Y8):
       *plane_count = 1;
       GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1755,7 +1692,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[0].v_subsampling = v_subsampling;
       break;
 
-    case HAL_PIXEL_FORMAT_Y16:
+    case static_cast<int32_t>(PixelFormat::Y16):
       *plane_count = 1;
       GetYuvSPPlaneInfo(info, format, width, height, 2, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1842,8 +1779,8 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
 
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       *plane_count = 2;
-      mmm_color_format = (info.usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 :
-                                                                     MMM_COLOR_FMT_P010;
+      mmm_color_format =
+          (info.usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
       y_stride = MMM_COLOR_FMT_Y_STRIDE(mmm_color_format, width);
       c_stride = MMM_COLOR_FMT_UV_STRIDE(mmm_color_format, width);
       y_height = MMM_COLOR_FMT_Y_SCANLINES(mmm_color_format, height);
@@ -1875,8 +1812,8 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[1].v_subsampling = v_subsampling;
       break;
 #endif
-      // Planar
-    case HAL_PIXEL_FORMAT_YV12:
+    // Planar
+    case static_cast<int32_t>(PixelFormat::YV12):
       if ((info.width & 1) || (info.height & 1)) {
         ALOGE("w or h is odd for the YV12 format");
         err = -EINVAL;
@@ -1948,8 +1885,8 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[0].v_subsampling = 0;
       break;
 
-      // Unsupported formats
-    case HAL_PIXEL_FORMAT_YCbCr_422_I:
+    // Unsupported formats
+    case static_cast<int32_t>(PixelFormat::YCBCR_422_I):
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
     default:
@@ -1971,9 +1908,9 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case static_cast<int32_t>(PixelFormat::YCRCB_420_SP):
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
-    case HAL_PIXEL_FORMAT_YV12:
+    case static_cast<int32_t>(PixelFormat::YV12):
     case HAL_PIXEL_FORMAT_NV12_HEIF:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
@@ -1983,15 +1920,15 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
       *h_subsampling = 1;
       *v_subsampling = 1;
       break;
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<int32_t>(PixelFormat::YCBCR_422_SP):
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_CbYCrY_422_I:
       *h_subsampling = 1;
       *v_subsampling = 0;
       break;
-    case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_Y8:
-    case HAL_PIXEL_FORMAT_BLOB:
+    case static_cast<int32_t>(PixelFormat::Y16):
+    case static_cast<int32_t>(PixelFormat::Y8):
+    case static_cast<int32_t>(PixelFormat::BLOB):
     default:
       *h_subsampling = 0;
       *v_subsampling = 0;
@@ -2041,15 +1978,15 @@ void CopyPlaneLayoutInfotoAndroidYcbcr(uint64_t base, int plane_count, PlaneLayo
 
 bool HasAlphaComponent(int32_t format) {
   switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_BGRA_8888:
+    case static_cast<int32_t>(PixelFormat::RGBA_8888):
+    case static_cast<int32_t>(PixelFormat::BGRA_8888):
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<int32_t>(PixelFormat::RGBA_1010102):
     case HAL_PIXEL_FORMAT_ARGB_2101010:
     case HAL_PIXEL_FORMAT_BGRA_1010102:
     case HAL_PIXEL_FORMAT_ABGR_2101010:
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case static_cast<int32_t>(PixelFormat::RGBA_FP16):
       return true;
     default:
       return false;
@@ -2065,8 +2002,8 @@ void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int3
   if (HasAlphaComponent(format)) {
     plane_info->component = (PlaneComponent)(plane_info->component | PLANE_COMPONENT_A);
   }
-  GetBufferSizeAndDimensions(info, &(plane_info->size), (unsigned int *) &width,
-                             (unsigned int *) &height);
+  GetBufferSizeAndDimensions(info, &(plane_info->size), (unsigned int *)&width,
+                             (unsigned int *)&height);
   plane_info->step = GetBpp(format);
   plane_info->offset = GetRgbMetaSize(format, width, height, usage);
   plane_info->h_subsampling = 0;
@@ -2080,9 +2017,9 @@ void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int3
 void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
                   uint64_t *drm_format_modifier) {
 #ifndef QMAA
-  bool compressed = (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) ? true : false;
+  bool compressed = (flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED) ? true : false;
   switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
+    case static_cast<uint32_t>(PixelFormat::RGBA_8888):
       *drm_format = DRM_FORMAT_ABGR8888;
       break;
     case HAL_PIXEL_FORMAT_RGBA_5551:
@@ -2091,10 +2028,10 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
     case HAL_PIXEL_FORMAT_RGBA_4444:
       *drm_format = DRM_FORMAT_ABGR4444;
       break;
-    case HAL_PIXEL_FORMAT_BGRA_8888:
+    case static_cast<uint32_t>(PixelFormat::BGRA_8888):
       *drm_format = DRM_FORMAT_ARGB8888;
       break;
-    case HAL_PIXEL_FORMAT_RGBX_8888:
+    case static_cast<uint32_t>(PixelFormat::RGBX_8888):
       *drm_format = DRM_FORMAT_XBGR8888;
       if (compressed)
         *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
@@ -2102,10 +2039,10 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
     case HAL_PIXEL_FORMAT_BGRX_8888:
       *drm_format = DRM_FORMAT_XRGB8888;
       break;
-    case HAL_PIXEL_FORMAT_RGB_888:
+    case static_cast<uint32_t>(PixelFormat::RGB_888):
       *drm_format = DRM_FORMAT_BGR888;
       break;
-    case HAL_PIXEL_FORMAT_RGB_565:
+    case static_cast<uint32_t>(PixelFormat::RGB_565):
       *drm_format = DRM_FORMAT_BGR565;
       break;
     case HAL_PIXEL_FORMAT_BGR_565:
@@ -2113,7 +2050,7 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
       if (compressed)
         *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
       break;
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case static_cast<uint32_t>(PixelFormat::RGBA_1010102):
       *drm_format = DRM_FORMAT_ABGR2101010;
       if (compressed)
         *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
@@ -2157,7 +2094,7 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
         *drm_format_modifier = DRM_FORMAT_MOD_QCOM_TILE;
       }
       break;
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case static_cast<uint32_t>(PixelFormat::YCRCB_420_SP):
       *drm_format = DRM_FORMAT_NV21;
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
@@ -2186,19 +2123,19 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
             DRM_FORMAT_MOD_QCOM_TILE | DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
       }
       break;
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case static_cast<uint32_t>(PixelFormat::YCBCR_422_SP):
       *drm_format = DRM_FORMAT_NV16;
       break;
-      /*
-    TODO: No HAL_PIXEL_FORMAT equivalent?
-    case kFormatYCrCb422H2V1SemiPlanar:
-      *drm_format = DRM_FORMAT_NV61;
-      break;*/
-    case HAL_PIXEL_FORMAT_YV12:
+    /*
+  TODO: No HAL_PIXEL_FORMAT equivalent?
+  case kFormatYCrCb422H2V1SemiPlanar:
+    *drm_format = DRM_FORMAT_NV61;
+    break;*/
+    case static_cast<uint32_t>(PixelFormat::YV12):
       *drm_format = DRM_FORMAT_YVU420;
       break;
-    case HAL_PIXEL_FORMAT_RGBA_FP16:
-      ALOGW("HAL_PIXEL_FORMAT_RGBA_FP16 currently not supported");
+    case static_cast<uint32_t>(PixelFormat::RGBA_FP16):
+      ALOGW("PixelFormat::RGBA_FP16 currently not supported");
       break;
     default:
       ALOGE("%s: Unsupported format %d", __FUNCTION__, format);
@@ -2278,25 +2215,25 @@ int ValidateAndMap(private_handle_t *handle, uint64_t reserved_region_size) {
   return 0;
 }
 
-int colorMetaDataToColorSpace(ColorMetaData in, ColorSpace_t *out) {
+int colorMetaDataToColorSpace(ColorMetaData in, int *out) {
   if (in.colorPrimaries == ColorPrimaries_BT601_6_525 ||
       in.colorPrimaries == ColorPrimaries_BT601_6_625) {
     if (in.range == Range_Full) {
-      *out = ITU_R_601_FR;
+      *out = HAL_CSC_ITU_R_601_FR;
     } else {
-      *out = ITU_R_601;
+      *out = HAL_CSC_ITU_R_601;
     }
   } else if (in.colorPrimaries == ColorPrimaries_BT2020) {
     if (in.range == Range_Full) {
-      *out = ITU_R_2020_FR;
+      *out = HAL_CSC_ITU_R_2020_FR;
     } else {
-      *out = ITU_R_2020;
+      *out = HAL_CSC_ITU_R_2020;
     }
   } else if (in.colorPrimaries == ColorPrimaries_BT709_5) {
     if (in.range == Range_Full) {
-      *out = ITU_R_709_FR;
+      *out = HAL_CSC_ITU_R_709_FR;
     } else {
-      *out = ITU_R_709;
+      *out = HAL_CSC_ITU_R_709;
     }
   } else {
     ALOGE(
@@ -2309,50 +2246,69 @@ int colorMetaDataToColorSpace(ColorMetaData in, ColorSpace_t *out) {
   return 0;
 }
 
-bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
+int colorSpaceToColorMetadata(int in, ColorMetaData *out) {
+  out->transfer = Transfer_sRGB;
+  switch (in) {
+    case HAL_CSC_ITU_R_601:
+      out->colorPrimaries = ColorPrimaries_BT601_6_525;
+      out->range = Range_Limited;
+      break;
+    case HAL_CSC_ITU_R_601_FR:
+      out->colorPrimaries = ColorPrimaries_BT601_6_525;
+      out->range = Range_Full;
+      break;
+    case HAL_CSC_ITU_R_709:
+      out->colorPrimaries = ColorPrimaries_BT709_5;
+      out->range = Range_Limited;
+      break;
+    case HAL_CSC_ITU_R_709_FR:
+      out->colorPrimaries = ColorPrimaries_BT709_5;
+      out->range = Range_Full;
+      break;
+    case HAL_CSC_ITU_R_2020:
+      out->colorPrimaries = ColorPrimaries_BT2020;
+      out->range = Range_Limited;
+      break;
+    case HAL_CSC_ITU_R_2020_FR:
+      out->colorPrimaries = ColorPrimaries_BT2020;
+      out->range = Range_Full;
+      break;
+    default:
+      ALOGE("Cannot convert ColorSpace_t %d to ColorMetaData", in);
+      return -1;
+      break;
+  }
+
+  return 0;
+}
+
+bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
   switch (paramType) {
-    case QTI_VT_TIMESTAMP:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VT_TIMESTAMP)];
-    case QTI_COLOR_METADATA:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_COLOR_METADATA)];
-    case QTI_PP_PARAM_INTERLACED:
-      return metadata
-          ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_PP_PARAM_INTERLACED)];
-    case QTI_VIDEO_PERF_MODE:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_PERF_MODE)];
-    case QTI_GRAPHICS_METADATA:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_GRAPHICS_METADATA)];
-    case QTI_UBWC_CR_STATS_INFO:
-      return metadata
-          ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_UBWC_CR_STATS_INFO)];
     case (int64_t)StandardMetadataType::CROP:
       return metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(
           ::android::gralloc4::MetadataType_Crop.value)];
-    case QTI_REFRESH_RATE:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_REFRESH_RATE)];
-    case QTI_COLORSPACE:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_COLOR_METADATA)];
-    case QTI_MAP_SECURE_BUFFER:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_MAP_SECURE_BUFFER)];
-    case QTI_LINEAR_FORMAT:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_LINEAR_FORMAT)];
-    case QTI_SINGLE_BUFFER_MODE:
-      return metadata
-          ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_SINGLE_BUFFER_MODE)];
-    case QTI_CVP_METADATA:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_CVP_METADATA)];
-    case QTI_VIDEO_HISTOGRAM_STATS:
-      return metadata
-          ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_HISTOGRAM_STATS)];
-    case QTI_VIDEO_TS_INFO:
-      return metadata
-          ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_TS_INFO)];
-    case QTI_S3D_FORMAT:
-      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_S3D_FORMAT)];
     case (int64_t)StandardMetadataType::BLEND_MODE:
       return metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(
           ::android::gralloc4::MetadataType_BlendMode.value)];
-    // Following metadata types are not changed after allocation - treat as set by default
+    case QTI_VT_TIMESTAMP:
+    case QTI_COLOR_METADATA:
+    case QTI_PP_PARAM_INTERLACED:
+    case QTI_VIDEO_PERF_MODE:
+    case QTI_GRAPHICS_METADATA:
+    case QTI_UBWC_CR_STATS_INFO:
+    case QTI_REFRESH_RATE:
+    case QTI_MAP_SECURE_BUFFER:
+    case QTI_LINEAR_FORMAT:
+    case QTI_SINGLE_BUFFER_MODE:
+    case QTI_CVP_METADATA:
+    case QTI_VIDEO_HISTOGRAM_STATS:
+    case QTI_VIDEO_TS_INFO:
+    case QTI_S3D_FORMAT:
+      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)];
+    case QTI_COLORSPACE:
+      // QTI_COLORSPACE is derived from QTI_COLOR_METADATA
+      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_COLOR_METADATA)];
+  // Following metadata types are not changed after allocation - treat as set by default
     case (int64_t)StandardMetadataType::BUFFER_ID:
     case (int64_t)StandardMetadataType::NAME:
     case (int64_t)StandardMetadataType::WIDTH:
@@ -3298,4 +3254,180 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
   return ret;
 }
 
+void setGralloc4Array(MetaData_t *metadata, int64_t paramType, bool isSet) {
+  switch (paramType) {
+    case (int64_t)StandardMetadataType::CROP:
+      metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(
+          ::android::gralloc4::MetadataType_Crop.value)] = isSet;
+      break;
+    case QTI_VT_TIMESTAMP:
+    case QTI_COLOR_METADATA:
+    case QTI_PP_PARAM_INTERLACED:
+    case QTI_VIDEO_PERF_MODE:
+    case QTI_GRAPHICS_METADATA:
+    case QTI_UBWC_CR_STATS_INFO:
+    case QTI_REFRESH_RATE:
+    case QTI_COLORSPACE:
+    case QTI_MAP_SECURE_BUFFER:
+    case QTI_LINEAR_FORMAT:
+    case QTI_SINGLE_BUFFER_MODE:
+    case QTI_CVP_METADATA:
+    case QTI_VIDEO_HISTOGRAM_STATS:
+    case QTI_VIDEO_TS_INFO:
+    case QTI_S3D_FORMAT:
+      metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)] = isSet;
+      break;
+    // Following metadata types are not changed after allocation - treat as set by default
+    case (int64_t)StandardMetadataType::BUFFER_ID:
+    case (int64_t)StandardMetadataType::NAME:
+    case (int64_t)StandardMetadataType::WIDTH:
+    case (int64_t)StandardMetadataType::HEIGHT:
+    case (int64_t)StandardMetadataType::LAYER_COUNT:
+    case (int64_t)StandardMetadataType::PIXEL_FORMAT_REQUESTED:
+    case (int64_t)StandardMetadataType::USAGE:
+    case (int64_t)StandardMetadataType::PIXEL_FORMAT_FOURCC:
+    case (int64_t)StandardMetadataType::PIXEL_FORMAT_MODIFIER:
+    case (int64_t)StandardMetadataType::PROTECTED_CONTENT:
+    case (int64_t)StandardMetadataType::ALLOCATION_SIZE:
+    case QTI_FD:
+    case QTI_PRIVATE_FLAGS:
+    case QTI_ALIGNED_WIDTH_IN_PIXELS:
+    case QTI_ALIGNED_HEIGHT_IN_PIXELS:
+      break;
+    default:
+      ALOGE("paramType %d not supported in Gralloc4", paramType);
+  }
+}
+
+Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param) {
+  auto err = ValidateAndMap(handle);
+  if (err != 0) {
+    return Error::UNSUPPORTED;
+  }
+
+  MetaData_t *data = reinterpret_cast<MetaData_t *>(handle->base_metadata);
+
+  if (data == nullptr) {
+    return Error::UNSUPPORTED;
+  }
+
+  // If parameter is NULL reset the specific MetaData Key
+  if (!param) {
+    setGralloc4Array(data, paramType, false);
+    switch (paramType) {
+      case QTI_VIDEO_PERF_MODE:
+        data->isVideoPerfMode = 0;
+        break;
+      case QTI_CVP_METADATA:
+        data->cvpMetadata.size = 0;
+        break;
+      case QTI_VIDEO_HISTOGRAM_STATS:
+        data->video_histogram_stats.stat_len = 0;
+        break;
+      default:
+        ALOGE("Unknown paramType %d", paramType);
+        break;
+    }
+    // param unset
+    return Error::NONE;
+  }
+
+  setGralloc4Array(data, paramType, true);
+  switch (paramType) {
+    case QTI_PP_PARAM_INTERLACED:
+      data->interlaced = *(reinterpret_cast<int32_t *>(param));
+      break;
+    case (int64_t)StandardMetadataType::CROP: {
+      CropRectangle_t in = *(reinterpret_cast<CropRectangle_t *>(param));
+      data->crop = {0, 0, in.right, in.bottom};
+      break;
+    }
+    case QTI_REFRESH_RATE:
+      data->refreshrate = *(reinterpret_cast<float *>(param));
+      break;
+    case QTI_COLORSPACE: {
+      ColorMetaData color = {};
+      if (!colorSpaceToColorMetadata(*(reinterpret_cast<int *>(param)), &color)) {
+        data->color = color;
+        break;
+      }
+      return Error::BAD_VALUE;
+    }
+    case QTI_MAP_SECURE_BUFFER:
+      data->mapSecureBuffer = *(reinterpret_cast<int32_t *>(param));
+      break;
+    case QTI_LINEAR_FORMAT:
+      data->linearFormat = *(reinterpret_cast<uint32_t *>(param));
+      break;
+    case QTI_SINGLE_BUFFER_MODE:
+      data->isSingleBufferMode = *(reinterpret_cast<uint32_t *>(param));
+      break;
+    case QTI_VT_TIMESTAMP:
+      data->vtTimeStamp = *(reinterpret_cast<uint64_t *>(param));
+      break;
+    case QTI_COLOR_METADATA:
+      data->color = *(reinterpret_cast<ColorMetaData *>(param));
+      break;
+    case QTI_UBWC_CR_STATS_INFO: {
+      struct UBWCStats *stats = (struct UBWCStats *)param;
+      int numelems = sizeof(data->ubwcCRStats) / sizeof(struct UBWCStats);
+      for (int i = 0; i < numelems; i++) {
+        data->ubwcCRStats[i] = stats[i];
+      }
+      break;
+    }
+    case QTI_VIDEO_PERF_MODE:
+      data->isVideoPerfMode = *(reinterpret_cast<uint32_t *>(param));
+      break;
+    case QTI_GRAPHICS_METADATA: {
+      GraphicsMetadata payload = *(reinterpret_cast<GraphicsMetadata *>(param));
+      data->graphics_metadata.size = payload.size;
+      memcpy(data->graphics_metadata.data, payload.data, sizeof(data->graphics_metadata.data));
+      break;
+    }
+    case QTI_CVP_METADATA: {
+      struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
+      if (cvpMetadata->size <= CVP_METADATA_SIZE) {
+        data->cvpMetadata.size = cvpMetadata->size;
+        memcpy(data->cvpMetadata.payload, cvpMetadata->payload, cvpMetadata->size);
+        data->cvpMetadata.capture_frame_rate = cvpMetadata->capture_frame_rate;
+        data->cvpMetadata.cvp_frame_rate = cvpMetadata->cvp_frame_rate;
+        data->cvpMetadata.flags = cvpMetadata->flags;
+        memcpy(data->cvpMetadata.reserved, cvpMetadata->reserved, (8 * sizeof(uint32_t)));
+      } else {
+        setGralloc4Array(data, paramType, false);
+        ALOGE("%s: cvp metadata length %d is more than max size %d", __func__, cvpMetadata->size,
+              CVP_METADATA_SIZE);
+        return Error::BAD_VALUE;
+      }
+      break;
+    }
+    case QTI_VIDEO_HISTOGRAM_STATS: {
+      struct VideoHistogramMetadata *vidstats = (struct VideoHistogramMetadata *)param;
+      if (vidstats->stat_len <= VIDEO_HISTOGRAM_STATS_SIZE) {
+        memcpy(data->video_histogram_stats.stats_info, vidstats->stats_info,
+               VIDEO_HISTOGRAM_STATS_SIZE);
+        data->video_histogram_stats.stat_len = vidstats->stat_len;
+        data->video_histogram_stats.frame_type = vidstats->frame_type;
+        data->video_histogram_stats.display_width = vidstats->display_width;
+        data->video_histogram_stats.display_height = vidstats->display_height;
+        data->video_histogram_stats.decode_width = vidstats->decode_width;
+        data->video_histogram_stats.decode_height = vidstats->decode_height;
+      } else {
+        setGralloc4Array(data, paramType, false);
+        ALOGE("%s: video stats length %u is more than max size %u", __func__, vidstats->stat_len,
+              VIDEO_HISTOGRAM_STATS_SIZE);
+        return Error::BAD_VALUE;
+      }
+      break;
+    }
+    case QTI_VIDEO_TS_INFO:
+      data->videoTsInfo = *(reinterpret_cast<VideoTimestampInfo *>(param));
+      break;
+    default:
+      ALOGE("Unknown paramType %d", paramType);
+      break;
+  }
+  return Error::NONE;
+}
 }  // namespace gralloc

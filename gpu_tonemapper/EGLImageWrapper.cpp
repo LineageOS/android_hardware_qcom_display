@@ -19,8 +19,8 @@
 
 #include "EGLImageWrapper.h"
 #include <cutils/native_handle.h>
-#include <gralloc_priv.h>
-#include <qdMetaData.h>
+#include <QtiGralloc.h>
+#include <QtiGrallocPriv.h>
 #include <ui/GraphicBuffer.h>
 #include <fcntl.h>
 #include <string>
@@ -31,6 +31,8 @@
 using std::string;
 using std::map;
 using std::pair;
+using aidl::android::hardware::graphics::common::StandardMetadataType;
+using private_handle_t = qtigralloc::private_handle_t;
 
 static string pidString = std::to_string(getpid());
 
@@ -111,7 +113,7 @@ void EGLImageWrapper::Deinit()
 }
 
 //-----------------------------------------------------------------------------
-static EGLImageBuffer* L_wrap(const private_handle_t *src)
+static EGLImageBuffer *L_wrap(const private_handle_t *src)
 //-----------------------------------------------------------------------------
 {
   EGLImageBuffer* result = 0;
@@ -121,10 +123,12 @@ static EGLImageBuffer* L_wrap(const private_handle_t *src)
   uint32_t stride = src->width;
   native_handle_t *native_handle = const_cast<private_handle_t *>(src);
 
-  BufferDim_t custom_dim;
-  if(!getMetaData(const_cast<private_handle_t *>(src), GET_BUFFER_GEOMETRY, &custom_dim)) {
-    unaligned_width = custom_dim.sliceWidth;
-    unaligned_height = custom_dim.sliceHeight;
+  CropRectangle_t crop;
+  if (gralloc::GetMetaDataValue(const_cast<private_handle_t *>(src),
+                                (int64_t)StandardMetadataType::CROP,
+                                &crop) != gralloc::Error::NONE) {
+    unaligned_width = crop.right;
+    unaligned_height = crop.bottom;
     uint32_t aligned_height = 0;
     gralloc::BufferInfo info(unaligned_width, unaligned_height, src->format, src->usage);
     gralloc::GetAlignedWidthAndHeight(info, &stride, &aligned_height);
@@ -134,7 +138,7 @@ static EGLImageBuffer* L_wrap(const private_handle_t *src)
               android::GraphicBuffer::USAGE_SW_READ_NEVER |
               android::GraphicBuffer::USAGE_SW_WRITE_NEVER;
 
-  if (src->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
+  if (src->flags & qtigralloc::PRIV_FLAGS_SECURE_BUFFER) {
     flags |= android::GraphicBuffer::USAGE_PROTECTED;
   }
 

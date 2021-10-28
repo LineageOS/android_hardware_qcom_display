@@ -13,6 +13,10 @@ cc_library_shared {
     shared_libs: [
         "libbinder",
         "libqservice",
+        "libgralloctypes",
+        "android.hardware.graphics.common@1.2",
+        "android.hardware.graphics.mapper@4.0",
+        "libhidlbase",
     ],
     cflags: [
         "-DLOG_TAG=\"qdutils\"",

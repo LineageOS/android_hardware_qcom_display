@@ -21,7 +21,7 @@
 #define __EGLIMAGE_BUFFER_H__
 
 #include <cutils/native_handle.h>
-#include <gralloc_priv.h>
+#include <QtiGrallocPriv.h>
 #include <ui/GraphicBuffer.h>
 #include "engine.h"
 
@@ -43,7 +43,7 @@ class EGLImageBuffer {
   void bindAsTexture(int target);
   void bindAsFramebuffer();
   ~EGLImageBuffer();
-  static EGLImageBuffer *from(const private_handle_t *src);
+  static EGLImageBuffer *from(const qtigralloc::private_handle_t *src);
   static void clear();
 };
 

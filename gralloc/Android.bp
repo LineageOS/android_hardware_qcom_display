@@ -14,7 +14,6 @@ cc_library_shared {
         "device_kernel_headers",
     ],
     shared_libs: [
-        "libqdMetaData",
         "libdl",
         "libgralloctypes",
         "libhidlbase",
@@ -58,7 +57,6 @@ cc_library_shared {
         "system/memory/libion/kernel-headers",
     ],
     shared_libs: [
-        "libqdMetaData",
         "libdl",
         "libgrallocutils",
         "libgralloctypes",
@@ -122,7 +120,6 @@ cc_library_shared {
     header_libs: ["display_headers"],
     shared_libs: [
         "libhidlbase",
-        "libqdMetaData",
         "libgrallocutils",
         "libgralloccore",
         "libgralloctypes",
@@ -162,7 +159,6 @@ cc_binary {
     header_libs: ["display_headers"],
     shared_libs: [
         "libhidlbase",
-        "libqdMetaData",
         "libgrallocutils",
         "libgralloccore",
         "libgralloctypes",

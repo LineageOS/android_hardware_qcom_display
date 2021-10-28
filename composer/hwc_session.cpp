@@ -21,10 +21,8 @@
 #include <binder/Parcel.h>
 #include <core/buffer_allocator.h>
 #include <cutils/properties.h>
-#include <display_config.h>
 #include <hardware_legacy/uevent.h>
 #include <private/color_params.h>
-#include <qd_utils.h>
 #include <sync/sync.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
@@ -1989,7 +1987,7 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
   }
 
   // Read optional user preferences: output_format, tap_point, pu_in_cwb_roi, cwb_roi.
-  int32_t output_format = HAL_PIXEL_FORMAT_RGB_888;
+  int32_t output_format = static_cast<int>(PixelFormat::RGB_888);
   CwbConfig cwb_config = {};
 
   if (input_parcel->dataPosition() != input_parcel->dataSize()) {
@@ -3455,7 +3453,7 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
     return HWC2_ERROR_UNSUPPORTED;
   }
 
-  *format = HAL_PIXEL_FORMAT_RGB_888;
+  *format = static_cast<int32_t>(PixelFormat::RGB_888);
   *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
 
   return HWC2_ERROR_NONE;

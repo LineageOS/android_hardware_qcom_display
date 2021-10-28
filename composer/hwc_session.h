@@ -30,7 +30,6 @@
 #include <core/ipc_interface.h>
 #include <utils/locker.h>
 #include <utils/constants.h>
-#include <qd_utils.h>
 #include <display_config.h>
 #include <vector>
 #include <queue>

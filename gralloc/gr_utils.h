@@ -30,14 +30,15 @@
 #ifndef __GR_UTILS_H__
 #define __GR_UTILS_H__
 
+#include <hardware/gralloc.h>
+#include <QtiGralloc.h>
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
+#include <utils/debug.h>
 #include <android/hardware/graphics/common/1.2/types.h>
 #include <gralloctypes/Gralloc4.h>
 #include <limits>
 #include <vector>
-
-#include "QtiGrallocPriv.h"
-#include "gralloc_priv.h"
-#include "qdMetaData.h"
 
 #define SZ_2M 0x200000
 #define SZ_1M 0x100000
@@ -57,7 +58,15 @@
 
 #define OVERFLOW(x, y) (((y) != 0) && ((x) > (INT_MAX / (y))))
 
+#define ROUND_UP_PAGESIZE(x) roundUpToPageSize(x)
+inline int roundUpToPageSize(int x) {
+  return (x + (getpagesize() - 1)) & ~(getpagesize() - 1);
+}
+
+using aidl::android::hardware::graphics::common::StandardMetadataType;
+using android::hardware::graphics::common::V1_2::PixelFormat;
 using android::hardware::graphics::common::V1_1::BufferUsage;
+using private_handle_t = qtigralloc::private_handle_t;
 
 namespace gralloc {
 struct BufferInfo {
@@ -136,6 +145,13 @@ enum PlaneComponent {
 
   /* meta information plane */
   PLANE_COMPONENT_META = 1 << 31,
+};
+
+/* Flag to determine interlaced content
+  * Value maps to Flags presents in types.hal of QtiMapperextensions
+  */
+enum {
+  LAYOUT_INTERLACED_FLAG = 1 << 0,
 };
 
 struct PlaneLayoutInfo {
@@ -248,6 +264,7 @@ Error ColorMetadataToDataspace(ColorMetaData color_metadata,
                                aidl::android::hardware::graphics::common::Dataspace *dataspace);
 Error GetPlaneLayout(private_handle_t *handle,
                      std::vector<aidl::android::hardware::graphics::common::PlaneLayout> *out);
+Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

@@ -710,7 +710,7 @@ ScopedAStatus DisplayConfigAIDL::isRotatorSupportedFormat(int halFormat, bool ub
     return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
   }
 
-  int flag = ubwc ? private_handle_t::PRIV_FLAGS_UBWC_ALIGNED : 0;
+  int flag = ubwc ? qtigralloc::PRIV_FLAGS_UBWC_ALIGNED : 0;
 
   sdm::LayerBufferFormat sdm_format = sdm::HWCLayer::GetSDMFormat(halFormat, flag);
 

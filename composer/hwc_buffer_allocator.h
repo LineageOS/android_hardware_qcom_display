@@ -32,14 +32,20 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <android/hardware/graphics/common/1.2/types.h>
 #include <android/hardware/graphics/allocator/4.0/IAllocator.h>
 #include <android/hardware/graphics/mapper/4.0/IMapper.h>
 #include <vendor/qti/hardware/display/mapper/4.0/IQtiMapper.h>
-#include "gralloc_priv.h"
+#include <vendor/qti/hardware/display/mapperextensions/1.2/IQtiMapperExtensions.h>
+#include <QtiGrallocPriv.h>
 
 using android::hardware::graphics::allocator::V4_0::IAllocator;
 using android::hardware::graphics::mapper::V4_0::IMapper;
+using android::hardware::graphics::common::V1_1::BufferUsage;
 using vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
+using IQtiMapperExtensions_v1_2 =
+    vendor::qti::hardware::display::mapperextensions::V1_2::IQtiMapperExtensions;
+using private_handle_t = qtigralloc::private_handle_t;
 
 namespace sdm {
 
@@ -54,10 +60,9 @@ class HWCBufferAllocator : public BufferAllocator {
   int FreeBuffer(BufferInfo *buffer_info);
   uint32_t GetBufferSize(BufferInfo *buffer_info);
 
-  void GetCustomWidthAndHeight(const native_handle_t *handle, int *width, int *height);
-  void GetAdjustedWidthAndHeight(const private_handle_t *handle, int *width, int *height);
-  void GetAlignedWidthAndHeight(int width, int height, int format, uint32_t alloc_type,
-                                int *aligned_width, int *aligned_height);
+  int GetCustomWidthAndHeight(const native_handle_t *handle, int *width, int *height);
+  int GetAlignedWidthAndHeight(int width, int height, int format, uint32_t alloc_type,
+                               int *aligned_width, int *aligned_height);
   int GetAllocatedBufferInfo(const BufferConfig &buffer_config,
                                       AllocatedBufferInfo *allocated_buffer_info);
   int GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
@@ -82,7 +87,7 @@ class HWCBufferAllocator : public BufferAllocator {
   int GetGrallocInstance();
   android::sp<IMapper> mapper_;
   android::sp<IAllocator> allocator_;
-  android::sp<IQtiMapperExtensions> mapper_ext_;
+  android::sp<IQtiMapperExtensions_v1_2> mapper_ext_;
 };
 
 }  // namespace sdm

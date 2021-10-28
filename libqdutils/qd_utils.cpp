@@ -28,8 +28,12 @@
  */
 
 #include <unistd.h>
-#include <gralloc_priv.h>
+#include <QtiGralloc.h>
+#include <QtiGrallocPriv.h>
 #include "qd_utils.h"
+#include <android/hardware/graphics/common/1.2/types.h>
+
+using android::hardware::graphics::common::V1_2::PixelFormat;
 
 static const int kFBNodeMax = 4;
 namespace qdutils {
@@ -164,80 +168,80 @@ int getDPTestConfig(uint32_t *panelBpp, uint32_t *patternType) {
 
 const char *GetHALPixelFormatString(int format) {
   switch (format) {
-  case HAL_PIXEL_FORMAT_RGBA_8888:
-    return "RGBA_8888";
-  case HAL_PIXEL_FORMAT_RGBX_8888:
-    return "RGBX_8888";
-  case HAL_PIXEL_FORMAT_RGB_888:
-    return "RGB_888";
-  case HAL_PIXEL_FORMAT_RGB_565:
-    return "RGB_565";
-  case HAL_PIXEL_FORMAT_BGR_565:
-    return "BGR_565";
-  case HAL_PIXEL_FORMAT_BGRA_8888:
-    return "BGRA_8888";
-  case HAL_PIXEL_FORMAT_RGBA_5551:
-    return "RGBA_5551";
-  case HAL_PIXEL_FORMAT_RGBA_4444:
-    return "RGBA_4444";
-  case HAL_PIXEL_FORMAT_YV12:
-    return "YV12";
-  case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-    return "YCbCr_422_SP_NV16";
-  case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-    return "YCrCb_420_SP_NV21";
-  case HAL_PIXEL_FORMAT_YCbCr_422_I:
-    return "YCbCr_422_I_YUY2";
-  case HAL_PIXEL_FORMAT_YCrCb_422_I:
-    return "YCrCb_422_I_YVYU";
-  case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-    return "NV12_ENCODEABLE";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
-    return "YCbCr_420_SP_TILED_TILE_4x2";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    return "YCbCr_420_SP";
-  case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
-    return "YCrCb_420_SP_ADRENO";
-  case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-    return "YCrCb_422_SP";
-  case HAL_PIXEL_FORMAT_R_8:
-    return "R_8";
-  case HAL_PIXEL_FORMAT_RG_88:
-    return "RG_88";
-  case HAL_PIXEL_FORMAT_INTERLACE:
-    return "INTERLACE";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    return "YCbCr_420_SP_VENUS";
-  case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-    return "YCrCb_420_SP_VENUS";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-    return "YCbCr_420_SP_VENUS_UBWC";
-  case HAL_PIXEL_FORMAT_RGBA_1010102:
-    return "RGBA_1010102";
-  case HAL_PIXEL_FORMAT_ARGB_2101010:
-    return "ARGB_2101010";
-  case HAL_PIXEL_FORMAT_RGBX_1010102:
-    return "RGBX_1010102";
-  case HAL_PIXEL_FORMAT_XRGB_2101010:
-    return "XRGB_2101010";
-  case HAL_PIXEL_FORMAT_BGRA_1010102:
-    return "BGRA_1010102";
-  case HAL_PIXEL_FORMAT_ABGR_2101010:
-    return "ABGR_2101010";
-  case HAL_PIXEL_FORMAT_BGRX_1010102:
-    return "BGRX_1010102";
-  case HAL_PIXEL_FORMAT_XBGR_2101010:
-    return "XBGR_2101010";
-  case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-    return "YCbCr_420_P010";
-  case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-    return "YCbCr_420_TP10_UBWC";
-  case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-    return "YCbCr_420_P010_VENUS";
-  case HAL_PIXEL_FORMAT_RGBA_FP16:
-    return "PIXEL_FORMAT_RGBA_FP16";
-  default:
-    return "Unknown_format";
+    case static_cast<int>(PixelFormat::RGBA_8888):
+      return "RGBA_8888";
+    case static_cast<int>(PixelFormat::RGBX_8888):
+      return "RGBX_8888";
+    case static_cast<int>(PixelFormat::RGB_888):
+      return "RGB_888";
+    case static_cast<int>(PixelFormat::RGB_565):
+      return "RGB_565";
+    case HAL_PIXEL_FORMAT_BGR_565:
+      return "BGR_565";
+    case static_cast<int>(PixelFormat::BGRA_8888):
+      return "BGRA_8888";
+    case HAL_PIXEL_FORMAT_RGBA_5551:
+      return "RGBA_5551";
+    case HAL_PIXEL_FORMAT_RGBA_4444:
+      return "RGBA_4444";
+    case HAL_PIXEL_FORMAT_YV12:
+      return "YV12";
+    case static_cast<int>(PixelFormat::YCBCR_422_SP):
+      return "YCbCr_422_SP_NV16";
+    case static_cast<int>(PixelFormat::YCRCB_420_SP):
+      return "YCrCb_420_SP_NV21";
+    case HAL_PIXEL_FORMAT_YCbCr_422_I:
+      return "YCbCr_422_I_YUY2";
+    case HAL_PIXEL_FORMAT_YCrCb_422_I:
+      return "YCrCb_422_I_YVYU";
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+      return "NV12_ENCODEABLE";
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
+      return "YCbCr_420_SP_TILED_TILE_4x2";
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+      return "YCbCr_420_SP";
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
+      return "YCrCb_420_SP_ADRENO";
+    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+      return "YCrCb_422_SP";
+    case HAL_PIXEL_FORMAT_R_8:
+      return "R_8";
+    case HAL_PIXEL_FORMAT_RG_88:
+      return "RG_88";
+    case HAL_PIXEL_FORMAT_INTERLACE:
+      return "INTERLACE";
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+      return "YCbCr_420_SP_VENUS";
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+      return "YCrCb_420_SP_VENUS";
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+      return "YCbCr_420_SP_VENUS_UBWC";
+    case static_cast<int>(PixelFormat::RGBA_1010102):
+      return "RGBA_1010102";
+    case HAL_PIXEL_FORMAT_ARGB_2101010:
+      return "ARGB_2101010";
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
+      return "RGBX_1010102";
+    case HAL_PIXEL_FORMAT_XRGB_2101010:
+      return "XRGB_2101010";
+    case HAL_PIXEL_FORMAT_BGRA_1010102:
+      return "BGRA_1010102";
+    case HAL_PIXEL_FORMAT_ABGR_2101010:
+      return "ABGR_2101010";
+    case HAL_PIXEL_FORMAT_BGRX_1010102:
+      return "BGRX_1010102";
+    case HAL_PIXEL_FORMAT_XBGR_2101010:
+      return "XBGR_2101010";
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+      return "YCbCr_420_P010";
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+      return "YCbCr_420_TP10_UBWC";
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+      return "YCbCr_420_P010_VENUS";
+    case static_cast<int>(PixelFormat::RGBA_FP16):
+      return "PIXEL_FORMAT_RGBA_FP16";
+    default:
+      return "Unknown_format";
   }
 }
 

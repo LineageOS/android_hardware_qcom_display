@@ -39,8 +39,8 @@
 #include "gr_buf_descriptor.h"
 #include "gr_device_impl.h"
 #include "gr_utils.h"
-#include "gralloc_priv.h"
-#include "qdMetaData.h"
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 #include "qd_utils.h"
 
 int gralloc_device_open(const struct hw_module_t *module, const char *name, hw_device_t **device);
@@ -113,8 +113,9 @@ inline gralloc1_error_t ToError(Error error) {
 }
 
 static uint64_t ProducerUsageToBufferUsage(uint64_t /*gralloc1_producer_usage_t*/ producer_usage) {
-  uint64_t usage = producer_usage & ~(GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN |
-                                      GRALLOC1_PRODUCER_USAGE_CPU_WRITE_OFTEN);
+  uint64_t usage =
+      producer_usage &
+      ~(GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN | GRALLOC1_PRODUCER_USAGE_CPU_WRITE_OFTEN);
   if ((producer_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN) ==
       GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN) {
     usage |= BufferUsage::CPU_READ_OFTEN;
@@ -250,8 +251,7 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
   return NULL;
 }
 
-void GrallocImpl::Dump(gralloc1_device_t *device, uint32_t *out_size,
-                                   char *out_buffer) {
+void GrallocImpl::Dump(gralloc1_device_t *device, uint32_t *out_size, char *out_buffer) {
   if (!device || !out_size) {
     ALOGE("Gralloc Error : device=%p", (void *)device);
     return;
@@ -276,7 +276,7 @@ void GrallocImpl::Dump(gralloc1_device_t *device, uint32_t *out_size,
 
 gralloc1_error_t GrallocImpl::CheckDeviceAndHandle(gralloc1_device_t *device,
                                                    buffer_handle_t buffer) {
-  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
   if (!device || (private_handle_t::validate(hnd) != 0)) {
     ALOGE("Gralloc Error : device= %p, buffer-handle=%p", (void *)device, (void *)buffer);
     return GRALLOC1_ERROR_BAD_HANDLE;
@@ -286,7 +286,7 @@ gralloc1_error_t GrallocImpl::CheckDeviceAndHandle(gralloc1_device_t *device,
 }
 
 int32_t GrallocImpl::CreateBufferDescriptor(gralloc1_device_t *device,
-                                                     gralloc1_buffer_descriptor_t *out_descriptor) {
+                                            gralloc1_buffer_descriptor_t *out_descriptor) {
   if (!device || !out_descriptor) {
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
@@ -295,7 +295,7 @@ int32_t GrallocImpl::CreateBufferDescriptor(gralloc1_device_t *device,
 }
 
 int32_t GrallocImpl::DestroyBufferDescriptor(gralloc1_device_t *device,
-                                                      gralloc1_buffer_descriptor_t descriptor) {
+                                             gralloc1_buffer_descriptor_t descriptor) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   }
@@ -304,69 +304,65 @@ int32_t GrallocImpl::DestroyBufferDescriptor(gralloc1_device_t *device,
 }
 
 int32_t GrallocImpl::SetConsumerUsage(gralloc1_device_t *device,
-                                               gralloc1_buffer_descriptor_t descriptor,
-                                               uint64_t /*gralloc1_consumer_usage_t*/ usage) {
+                                      gralloc1_buffer_descriptor_t descriptor,
+                                      uint64_t /*gralloc1_consumer_usage_t*/ usage) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
     auto *dev = reinterpret_cast<GrallocImpl *>(device);
-    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(descriptor,
-                                &BufferDescriptor::SetUsage,
-                                ConsumerUsageToBufferUsage(usage)));
+    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(
+        descriptor, &BufferDescriptor::SetUsage, ConsumerUsageToBufferUsage(usage)));
   }
 }
 
 int32_t GrallocImpl::SetBufferDimensions(gralloc1_device_t *device,
-                                                  gralloc1_buffer_descriptor_t descriptor,
-                                                  uint32_t width, uint32_t height) {
+                                         gralloc1_buffer_descriptor_t descriptor, uint32_t width,
+                                         uint32_t height) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
     auto *dev = reinterpret_cast<GrallocImpl *>(device);
-    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(descriptor,
-                                &BufferDescriptor::SetDimensions,
-                                INT(width), INT(height)));
+    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(
+        descriptor, &BufferDescriptor::SetDimensions, INT(width), INT(height)));
   }
 }
 
 int32_t GrallocImpl::SetColorFormat(gralloc1_device_t *device,
-                                             gralloc1_buffer_descriptor_t descriptor,
-                                             int32_t format) {
+                                    gralloc1_buffer_descriptor_t descriptor, int32_t format) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
     auto *dev = reinterpret_cast<GrallocImpl *>(device);
-    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(descriptor,
-                                &BufferDescriptor::SetColorFormat, format));
+    return static_cast<int32_t>(
+        dev->CallBufferDescriptorFunction(descriptor, &BufferDescriptor::SetColorFormat, format));
   }
 }
 
 int32_t GrallocImpl::SetLayerCount(gralloc1_device_t *device,
-                                            gralloc1_buffer_descriptor_t descriptor,
-                                            uint32_t layer_count) {
+                                   gralloc1_buffer_descriptor_t descriptor, uint32_t layer_count) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
     auto *dev = reinterpret_cast<GrallocImpl *>(device);
-    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(descriptor,
-                                &BufferDescriptor::SetLayerCount, layer_count));
+    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(
+        descriptor, &BufferDescriptor::SetLayerCount, layer_count));
   }
 }
 
 int32_t GrallocImpl::SetProducerUsage(gralloc1_device_t *device,
-                                               gralloc1_buffer_descriptor_t descriptor,
-                                               uint64_t /*gralloc1_producer_usage_t*/ usage) {
+                                      gralloc1_buffer_descriptor_t descriptor,
+                                      uint64_t /*gralloc1_producer_usage_t*/ usage) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
     auto *dev = reinterpret_cast<GrallocImpl *>(device);
-    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(descriptor,
-                                &BufferDescriptor::SetUsage, ProducerUsageToBufferUsage(usage)));
+    return static_cast<int32_t>(dev->CallBufferDescriptorFunction(
+        descriptor, &BufferDescriptor::SetUsage, ProducerUsageToBufferUsage(usage)));
   }
 }
 
 int32_t GrallocImpl::GetBackingStore(gralloc1_device_t *device, buffer_handle_t buffer,
-                                              gralloc1_backing_store_t *out_backstore) {
+                                     gralloc1_backing_store_t *out_backstore) {
   if (!out_backstore) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
@@ -374,35 +370,35 @@ int32_t GrallocImpl::GetBackingStore(gralloc1_device_t *device, buffer_handle_t 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *out_backstore =
-        static_cast<gralloc1_backing_store_t>(PRIV_HANDLE_CONST(buffer)->GetBackingstore());
+        static_cast<gralloc1_backing_store_t>(QTI_HANDLE_CONST(buffer)->GetBackingstore());
   }
 
   return status;
 }
 
 int32_t GrallocImpl::GetConsumerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
-                                               uint64_t /*gralloc1_consumer_usage_t*/ *outUsage) {
+                                      uint64_t /*gralloc1_consumer_usage_t*/ *outUsage) {
   if (!outUsage) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outUsage = static_cast<uint64_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
+    *outUsage = static_cast<uint64_t>(QTI_HANDLE_CONST(buffer)->GetUsage());
   }
 
   return static_cast<int32_t>(status);
 }
 
 int32_t GrallocImpl::GetBufferDimensions(gralloc1_device_t *device, buffer_handle_t buffer,
-                                                  uint32_t *outWidth, uint32_t *outHeight) {
+                                         uint32_t *outWidth, uint32_t *outHeight) {
   if (!outWidth || !outHeight) {
     return GRALLOC1_ERROR_BAD_VALUE;
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+    const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
     *outWidth = UINT(hnd->GetUnalignedWidth());
     *outHeight = UINT(hnd->GetUnalignedHeight());
   }
@@ -411,56 +407,56 @@ int32_t GrallocImpl::GetBufferDimensions(gralloc1_device_t *device, buffer_handl
 }
 
 int32_t GrallocImpl::GetColorFormat(gralloc1_device_t *device, buffer_handle_t buffer,
-                                             int32_t *outFormat) {
+                                    int32_t *outFormat) {
   if (!outFormat) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outFormat = PRIV_HANDLE_CONST(buffer)->GetColorFormat();
+    *outFormat = QTI_HANDLE_CONST(buffer)->GetColorFormat();
   }
 
   return static_cast<int32_t>(status);
 }
 
 int32_t GrallocImpl::GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
-                                            uint32_t *outLayerCount) {
+                                   uint32_t *outLayerCount) {
   if (!outLayerCount) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outLayerCount = PRIV_HANDLE_CONST(buffer)->GetLayerCount();
+    *outLayerCount = QTI_HANDLE_CONST(buffer)->GetLayerCount();
   }
 
   return static_cast<int32_t>(status);
 }
 
 int32_t GrallocImpl::GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
-                                               uint64_t /*gralloc1_producer_usage_t*/ *outUsage) {
+                                      uint64_t /*gralloc1_producer_usage_t*/ *outUsage) {
   if (!outUsage) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outUsage = static_cast<uint64_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
+    *outUsage = static_cast<uint64_t>(QTI_HANDLE_CONST(buffer)->GetUsage());
   }
 
   return static_cast<int32_t>(status);
 }
 
 int32_t GrallocImpl::GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
-                                              uint32_t *outStride) {
+                                     uint32_t *outStride) {
   if (!outStride) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outStride = UINT(PRIV_HANDLE_CONST(buffer)->GetStride());
+    *outStride = UINT(QTI_HANDLE_CONST(buffer)->GetStride());
   }
 
   return static_cast<int32_t>(status);
@@ -489,8 +485,8 @@ gralloc1_error_t GrallocImpl::AllocateBuffer(const gralloc1_buffer_descriptor_t 
 }
 
 int32_t GrallocImpl::AllocateBuffers(gralloc1_device_t *device, uint32_t num_descriptors,
-                                              const gralloc1_buffer_descriptor_t *descriptors,
-                                              buffer_handle_t *out_buffers) {
+                                     const gralloc1_buffer_descriptor_t *descriptors,
+                                     buffer_handle_t *out_buffers) {
   if (!num_descriptors || !descriptors) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   }
@@ -512,7 +508,7 @@ int32_t GrallocImpl::AllocateBuffers(gralloc1_device_t *device, uint32_t num_des
 int32_t GrallocImpl::RetainBuffer(gralloc1_device_t *device, buffer_handle_t buffer) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+    const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
     GrallocImpl const *dev = GRALLOC_IMPL(device);
     status = ToError(dev->buf_mgr_->RetainBuffer(hnd));
   }
@@ -525,13 +521,13 @@ int32_t GrallocImpl::ReleaseBuffer(gralloc1_device_t *device, buffer_handle_t bu
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   }
 
-  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
   GrallocImpl const *dev = GRALLOC_IMPL(device);
   return static_cast<int32_t>((ToError(dev->buf_mgr_->ReleaseBuffer(hnd))));
 }
 
 int32_t GrallocImpl::GetFlexLayout(const private_handle_t *hnd,
-                                            struct android_flex_layout *layout) {
+                                   struct android_flex_layout *layout) {
   if (!IsYuvFormat(hnd->format)) {
     return static_cast<int32_t>(GRALLOC1_ERROR_UNSUPPORTED);
   }
@@ -574,14 +570,14 @@ int32_t GrallocImpl::GetFlexLayout(const private_handle_t *hnd,
 }
 
 int32_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
-                                               uint32_t *out_num_planes) {
+                                      uint32_t *out_num_planes) {
   if (!out_num_planes) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+    const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
     if (!IsYuvFormat(hnd->format)) {
       status = GRALLOC1_ERROR_UNSUPPORTED;
     } else {
@@ -598,10 +594,10 @@ static inline void CloseFdIfValid(int fd) {
 }
 
 int32_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
-                                         uint64_t /*gralloc1_producer_usage_t*/ prod_usage,
-                                         uint64_t /*gralloc1_consumer_usage_t*/ cons_usage,
-                                         const gralloc1_rect_t *region, void **out_data,
-                                         int32_t acquire_fence) {
+                                uint64_t /*gralloc1_producer_usage_t*/ prod_usage,
+                                uint64_t /*gralloc1_consumer_usage_t*/ cons_usage,
+                                const gralloc1_rect_t *region, void **out_data,
+                                int32_t acquire_fence) {
   ATRACE_CALL();
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status != GRALLOC1_ERROR_NONE || !out_data ||
@@ -621,7 +617,7 @@ int32_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffe
     }
   }
 
-  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
   GrallocImpl const *dev = GRALLOC_IMPL(device);
 
   // Either producer usage or consumer usage must be *_USAGE_NONE
@@ -640,11 +636,10 @@ int32_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffe
 }
 
 int32_t GrallocImpl::LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
-                                       uint64_t /*gralloc1_producer_usage_t*/ prod_usage,
-                                       uint64_t /*gralloc1_consumer_usage_t*/ cons_usage,
-                                       const gralloc1_rect_t *region,
-                                       struct android_flex_layout *out_flex_layout,
-                                       int32_t acquire_fence) {
+                              uint64_t /*gralloc1_producer_usage_t*/ prod_usage,
+                              uint64_t /*gralloc1_consumer_usage_t*/ cons_usage,
+                              const gralloc1_rect_t *region,
+                              struct android_flex_layout *out_flex_layout, int32_t acquire_fence) {
   if (!out_flex_layout) {
     CloseFdIfValid(acquire_fence);
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
@@ -652,19 +647,19 @@ int32_t GrallocImpl::LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
 
   void *out_data{};
   int32_t status = GrallocImpl::LockBuffer(device, buffer, prod_usage, cons_usage, region,
-                                                    &out_data, acquire_fence);
+                                           &out_data, acquire_fence);
   if (status != GRALLOC1_ERROR_NONE) {
     return static_cast<int32_t>(status);
   }
 
   auto *dev = reinterpret_cast<GrallocImpl *>(device);
-  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
   dev->GetFlexLayout(hnd, out_flex_layout);
   return static_cast<int32_t>(status);
 }
 
 int32_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
-                                           int32_t *release_fence) {
+                                  int32_t *release_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status != GRALLOC1_ERROR_NONE) {
     return static_cast<int32_t>(status);
@@ -674,7 +669,7 @@ int32_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buf
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
-  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  const private_handle_t *hnd = QTI_HANDLE_CONST(buffer);
   GrallocImpl const *dev = GRALLOC_IMPL(device);
 
   *release_fence = -1;
@@ -714,7 +709,7 @@ static int32_t Perform(int operation, va_list args) {
       }
 
       BufferDim_t buffer_dim;
-      if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
+      if (getMetaDataValue(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == Error::NONE) {
         *stride = buffer_dim.sliceWidth;
       } else {
         *stride = hnd->width;
@@ -735,8 +730,10 @@ static int32_t Perform(int operation, va_list args) {
 
       int err = GetCustomDimensions(hnd, stride, height);
       if (err) {
-        ALOGW("%s: Error during GetCustomDimensions API Call. "
-              "stride: %d, height: %d", __FUNCTION__, *stride, *height);
+        ALOGW(
+            "%s: Error during GetCustomDimensions API Call. "
+            "stride: %d, height: %d",
+            __FUNCTION__, *stride, *height);
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
       }
     } break;
@@ -766,7 +763,7 @@ static int32_t Perform(int operation, va_list args) {
       *aligned_height = INT(alignedh);
     } break;
 
-    case GRALLOC_MODULE_PERFORM_GET_COLOR_SPACE_FROM_HANDLE: {
+    case GRALLOC_MODULE_PERFORM_QTI_COLORSPACE_FROM_HANDLE: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
       int *color_space = va_arg(args, int *);
 
@@ -797,7 +794,7 @@ static int32_t Perform(int operation, va_list args) {
       }
     } break;
 
-    case GRALLOC_MODULE_PERFORM_GET_MAP_SECURE_BUFFER_INFO: {
+    case GRALLOC_MODULE_PERFORM_QTI_MAP_SECURE_BUFFER_INFO: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
       int *map_secure_buffer = va_arg(args, int *);
 
@@ -809,7 +806,7 @@ static int32_t Perform(int operation, va_list args) {
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
       }
 
-      if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, map_secure_buffer) != 0) {
+      if (getMetaDataValue(hnd, QTI_MAP_SECURE_BUFFER, map_secure_buffer) != Error::NONE) {
         *map_secure_buffer = 0;
       }
     } break;
@@ -826,9 +823,9 @@ static int32_t Perform(int operation, va_list args) {
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
       }
 
-      *flag = hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
+      *flag = hnd->flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED;
       int linear_format = 0;
-      if (getMetaData(hnd, GET_LINEAR_FORMAT, &linear_format) == 0) {
+      if (getMetaDataValue(hnd, QTI_LINEAR_FORMAT, &linear_format) == Error::NONE) {
         if (linear_format) {
           *flag = 0;
         }
@@ -864,32 +861,32 @@ static int32_t Perform(int operation, va_list args) {
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
       }
 
-      if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, flag) != 0) {
+      if (getMetaDataValue(hnd, QTI_PP_PARAM_INTERLACED, flag) != Error::NONE) {
         *flag = 0;
       }
     } break;
 
-    case GRALLOC_MODULE_PERFORM_SET_SINGLE_BUFFER_MODE: {
+    case GRALLOC_MODULE_PERFORM_QTI_SINGLE_BUFFER_MODE: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
       uint32_t *enable = va_arg(args, uint32_t *);
       if (private_handle_t::validate(hnd) != 0) {
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_HANDLE);
       }
-      if (setMetaData(hnd, SET_SINGLE_BUFFER_MODE, enable) != 0) {
+      if (SetMetaData(hnd, QTI_SINGLE_BUFFER_MODE, enable) != Error::NONE) {
         return static_cast<int32_t>(GRALLOC1_ERROR_UNSUPPORTED);
       }
     } break;
 
-    case GRALLOC_MODULE_PERFORM_GET_GRAPHICS_METADATA: {
-      private_handle_t* hnd = va_arg(args, private_handle_t *);
+    case GRALLOC_MODULE_PERFORM_QTI_GRAPHICS_METADATA: {
+      private_handle_t *hnd = va_arg(args, private_handle_t *);
 
       if (private_handle_t::validate(hnd) != 0) {
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_HANDLE);
       }
 
-      void* graphic_metadata = va_arg(args, void*);
+      void *graphic_metadata = va_arg(args, void *);
 
-      if (getMetaData(hnd, GET_GRAPHICS_METADATA, graphic_metadata) != 0) {
+      if (getMetaDataValue(hnd, QTI_GRAPHICS_METADATA, graphic_metadata) != Error::NONE) {
         graphic_metadata = NULL;
         return static_cast<int32_t>(GRALLOC1_ERROR_UNSUPPORTED);
       }

@@ -29,11 +29,11 @@
 
 #include <QtiGralloc.h>
 
+#include <gralloctypes/Gralloc4.h>
 #include <core/buffer_allocator.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 
-#include "gr_utils.h"
 #include "hwc_buffer_allocator.h"
 #include "hwc_debugger.h"
 #include "hwc_layers.h"
@@ -42,6 +42,7 @@
 
 using android::hardware::hidl_handle;
 using android::hardware::hidl_vec;
+using vendor::qti::hardware::display::mapperextensions::V1_0::PlaneLayout;
 using android::hardware::graphics::common::V1_2::PixelFormat;
 using android::hardware::graphics::mapper::V4_0::BufferDescriptor;
 using android::hardware::graphics::mapper::V4_0::Error;
@@ -71,7 +72,7 @@ int HWCBufferAllocator::GetGrallocInstance() {
   android::sp<IQtiMapper> qti_mapper = IQtiMapper::castFrom(mapper_);
   qti_mapper->getMapperExtensions([&](auto _error, auto _extensions) {
     if (_error == Error::NONE)
-      mapper_ext_ = _extensions;
+      mapper_ext_ = IQtiMapperExtensions_v1_2::castFrom(_extensions);
   });
 
   if (mapper_ext_ == nullptr) {
@@ -373,9 +374,13 @@ int HWCBufferAllocator::GetBufferGeometry(void *buf, int32_t &slice_width, int32
   return kErrorParameters;
 }
 
-void HWCBufferAllocator::GetCustomWidthAndHeight(const native_handle_t *handle, int *width,
-                                                 int *height) {
+int HWCBufferAllocator::GetCustomWidthAndHeight(const native_handle_t *handle, int *width,
+                                                int *height) {
   void *hnd = const_cast<native_handle_t *>(handle);
+  private_handle_t *priv_handle = static_cast<private_handle_t *>(hnd);
+
+  *width = priv_handle->width;
+  *height = priv_handle->height;
 
   auto err = GetGrallocInstance();
   if (err != 0) {
@@ -386,20 +391,17 @@ void HWCBufferAllocator::GetCustomWidthAndHeight(const native_handle_t *handle, 
     if (_error == MapperExtError::NONE) {
       *width = _width;
       *height = _height;
+    } else {
+      err = -EINVAL;
     }
   });
+
+  return err;
 }
 
-void HWCBufferAllocator::GetAdjustedWidthAndHeight(const private_handle_t *handle, int *width,
-                                                 int *height) {
-  *width = handle->width;
-  *height = handle->height;
-  gralloc::GetCustomDimensions(const_cast<private_handle_t *>(handle), width, height);
-}
-
-void HWCBufferAllocator::GetAlignedWidthAndHeight(int width, int height, int format,
-                                                  uint32_t alloc_type, int *aligned_width,
-                                                  int *aligned_height) {
+int HWCBufferAllocator::GetAlignedWidthAndHeight(int width, int height, int format,
+                                                 uint32_t alloc_type, int *aligned_width,
+                                                 int *aligned_height) {
   uint64_t usage = 0;
   if (alloc_type & GRALLOC_USAGE_HW_FB) {
     usage |= BufferUsage::COMPOSER_CLIENT_TARGET;
@@ -407,8 +409,8 @@ void HWCBufferAllocator::GetAlignedWidthAndHeight(int width, int height, int for
   if (alloc_type & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
   }
-  *aligned_width = UINT(width);
-  *aligned_height = UINT(height);
+  *aligned_width = static_cast<unsigned int>(width);
+  *aligned_height = static_cast<unsigned int>(height);
 
   auto err = GetGrallocInstance();
   if (err != 0) {
@@ -421,13 +423,22 @@ void HWCBufferAllocator::GetAlignedWidthAndHeight(int width, int height, int for
         if (_error == MapperExtError::NONE) {
           *aligned_width = _aligned_w;
           *aligned_height = _aligned_h;
+        } else {
+          err = -EINVAL;
         }
       });
+
+  return err;
 }
 
 uint32_t HWCBufferAllocator::GetBufferSize(BufferInfo *buffer_info) {
   const BufferConfig &buffer_config = buffer_info->buffer_config;
   uint64_t alloc_flags = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP;
+  auto err = GetGrallocInstance();
+  if (err != 0) {
+    DLOGW("Could not get gralloc instance");
+    return err;
+  }
 
   int width = INT(buffer_config.width);
   int height = INT(buffer_config.height);
@@ -446,29 +457,40 @@ uint32_t HWCBufferAllocator::GetBufferSize(BufferInfo *buffer_info) {
     return 0;
   }
 
-  uint32_t aligned_width = 0, aligned_height = 0, buffer_size = 0;
-  // TODO(user): Replace with getFromBufferDescriptorInfo
-  gralloc::BufferInfo info(width, height, format, alloc_flags);
-  int ret = GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
-  if (ret < 0) {
-    return 0;
+  uint64_t buffer_size = 0;
+  IMapper::BufferDescriptorInfo info;
+  info.width = width;
+  info.height = height;
+  info.format = static_cast<PixelFormat>(format);
+  info.usage = alloc_flags;
+
+  auto error = Error::UNSUPPORTED;
+  mapper_->getFromBufferDescriptorInfo(
+      info, android::gralloc4::MetadataType_AllocationSize,
+      [&](const auto _error, const auto _bytestream) {
+        if (_error == Error::NONE)
+          error = static_cast<Error>(
+              android::gralloc4::decodeAllocationSize(_bytestream, &buffer_size));
+      });
+  if (error == Error::NONE) {
+    return static_cast<uint32_t>(buffer_size);
   }
-  return buffer_size;
+  return 0;
 }
 
 int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uint64_t *flags) {
   switch (format) {
     case kFormatRGBA8888:
-      *target = HAL_PIXEL_FORMAT_RGBA_8888;
+      *target = static_cast<int>(PixelFormat::RGBA_8888);
       break;
     case kFormatRGBX8888:
-      *target = HAL_PIXEL_FORMAT_RGBX_8888;
+      *target = static_cast<int>(PixelFormat::RGBX_8888);
       break;
     case kFormatRGB888:
-      *target = HAL_PIXEL_FORMAT_RGB_888;
+      *target = static_cast<int>(PixelFormat::RGB_888);
       break;
     case kFormatRGB565:
-      *target = HAL_PIXEL_FORMAT_RGB_565;
+      *target = static_cast<int>(PixelFormat::RGB_565);
       break;
     case kFormatBGR565:
       *target = HAL_PIXEL_FORMAT_BGR_565;
@@ -477,13 +499,13 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_BGR_888;
       break;
     case kFormatBGRA8888:
-      *target = HAL_PIXEL_FORMAT_BGRA_8888;
+      *target = static_cast<int>(PixelFormat::BGRA_8888);
       break;
     case kFormatYCrCb420PlanarStride16:
-      *target = HAL_PIXEL_FORMAT_YV12;
+      *target = static_cast<int>(PixelFormat::YV12);
       break;
     case kFormatYCrCb420SemiPlanar:
-      *target = HAL_PIXEL_FORMAT_YCrCb_420_SP;
+      *target = static_cast<int>(PixelFormat::YCRCB_420_SP);
       break;
     case kFormatYCbCr420SemiPlanar:
       *target = HAL_PIXEL_FORMAT_YCbCr_420_SP;
@@ -495,7 +517,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_CbYCrY_422_I;
       break;
     case kFormatYCbCr422H2V1SemiPlanar:
-      *target = HAL_PIXEL_FORMAT_YCbCr_422_SP;
+      *target = static_cast<int>(PixelFormat::YCBCR_422_SP);
       break;
     case kFormatYCbCr420SemiPlanarVenus:
       *target = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
@@ -515,7 +537,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_RGBA_4444;
       break;
     case kFormatRGBA1010102:
-      *target = HAL_PIXEL_FORMAT_RGBA_1010102;
+      *target = static_cast<int>(PixelFormat::RGBA_1010102);
       break;
     case kFormatARGB2101010:
       *target = HAL_PIXEL_FORMAT_ARGB_2101010;
@@ -555,11 +577,11 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
       break;
     case kFormatRGBA8888Ubwc:
-      *target = HAL_PIXEL_FORMAT_RGBA_8888;
+      *target = static_cast<int>(PixelFormat::RGBA_8888);
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     case kFormatRGBX8888Ubwc:
-      *target = HAL_PIXEL_FORMAT_RGBX_8888;
+      *target = static_cast<int>(PixelFormat::RGBX_8888);
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     case kFormatBGR565Ubwc:
@@ -567,7 +589,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     case kFormatRGBA1010102Ubwc:
-      *target = HAL_PIXEL_FORMAT_RGBA_1010102;
+      *target = static_cast<int>(PixelFormat::RGBA_1010102);
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     case kFormatRGBX1010102Ubwc:
@@ -575,7 +597,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     case kFormatBlob:
-      *target = HAL_PIXEL_FORMAT_BLOB;
+      *target = static_cast<int>(PixelFormat::BLOB);
       break;
     default:
       DLOGW("Unsupported format = 0x%x", format);
@@ -586,6 +608,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
 
 int HWCBufferAllocator::GetAllocatedBufferInfo(
     const BufferConfig &buffer_config, AllocatedBufferInfo *allocated_buffer_info) {
+  BufferInfo buffer_info = {buffer_config, *allocated_buffer_info};
   // TODO(user): This API should pass the buffer_info of the already allocated buffer
   // The private_data can then be typecast to the private_handle and used directly.
   uint64_t alloc_flags = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP;
@@ -607,11 +630,12 @@ int HWCBufferAllocator::GetAllocatedBufferInfo(
     return -EINVAL;
   }
 
-  uint32_t aligned_width = 0, aligned_height = 0, buffer_size = 0;
-  // TODO(user): Replace with getFromBufferDescriptorInfo
-  gralloc::BufferInfo info(width, height, format, alloc_flags);
-  int ret = GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
-  if (ret < 0) {
+  uint32_t buffer_size = 0;
+  int aligned_width = 0, aligned_height = 0;
+  int ret =
+      GetAlignedWidthAndHeight(width, height, format, alloc_flags, &aligned_width, &aligned_height);
+  buffer_size = GetBufferSize(&buffer_info);
+  if (ret < 0 || buffer_size == 0) {
     return -EINVAL;
   }
   allocated_buffer_info->stride = UINT32(aligned_width);
@@ -622,26 +646,42 @@ int HWCBufferAllocator::GetAllocatedBufferInfo(
   return 0;
 }
 
-int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
-                                                 uint32_t stride[4], uint32_t offset[4],
-                                                 uint32_t *num_planes) {
-
+int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
+                                        uint32_t offset[4], uint32_t *num_planes) {
   // TODO(user): Transition APIs to not need a private handle
-  private_handle_t hnd(-1, 0, 0, 0, 0, 0, 0);
-  int format = HAL_PIXEL_FORMAT_RGBA_8888;
+  int format = static_cast<int>(PixelFormat::RGBA_8888);
+  hidl_vec<PlaneLayout> plane_layouts;
+  auto err = MapperExtError::NONE;
   uint64_t flags = 0;
   SetBufferInfo(buf_info.format, &format, &flags);
   // Setup only the required stuff, skip rest
-  hnd.format = format;
-  hnd.width = INT32(buf_info.aligned_width);
-  hnd.height = INT32(buf_info.aligned_height);
   if (flags & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
-    hnd.flags = private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
+    flags = qtigralloc::PRIV_FLAGS_UBWC_ALIGNED;
   }
-  hnd.usage = buf_info.usage;
-  int ret = gralloc::GetBufferLayout(&hnd, stride, offset, num_planes);
-  if (ret < 0) {
+  mapper_ext_->getFormatLayout(
+      INT32(format), buf_info.usage, INT32(flags), INT32(buf_info.aligned_width),
+      INT32(buf_info.aligned_height),
+      [&](MapperExtError _error, const auto &_size, const auto &_plane_layouts) {
+        err = _error;
+        plane_layouts = _plane_layouts;
+      });
+
+  if (err != MapperExtError::NONE) {
     DLOGE("GetBufferLayout failed");
+    return -EINVAL;
+  }
+
+  // We are only returning buffer layout for progressive or single field formats.
+  *num_planes = (plane_layouts.size() > 3) ? 2 : plane_layouts.size();
+
+  for (int i = 0; i < *num_planes; i++)
+  {
+    offset[i] = static_cast<uint32_t>(plane_layouts[i].offset);
+    stride[i] = static_cast<uint32_t>(plane_layouts[i].stride_bytes);
+  }
+
+  if (flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED) {
+    std::fill(offset, offset + 4, 0);
   }
 
   return kErrorNone;

@@ -31,7 +31,6 @@
 #define DEBUG 0
 #include "QtiMapperExtensions.h"
 #include <cutils/trace.h>
-#include <qdMetaData.h>
 #include <sync/sync.h>
 #include "gr_utils.h"
 
@@ -55,10 +54,10 @@ Return<void> QtiMapperExtensions::getMapSecureBufferFlag(void *buffer,
   auto hnd = static_cast<private_handle_t *>(buffer);
   int map_secure_buffer = 0;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
-    if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, &map_secure_buffer) != 0) {
+    err = static_cast<Error>(
+        gralloc::GetMetaDataValue(hnd, QTI_MAP_SECURE_BUFFER, &map_secure_buffer));
+    if (err != Error::NONE) {
       map_secure_buffer = 0;
-    } else {
-      err = Error::NONE;
     }
   }
   hidl_cb(err, map_secure_buffer != 0);
@@ -71,11 +70,14 @@ Return<void> QtiMapperExtensions::getInterlacedFlag(void *buffer, getInterlacedF
   int interlaced_flag = 0;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     err = Error::NONE;
-    auto ret = getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced_flag);
-    if (ret != 0) {
+    auto ret = static_cast<Error>(
+        gralloc::GetMetaDataValue(hnd, QTI_PP_PARAM_INTERLACED, &interlaced_flag));
+    if (ret != Error::NONE) {
       interlaced_flag = 0;
-      ALOGW("%s: getMetaData returned %d, defaulting to "
-      "interlaced_flag = %d", __FUNCTION__, ret, interlaced_flag);
+      ALOGW(
+          "%s: getMetaData returned %d, defaulting to "
+          "interlaced_flag = %d",
+          __FUNCTION__, ret, interlaced_flag);
     }
   }
   hidl_cb(err, interlaced_flag != 0);
@@ -93,8 +95,10 @@ Return<void> QtiMapperExtensions::getCustomDimensions(void *buffer,
     height = hnd->height;
     int ret = gralloc::GetCustomDimensions(hnd, &stride, &height);
     if (ret) {
-      ALOGW("%s: Error during GetCustomDimensions API call. "
-            "stride: %d, height: %d", __FUNCTION__, stride, height);
+      ALOGW(
+          "%s: Error during GetCustomDimensions API call. "
+          "stride: %d, height: %d",
+          __FUNCTION__, stride, height);
       err = Error::BAD_BUFFER;
     } else {
       err = Error::NONE;
@@ -183,11 +187,8 @@ Return<Error> QtiMapperExtensions::setSingleBufferMode(void *buffer, bool enable
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
-    if (setMetaData(hnd, SET_SINGLE_BUFFER_MODE, &enable) != 0) {
-      err = Error::UNSUPPORTED;
-    } else {
-      err = Error::NONE;
-    }
+    err = static_cast<Error>(gralloc::SetMetaData(hnd, QTI_SINGLE_BUFFER_MODE, &enable));
+    err = (err != Error::NONE) ? Error::UNSUPPORTED : err;
   }
   return err;
 }
@@ -341,9 +342,8 @@ Return<void> QtiMapperExtensions::getSurfaceMetadata(void *buffer, getSurfaceMet
   auto hnd = static_cast<private_handle_t *>(buffer);
   GraphicsMetadata surface_metadata;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
-    if (getMetaData(hnd, GET_GRAPHICS_METADATA, &surface_metadata) == 0) {
-      err = Error::NONE;
-    }
+    err = static_cast<Error>(
+        gralloc::GetMetaDataValue(hnd, QTI_GRAPHICS_METADATA, &surface_metadata));
   }
   if (err != Error::NONE) {
     hidl_cb(err, nullptr);
@@ -416,11 +416,8 @@ Return<Error> QtiMapperExtensions::getSurfaceMetadata_V1(void *buffer, void *met
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   if (metadata != nullptr && buffer != nullptr && private_handle_t::validate(hnd) == 0) {
-    if (getMetaData(hnd, GET_GRAPHICS_METADATA, metadata) == 0) {
-      err = Error::NONE;
-    } else {
-      err = Error::UNSUPPORTED;
-    }
+    err = static_cast<Error>(gralloc::GetMetaDataValue(hnd, QTI_GRAPHICS_METADATA, metadata));
+    err = (err != Error::NONE) ? Error::UNSUPPORTED : err;
   } else {
     ALOGE("%s: buffer pointer: %p, metadata pointer: %p ", __FUNCTION__, buffer, metadata);
   }

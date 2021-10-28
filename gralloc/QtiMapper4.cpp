@@ -32,7 +32,6 @@
 #include "QtiMapper4.h"
 
 #include <cutils/trace.h>
-#include <qdMetaData.h>
 #include <sync/sync.h>
 
 #include <vector>
@@ -57,7 +56,8 @@ QtiMapper::QtiMapper() {
 }
 
 bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_4_0 &bd) {
-  unsigned int max_bpp = gralloc::GetBppForUncompressedRGB(HAL_PIXEL_FORMAT_RGBA_FP16);
+  unsigned int max_bpp =
+      gralloc::GetBppForUncompressedRGB(static_cast<int>(PixelFormat::RGBA_FP16));
   if (bd.width == 0 || bd.height == 0 || (OVERFLOW((bd.width * max_bpp), bd.height)) ||
       (static_cast<int32_t>(bd.format) <= 0) || bd.layerCount <= 0) {
     return false;
@@ -68,9 +68,8 @@ bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_4_0 &bd) {
 
 Error QtiMapper::CreateDescriptor(const BufferDescriptorInfo_4_0 &descriptor_info,
                                   IMapperBufferDescriptor *descriptor) {
-  ALOGD_IF(DEBUG,
-           "BufferDescriptorInfo: name %s wxh: %dx%d usage: 0x%" PRIu64
-           " format: %d layer_count: %d",
+  ALOGD_IF(DEBUG, "BufferDescriptorInfo: name %s wxh: %dx%d usage: 0x%" PRIu64
+                  " format: %d layer_count: %d",
            descriptor_info.name.c_str(), descriptor_info.width, descriptor_info.height,
            descriptor_info.usage, static_cast<uint32_t>(descriptor_info.format),
            descriptor_info.layerCount);
@@ -115,7 +114,7 @@ Return<void> QtiMapper::importBuffer(const hidl_handle &raw_handle, importBuffer
   }
 
   auto error =
-      static_cast<IMapper_4_0_Error>(buf_mgr_->RetainBuffer(PRIV_HANDLE_CONST(buffer_handle)));
+      static_cast<IMapper_4_0_Error>(buf_mgr_->RetainBuffer(QTI_HANDLE_CONST(buffer_handle)));
   if (error != Error::NONE) {
     ALOGE("%s: Unable to retain handle: %p", __FUNCTION__, buffer_handle);
     native_handle_close(buffer_handle);
@@ -125,7 +124,7 @@ Return<void> QtiMapper::importBuffer(const hidl_handle &raw_handle, importBuffer
     return Void();
   }
   ALOGD_IF(DEBUG, "Imported handle: %p id: %" PRIu64, buffer_handle,
-           PRIV_HANDLE_CONST(buffer_handle)->id);
+           QTI_HANDLE_CONST(buffer_handle)->id);
   hidl_cb(Error::NONE, buffer_handle);
   return Void();
 }
@@ -134,7 +133,7 @@ Return<Error> QtiMapper::freeBuffer(void *buffer) {
   if (!buffer) {
     return Error::BAD_BUFFER;
   }
-  return static_cast<IMapper_4_0_Error>(buf_mgr_->ReleaseBuffer(PRIV_HANDLE_CONST(buffer)));
+  return static_cast<IMapper_4_0_Error>(buf_mgr_->ReleaseBuffer(QTI_HANDLE_CONST(buffer)));
 }
 
 bool QtiMapper::GetFenceFd(const hidl_handle &fence_handle, int *outFenceFd) {
@@ -178,7 +177,7 @@ Error QtiMapper::LockBuffer(void *buffer, uint64_t usage, const hidl_handle &acq
     WaitFenceFd(fence_fd);
   }
 
-  auto hnd = PRIV_HANDLE_CONST(buffer);
+  auto hnd = QTI_HANDLE_CONST(buffer);
 
   if (access_region.top < 0 || access_region.left < 0 || access_region.width < 0 ||
       access_region.height < 0 || access_region.width > hnd->width ||
@@ -196,7 +195,7 @@ Return<void> QtiMapper::lock(void *buffer, uint64_t cpu_usage, const IMapper::Re
     return Void();
   }
 
-  auto hnd = PRIV_HANDLE_CONST(buffer);
+  auto hnd = QTI_HANDLE_CONST(buffer);
   auto *out_data = reinterpret_cast<void *>(hnd->base);
 
   hidl_cb(err, out_data);
@@ -206,7 +205,7 @@ Return<void> QtiMapper::lock(void *buffer, uint64_t cpu_usage, const IMapper::Re
 Return<void> QtiMapper::unlock(void *buffer, unlock_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   if (buffer != nullptr) {
-    err = static_cast<IMapper_4_0_Error>(buf_mgr_->UnlockBuffer(PRIV_HANDLE_CONST(buffer)));
+    err = static_cast<IMapper_4_0_Error>(buf_mgr_->UnlockBuffer(QTI_HANDLE_CONST(buffer)));
   }
   // We don't have a release fence
   hidl_cb(err, hidl_handle(nullptr));
@@ -292,6 +291,18 @@ Return<void> QtiMapper::getFromBufferDescriptorInfo(const BufferDescriptorInfo &
       err =
           static_cast<IMapper_4_0_Error>(android::gralloc4::encodeHeight(description.height, &out));
       break;
+    case static_cast<int64_t>(StandardMetadataType::ALLOCATION_SIZE): {
+      uint32_t aligned_width = 0, aligned_height = 0, buffer_size = 0;
+      gralloc::BufferInfo info(
+          static_cast<int>(description.width), static_cast<int>(description.height),
+          static_cast<int>(description.format), static_cast<uint64_t>(description.usage));
+      if (gralloc::GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width,
+                                              &aligned_height) == 0) {
+        err = static_cast<IMapper_4_0_Error>(
+            android::gralloc4::encodeAllocationSize(buffer_size, &out));
+      }
+      break;
+    }
     case static_cast<int64_t>(StandardMetadataType::LAYER_COUNT):
       err = static_cast<IMapper_4_0_Error>(
           android::gralloc4::encodeLayerCount(description.layerCount, &out));
@@ -333,7 +344,7 @@ Return<void> QtiMapper::getFromBufferDescriptorInfo(const BufferDescriptorInfo &
       uint32_t drm_format = 0;
       uint64_t drm_format_modifier = 0;
       if (gralloc::IsUBwcEnabled(format, description.usage)) {
-        gralloc::GetDRMFormat(format, private_handle_t::PRIV_FLAGS_UBWC_ALIGNED, &drm_format,
+        gralloc::GetDRMFormat(format, qtigralloc::PRIV_FLAGS_UBWC_ALIGNED, &drm_format,
                               &drm_format_modifier);
       } else {
         gralloc::GetDRMFormat(format, 0, &drm_format, &drm_format_modifier);
@@ -357,7 +368,7 @@ Return<void> QtiMapper::getFromBufferDescriptorInfo(const BufferDescriptorInfo &
 Return<void> QtiMapper::flushLockedBuffer(void *buffer, flushLockedBuffer_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   if (buffer != nullptr) {
-    err = static_cast<IMapper_4_0_Error>(buf_mgr_->FlushBuffer(PRIV_HANDLE_CONST(buffer)));
+    err = static_cast<IMapper_4_0_Error>(buf_mgr_->FlushBuffer(QTI_HANDLE_CONST(buffer)));
   }
   // We don't have a release fence
   hidl_cb(err, hidl_handle(nullptr));
@@ -367,7 +378,7 @@ Return<void> QtiMapper::flushLockedBuffer(void *buffer, flushLockedBuffer_cb hid
 Return<Error> QtiMapper::rereadLockedBuffer(void *buffer) {
   auto err = Error::BAD_BUFFER;
   if (buffer != nullptr) {
-    err = static_cast<IMapper_4_0_Error>(buf_mgr_->RereadBuffer(PRIV_HANDLE_CONST(buffer)));
+    err = static_cast<IMapper_4_0_Error>(buf_mgr_->RereadBuffer(QTI_HANDLE_CONST(buffer)));
   }
   return err;
 }
@@ -403,7 +414,7 @@ Error QtiMapper::DumpBufferMetadata(const private_handle_t *buffer, BufferDump *
 }
 Return<void> QtiMapper::dumpBuffer(void *buffer, dumpBuffer_cb hidl_cb) {
   BufferDump buffer_dump;
-  auto hnd = PRIV_HANDLE_CONST(buffer);
+  auto hnd = QTI_HANDLE_CONST(buffer);
   if (buffer != nullptr) {
     if (DumpBufferMetadata(hnd, &buffer_dump) == Error::NONE) {
       hidl_cb(Error::NONE, buffer_dump);

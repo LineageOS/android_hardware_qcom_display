@@ -48,7 +48,6 @@
 #include <vector>
 
 #include "gr_utils.h"
-#include "gralloc_priv.h"
 #include "gr_dma_legacy_mgr.h"
 
 #ifndef ION_FLAG_CP_PIXEL
@@ -308,7 +307,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string
   }
 
   if (flags & UINT(ION_SECURE)) {
-    type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
+    type |= qtigralloc::PRIV_FLAGS_SECURE_BUFFER;
   }
 
   if (is_default) {

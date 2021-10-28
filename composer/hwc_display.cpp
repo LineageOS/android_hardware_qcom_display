@@ -28,7 +28,6 @@
 #include <utils/utils.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
-#include <qd_utils.h>
 #include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
 #include <QtiGralloc.h>
 
@@ -2015,9 +2014,8 @@ void HWCDisplay::DumpInputBuffers() {
     buffer_allocator_->GetFormat((void *)handle, format);
     buffer_allocator_->GetAllocationSize((void *)handle, alloc_size);
 
-    snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
-             dir_path, i, width, height, qdutils::GetHALPixelFormatString(format),
-             dump_frame_index_);
+    snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_format%d_frame%d.raw",
+             dir_path, i, width, height, format, dump_frame_index_);
 
     if (base_ptr != nullptr) {
       FILE *fp = fopen(dump_file_name, "w+");
@@ -2166,7 +2164,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   int aligned_width;
   int aligned_height;
   uint32_t usage = GRALLOC_USAGE_HW_FB;
-  int format = HAL_PIXEL_FORMAT_RGBA_8888;
+  int format = static_cast<int>(PixelFormat::RGBA_8888);
   int ubwc_disabled = 0;
   int flags = 0;
 
@@ -3304,7 +3302,8 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
     return HWC2::Error::Unsupported;
   }
 
-  const private_handle_t *handle = reinterpret_cast<const private_handle_t *>(buffer);
+  const private_handle_t *handle =
+      reinterpret_cast<const private_handle_t *>(buffer);
 
   if (!handle) {
     DLOGE("Bad parameter: handle is null");

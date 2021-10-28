@@ -23,6 +23,7 @@
 
 #include <QtiGralloc.h>
 #include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 #include <gralloctypes/Gralloc4.h>
 #include <sys/mman.h>
 
@@ -35,9 +36,7 @@
 #include <fstream>
 #include "gr_adreno_info.h"
 #include "gr_buf_descriptor.h"
-#include "gr_priv_handle.h"
 #include "gr_utils.h"
-#include "qdMetaData.h"
 #include "qd_utils.h"
 
 namespace gralloc {
@@ -213,7 +212,7 @@ static Error getYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr y
     } else {
       CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, plane_info, ycbcr);
       switch (format) {
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+        case static_cast<int>(PixelFormat::YCRCB_420_SP):
         case HAL_PIXEL_FORMAT_YCrCb_422_SP:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
@@ -302,15 +301,14 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   private_handle_t *handle = const_cast<private_handle_t *>(hnd);
   handle->fd = -1;
   handle->fd_metadata = -1;
-  if (!(handle->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED)) {
-    free(handle);
-  }
+  free(handle);
   return Error::NONE;
 }
 
 Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
   unsigned int size, alignedw, alignedh;
-  unsigned int max_bpp = gralloc::GetBppForUncompressedRGB(HAL_PIXEL_FORMAT_RGBA_FP16);
+  unsigned int max_bpp =
+      gralloc::GetBppForUncompressedRGB(static_cast<int>(PixelFormat::RGBA_FP16));
   info.format = GetImplDefinedFormat(info.usage, info.format);
   int ret = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
   if ((ret < 0) || (OVERFLOW((alignedw * max_bpp), alignedh))) {
@@ -378,7 +376,7 @@ Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
 
   RegisterHandleLocked(hnd, ion_handle, ion_handle_meta);
   allocated_ += hnd->size;
-  if (allocated_ >=  kAllocThreshold) {
+  if (allocated_ >= kAllocThreshold) {
     kAllocThreshold += kMemoryOffset;
     BuffersDump();
   }
@@ -475,8 +473,8 @@ Error BufferManager::LockBuffer(const private_handle_t *hnd, uint64_t usage) {
   // only read/written in software.
 
   // todo use handle here
-  if (err == Error::NONE && (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION) &&
-      (hnd->flags & private_handle_t::PRIV_FLAGS_CACHED)) {
+  if (err == Error::NONE && (hnd->flags & qtigralloc::PRIV_FLAGS_USES_ION) &&
+      (hnd->flags & qtigralloc::PRIV_FLAGS_CACHED)) {
     if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
                                 buf->ion_handle_main, CACHE_INVALIDATE, hnd->fd)) {
       return Error::BAD_BUFFER;
@@ -486,7 +484,7 @@ Error BufferManager::LockBuffer(const private_handle_t *hnd, uint64_t usage) {
   // Mark the buffer to be flushed after CPU write.
   if (err == Error::NONE && CpuCanWrite(usage)) {
     private_handle_t *handle = const_cast<private_handle_t *>(hnd);
-    handle->flags |= private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
+    handle->flags |= qtigralloc::PRIV_FLAGS_NEEDS_FLUSH;
   }
 
   return err;
@@ -538,12 +536,12 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
     return Error::BAD_BUFFER;
   }
 
-  if (hnd->flags & private_handle_t::PRIV_FLAGS_NEEDS_FLUSH) {
+  if (hnd->flags & qtigralloc::PRIV_FLAGS_NEEDS_FLUSH) {
     if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
                                 buf->ion_handle_main, CACHE_CLEAN, hnd->fd) != 0) {
       status = Error::BAD_BUFFER;
     }
-    hnd->flags &= ~private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
+    hnd->flags &= ~qtigralloc::PRIV_FLAGS_NEEDS_FLUSH;
   } else {
     if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
                                 buf->ion_handle_main, CACHE_READ_DONE, hnd->fd) != 0) {
@@ -560,7 +558,7 @@ static void InitializePrivateHandle(private_handle_t *hnd, int fd, int meta_fd, 
                                     unsigned int size, uint64_t usage = 0) {
   hnd->fd = fd;
   hnd->fd_metadata = meta_fd;
-  hnd->magic = qtigralloc::private_handle_t::kMagic;
+  hnd->magic = private_handle_t::kMagic;
   hnd->flags = flags;
   hnd->width = width;
   hnd->height = height;
@@ -578,8 +576,8 @@ static void InitializePrivateHandle(private_handle_t *hnd, int fd, int meta_fd, 
   hnd->base_metadata = 0;
   hnd->gpuaddr = 0;
   hnd->version = static_cast<int>(sizeof(native_handle));
-  hnd->numInts = qtigralloc::private_handle_t::NumInts();
-  hnd->numFds = qtigralloc::private_handle_t::kNumFds;
+  hnd->numInts = private_handle_t::NumInts();
+  hnd->numFds = private_handle_t::kNumFds;
 }
 
 Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
@@ -665,7 +663,8 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   bool use_adreno_for_size = CanUseAdrenoForSize(buffer_type, usage);
   if (use_adreno_for_size) {
-    setMetaDataAndUnmap(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
+    SetMetaData(hnd, QTI_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
+    UnmapAndReset(hnd);
   }
 
 #ifdef METADATA_V2
@@ -706,7 +705,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   return Error::NONE;
 }
 
-void BufferManager:: BuffersDump() {
+void BufferManager::BuffersDump() {
   char timeStamp[32];
   char hms[32];
   uint64_t millis;
@@ -715,7 +714,7 @@ void BufferManager:: BuffersDump() {
 
   gettimeofday(&tv, NULL);
   localtime_r(&tv.tv_sec, &ptm);
-  strftime (hms, sizeof (hms), "%H:%M:%S", &ptm);
+  strftime(hms, sizeof(hms), "%H:%M:%S", &ptm);
   millis = tv.tv_usec / 1000;
   snprintf(timeStamp, sizeof(timeStamp), "Timestamp: %s.%03" PRIu64, hms, millis);
 
@@ -732,13 +731,13 @@ void BufferManager:: BuffersDump() {
     auto buf = it.second;
     auto hnd = buf->handle;
     auto metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-    fs  << std::setw(80) << "Client:" << (metadata ? metadata->name: "No name");
-    fs  << std::setw(20) << "WxH:" << std::setw(4) << hnd->width << " x "
-        << std::setw(4) << hnd->height;
-    fs  << std::setw(20) << "Size: " << std::setw(9) << hnd->size <<  std::endl;
+    fs << std::setw(80) << "Client:" << (metadata ? metadata->name : "No name");
+    fs << std::setw(20) << "WxH:" << std::setw(4) << hnd->width << " x " << std::setw(4)
+       << hnd->height;
+    fs << std::setw(20) << "Size: " << std::setw(9) << hnd->size << std::endl;
     totalAllocationSize += hnd->size;
   }
-  fs << "Total allocation  = " << totalAllocationSize/1024 << "KiB" << std::endl;
+  fs << "Total allocation  = " << totalAllocationSize / 1024 << "KiB" << std::endl;
   file_dump_.position = fs.tellp();
   if (file_dump_.position > (20 * 1024 * 1024)) {
     file_dump_.position = 0;
@@ -819,7 +818,6 @@ Error BufferManager::GetMetadataValue(private_handle_t *handle, int64_t metadata
   auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
   return GetMetaDataValue(handle, metadatatype_value, param);
 }
-
 Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_value,
                                  hidl_vec<uint8_t> *out) {
   std::lock_guard<std::mutex> lock(buffer_lock_);
@@ -1030,8 +1028,8 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
     }
     case (int64_t)StandardMetadataType::CROP: {
       // Crop is the same for all planes
-      std::vector<Rect> out_crop = {{metadata->crop.left, metadata->crop.top, metadata->crop.right,
-                                     metadata->crop.bottom}};
+      std::vector<Rect> out_crop = {
+          {metadata->crop.left, metadata->crop.top, metadata->crop.right, metadata->crop.bottom}};
       android::gralloc4::encodeCrop(out_crop, out);
       break;
     }
@@ -1269,9 +1267,9 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
         uint64_t crOffset = (reinterpret_cast<uint64_t>(layout[0].cr) - handle->base);
         uint64_t cbOffset = (reinterpret_cast<uint64_t>(layout[0].cb) - handle->base);
         ALOGD_IF(DEBUG, " layout: y: %" PRIu64 " , cr: %" PRIu64 " , cb: %" PRIu64
-              " , yStride: %d, cStride: %d, chromaStep: %d ",
-              yOffset, crOffset, cbOffset, layout[0].yStride, layout[0].cStride,
-              layout[0].chromaStep);
+                        " , yStride: %d, cStride: %d, chromaStep: %d ",
+                 yOffset, crOffset, cbOffset, layout[0].yStride, layout[0].cStride,
+                 layout[0].chromaStep);
 
         qtigralloc::encodeYUVPlaneInfoMetadata(layout, out);
         break;
@@ -1437,7 +1435,7 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
                   metadata->color.dynamicMetaDataPayload);
         metadata->color.dynamicMetaDataValid = true;
       } else {
-        // Reset metadata by passing in std::nullopt
+// Reset metadata by passing in std::nullopt
 #ifdef METADATA_V2
         metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
             false;

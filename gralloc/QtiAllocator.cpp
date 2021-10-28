@@ -95,13 +95,13 @@ Return<void> QtiAllocator::allocate(const hidl_vec<uint8_t> &descriptor, uint32_
   uint32_t stride = 0;
   hidl_vec<hidl_handle> hidl_buffers;
   if (err == Error::NONE && buffers.size() > 0) {
-    stride = static_cast<uint32_t>(PRIV_HANDLE_CONST(buffers[0].getNativeHandle())->width);
+    stride = static_cast<uint32_t>(QTI_HANDLE_CONST(buffers[0].getNativeHandle())->width);
     hidl_buffers.setToExternal(buffers.data(), buffers.size());
   }
   hidl_cb(static_cast<IMapper_4_0_Error>(err), stride, hidl_buffers);
 
   for (const auto &b : buffers) {
-    buf_mgr_->ReleaseBuffer(PRIV_HANDLE_CONST(b.getNativeHandle()));
+    buf_mgr_->ReleaseBuffer(QTI_HANDLE_CONST(b.getNativeHandle()));
   }
 
   return Void();

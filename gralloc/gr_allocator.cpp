@@ -39,7 +39,9 @@
 
 #include "gr_allocator.h"
 #include "gr_utils.h"
-#include "gralloc_priv.h"
+#include <QtiGralloc.h>
+#include <QtiGrallocPriv.h>
+#include <QtiGrallocDefs.h>
 
 #include "qd_utils.h"
 #include "gr_alloc_interface.h"
@@ -77,7 +79,7 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
 
   ret = alloc_intf->AllocBuffer(alloc_data);
   if (ret >= 0) {
-    alloc_data->alloc_type |= private_handle_t::PRIV_FLAGS_USES_ION;
+    alloc_data->alloc_type |= qtigralloc::PRIV_FLAGS_USES_ION;
   } else {
     ALOGE("%s: Failed to allocate buffer - heap name: %s flags: 0x%x ret: %d", __FUNCTION__,
           alloc_data->heap_name.c_str(), alloc_data->flags, ret);
@@ -88,8 +90,8 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   }
 
   if (err) {
-    ALOGE("%s: Failed to modify secure use permissions - heap name: %s flags: 0x%x, err: %d"
-          , __FUNCTION__, alloc_data->heap_name.c_str(), alloc_data->flags, err);
+    ALOGE("%s: Failed to modify secure use permissions - heap name: %s flags: 0x%x, err: %d",
+          __FUNCTION__, alloc_data->heap_name.c_str(), alloc_data->flags, err);
   }
 
   return ret;
@@ -170,9 +172,9 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
     alloc_intf->GetHeapInfo(descriptors[i]->GetUsage(), use_system_heap_for_sensors_,
                             &cur_heap_name, &cur_vm_names, &cur_alloc_type, &cur_flags, &cur_size);
 
-    if (i > 0 && (cur_heap_name != prev_heap_name || cur_alloc_type != prev_alloc_type ||
-                  cur_flags != prev_flags || cur_vm_names != prev_vm_names ||
-                  cur_size != prev_size)) {
+    if (i > 0 &&
+        (cur_heap_name != prev_heap_name || cur_alloc_type != prev_alloc_type ||
+         cur_flags != prev_flags || cur_vm_names != prev_vm_names || cur_size != prev_size)) {
       return false;
     }
 
