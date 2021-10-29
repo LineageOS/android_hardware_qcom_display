@@ -64,7 +64,7 @@ case "$target" in
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_qsync_idle 1
         ;;
-        506)
+        506|547)
         # Set property for Diwali
         # SOC ID for Diwali is 506
         setprop vendor.gralloc.use_dma_buf_heaps 1
