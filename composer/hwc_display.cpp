@@ -751,7 +751,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame) && !hdr_layer) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;
     }
@@ -813,11 +813,6 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
-
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
-      layer->flags.is_game = true;
-      layer->input_buffer.flags.game = true;
-    }
 
     layer->flags.compatible = hwc_layer->IsLayerCompatible();
 
