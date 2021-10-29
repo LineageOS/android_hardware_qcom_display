@@ -1434,6 +1434,10 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retir
 
   pending_commit_ = false;
 
+  if (layer_stack_.request_flags.trigger_refresh) {
+    callbacks_->Refresh(id_);
+  }
+
   return status;
 }
 

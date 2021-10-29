@@ -26,6 +26,7 @@
 #define __DISPLAY_BUILTIN_H__
 
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #include <core/dpps_interface.h>
 #include <core/ipc_interface.h>
@@ -172,6 +173,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError PrePrepare(LayerStack *layer_stack) override;
   DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) override;
   DisplayError PostHandleSecureEvent(SecureEvent secure_event) override;
+  void InitCWBBuffer();
+  void AppendCWBLayer(LayerStack *layer_stack);
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -278,6 +281,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   int hfc_buffer_fd_ = -1;
   uint32_t hfc_buffer_size_ = 0;
   DisplayIPCVmCallbackImpl *vm_cb_intf_ = nullptr;
+  bool enable_cwb_idle_fallback_ = false;
+  Layer cwb_layer_ = {};
 };
 
 }  // namespace sdm

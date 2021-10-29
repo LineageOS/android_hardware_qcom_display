@@ -435,6 +435,7 @@ class DisplayBase : public DisplayInterface {
   std::condition_variable cv_;
   LayerBuffer cached_framebuffer_ = {};
   Layer noise_layer_ = {};
+  DisplayError ConfigureCwbForIdleFallback(LayerStack *layer_stack);
 };
 
 }  // namespace sdm

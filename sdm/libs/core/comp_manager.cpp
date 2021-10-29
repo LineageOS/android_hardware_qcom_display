@@ -301,9 +301,11 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle,
     size_ff++;
   if (disp_layer_stack->info.demura_present)
     size_ff++;
+  if (disp_layer_stack->info.cwb_present)
+    size_ff++;
   uint32_t app_layer_count = UINT32(disp_layer_stack->stack->layers.size()) - size_ff;
   if (display_comp_ctx->idle_fallback) {
-    // Handle the idle timeout by falling back
+    // Handle the GPU based idle timeout by falling back
     constraints->safe_mode = true;
   }
 
@@ -324,8 +326,14 @@ DisplayError CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_la
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  if (display_comp_ctx->idle_fallback) {
+    display_comp_ctx->constraints.idle_timeout = true;
+  }
+
   DisplayError error = display_comp_ctx->strategy->Start(disp_layer_stack,
-                                                         &display_comp_ctx->max_strategies);
+                                                         &display_comp_ctx->max_strategies,
+                                                         &display_comp_ctx->constraints);
   display_comp_ctx->remaining_strategies = display_comp_ctx->max_strategies;
 
   // Select a composition strategy, and try to allocate resources for it.
@@ -350,7 +358,7 @@ DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer
   bool exit = false;
   uint32_t &count = display_comp_ctx->remaining_strategies;
   for (; !exit && count > 0; count--) {
-    error = display_comp_ctx->strategy->GetNextStrategy(&display_comp_ctx->constraints);
+    error = display_comp_ctx->strategy->GetNextStrategy();
     if (error != kErrorNone) {
       // Composition strategies exhausted. Resource Manager could not allocate resources even for
       // GPU composition. This will never happen.
@@ -457,6 +465,7 @@ DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_la
 
   display_comp_ctx->idle_fallback = false;
   display_comp_ctx->first_cycle_ = false;
+  display_comp_ctx->constraints.idle_timeout = false;
 
   DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
            StringDisplayList(registered_displays_).c_str(), display_comp_ctx->display_id,

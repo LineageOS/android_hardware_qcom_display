@@ -187,7 +187,12 @@ DisplayError DisplayBuiltIn::Init() {
   DLOGI("Noise Layer Feature is %s for display = %d-%d", noise_disable_prop_ ? "Disabled" :
         "Enabled", display_id_, display_type_);
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(ENABLE_CWB_IDLE_FALLBACK, &value);
+  enable_cwb_idle_fallback_ = (value == 1);
+
   NoiseInit();
+  InitCWBBuffer();
 
   return error;
 }
@@ -226,6 +231,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
     return error;
   }
 
+  AppendCWBLayer(layer_stack);
   // Do not skip validate if needs update PP features.
   if (color_mgr_) {
     needs_validate_ |= color_mgr_->IsValidateNeeded();
@@ -1035,10 +1041,10 @@ void DisplayBuiltIn::IdleTimeout() {
 
   handle_idle_timeout_ = true;
   event_handler_->Refresh();
-  hw_intf_->EnableSelfRefresh();
   if (!enhance_idle_time_) {
     comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
   }
+  validated_ = false;
 }
 
 void DisplayBuiltIn::PingPongTimeout() {
@@ -1922,6 +1928,7 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.stitch_target_index = -1;
   hw_layers_info.demura_target_index = -1;
   hw_layers_info.noise_layer_index = -1;
+  hw_layers_info.cwb_target_index = -1;
 
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
@@ -1950,6 +1957,9 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
       hw_layers_info.noise_layer_info = noise_layer_info_;
       DLOGV_IF(kTagDisplay, "Display %d-%d requested Noise at index = %d with zpos_n = %d",
                display_id_, display_type_, index, noise_layer_info_.zpos_noise);
+    } else if (layer->composition == kCompositionCWBTarget) {
+      hw_layers_info.cwb_target_index = index;
+      hw_layers_info.cwb_present = true;
     } else {
       hw_layers_info.app_layer_count++;
     }
@@ -1963,13 +1973,13 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
     index++;
   }
 
-  DLOGI_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
-                        "gpu_target_index: %d, stitch_index: %d demura_index: %d game_present: %d"
-                        " noise_present: %d display: %d-%d", layers.size(),
-                        hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
-                        hw_layers_info.stitch_target_index, hw_layers_info.demura_target_index,
-                        hw_layers_info.game_present, hw_layers_info.flags.noise_present,
-                        display_id_, display_type_);
+  DLOGI_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d "
+            "gpu_target_index: %d, stitch_index: %d demura_index: %d cwb_target_index: %d "
+            "game_present: %d noise_present: %d display: %d-%d", layers.size(),
+            hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+            hw_layers_info.stitch_target_index, hw_layers_info.demura_target_index,
+            hw_layers_info.cwb_target_index, hw_layers_info.game_present,
+            hw_layers_info.flags.noise_present, display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
     DLOGW("Layer count is zero");
@@ -2404,4 +2414,68 @@ void DisplayIPCVmCallbackImpl::OnServerExit() {
   server_ready_ = false;
 }
 // LCOV_EXCL_STOP
+
+void DisplayBuiltIn::InitCWBBuffer() {
+  if (hw_panel_info_.mode != kModeVideo || !hw_resource_info_.has_concurrent_writeback) {
+    return;
+  }
+
+  if (!enable_cwb_idle_fallback_) {
+    return;
+  }
+
+  BufferInfo output_buffer_info;
+  CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;
+  if (GetCwbBufferResolution(tap_point, &output_buffer_info.buffer_config.width,
+                             &output_buffer_info.buffer_config.height)) {
+    DLOGE("Buffer Resolution setting failed.");
+    return;
+  }
+
+  output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
+  output_buffer_info.buffer_config.buffer_count = 1;
+  if (buffer_allocator_->AllocateBuffer(&output_buffer_info) != 0) {
+    DLOGE("Buffer allocation failed");
+    return;
+  }
+
+  LayerBuffer buffer = {};
+  buffer.planes[0].fd = output_buffer_info.alloc_buffer_info.fd;
+  buffer.planes[0].offset = 0;
+  buffer.planes[0].stride = output_buffer_info.alloc_buffer_info.stride;
+  buffer.size = output_buffer_info.alloc_buffer_info.size;
+  buffer.handle_id = output_buffer_info.alloc_buffer_info.id;
+  buffer.width = output_buffer_info.alloc_buffer_info.aligned_width;
+  buffer.height = output_buffer_info.alloc_buffer_info.aligned_height;
+  buffer.format = output_buffer_info.alloc_buffer_info.format;
+  buffer.unaligned_width = mixer_attributes_.width;
+  buffer.unaligned_height = mixer_attributes_.height;
+
+  cwb_layer_.composition = kCompositionCWBTarget;
+  cwb_layer_.input_buffer = buffer;
+  cwb_layer_.input_buffer.buffer_id = reinterpret_cast<uint64_t>(output_buffer_info.private_data);
+
+  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+
+  cwb_layer_.flags.is_cwb = 1;
+
+  CwbConfig cwb_config = {};
+  cwb_config.tap_point = CwbTapPoint::kLmTapPoint;
+  cwb_config.cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(cwb_layer_.input_buffer.width),
+                                       FLOAT(cwb_layer_.input_buffer.height));
+  return;
+}
+
+void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
+  if (!enable_cwb_idle_fallback_) {
+    return;
+  }
+
+  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  cwb_layer_.composition = kCompositionCWBTarget;
+  layer_stack->layers.push_back(&cwb_layer_);
+}
+
 }  // namespace sdm

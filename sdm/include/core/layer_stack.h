@@ -118,6 +118,9 @@ enum LayerComposition {
 
   kCompositionStitchTarget,  //!< This layer will hold result of composition for layers marked fo
                              //!< Blit composition.
+
+  kCompositionCWBTarget,     //!< This layer will hold result of composition for layers marked for
+                             //!< CWB composition in case of Idle fallback.
 };
 
 enum LayerUpdate {
@@ -217,6 +220,9 @@ struct LayerFlags {
                               //!< with the current draw cycle.
 
       uint32_t is_noise : 1;  //!< This flag shall be set by SDM to indicate this layer as noise
+
+      uint32_t is_cwb : 1;    //!< This flag shall be set by SDM to indicate that this layer is
+                              //!< CWB output layer
 
       uint32_t reserved1 : 1;
                               //!< This flag is reserved(1) for private usage
@@ -525,6 +531,16 @@ struct CwbConfig {
   @sa DisplayInterface::Commit
 */
 
+struct LayerStackRequestFlags {
+  union {
+    struct {
+      uint32_t trigger_refresh : 1;
+    };
+    uint32_t request_flags = 0;  //!< For initialization purpose only.
+                                 //!< Shall not be refered directly.
+  };
+};
+
 struct LayerStack {
   std::vector<Layer *> layers = {};    //!< Vector of layer pointers.
 
@@ -559,6 +575,8 @@ struct LayerStack {
   bool validate_only = false;
   bool client_incompatible = false;    //!< Flag to disable async commit when client target is
                                        //!< not compatible.
+
+  LayerStackRequestFlags request_flags;  //!< request flags on this LayerStack by SDM.
 };
 
 }  // namespace sdm

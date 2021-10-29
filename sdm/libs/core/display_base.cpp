@@ -771,6 +771,17 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   CacheDisplayComposition();
 
+  if (error == kErrorNone) {
+    error = ConfigureCwbForIdleFallback(layer_stack);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+
+  if (disp_layer_stack_.info.enable_self_refresh) {
+    hw_intf_->EnableSelfRefresh();
+  }
+
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
 
   return error;
@@ -1242,6 +1253,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 #endif
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
+  if (layer_stack->request_flags.trigger_refresh) {
+    layer_stack->output_buffer = nullptr;
+  }
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
@@ -2039,6 +2053,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionGPUTarget:     return "GPU_TARGET";
   case kCompositionStitchTarget:  return "STITCH_TARGET";
   case kCompositionDemura:        return "DEMURA";
+  case kCompositionCWBTarget:     return "CWB_TARGET";
   default:                        return "UNKNOWN";
   }
 }
@@ -3931,6 +3946,41 @@ std::chrono::system_clock::time_point DisplayBase::WaitUntil() {
     timeout_time = current_time + std::chrono::milliseconds(idle_time_ms);
   }
   return timeout_time;
+}
+
+DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
+  DisplayError error = kErrorNone;
+  if (!layer_stack->request_flags.trigger_refresh) {
+    return error;
+  }
+
+  comp_manager_->HandleCwbFrequencyBoost(true);
+
+  cwb_config_ = new CwbConfig;
+  if (layer_stack->cwb_config == NULL) {
+    cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
+    uint32_t buffer_width = 0, buffer_height = 0;
+    error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+    if (error != kErrorNone) {
+      DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
+      return error;
+    }
+
+    // Setting full frame ROI
+    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
+    DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+    cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
+  }
+
+  disp_layer_stack_.info.hw_cwb_config = cwb_config_;
+  error = ValidateCwbConfigInfo(disp_layer_stack_.info.hw_cwb_config,
+                                layer_stack->output_buffer->format);
+  if (error != kErrorNone) {
+    DLOGE("CWB_config validation failed.");
+    return error;
+  }
+
+  return error;
 }
 
 }  // namespace sdm

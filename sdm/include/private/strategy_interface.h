@@ -41,12 +41,15 @@ struct StrategyConstraints {
   uint32_t max_layers = kMaxSDELayers;  //!< Maximum number of layers that shall be programmed
                                         //!< on hardware for the given layer stack.
   LayerFeedback feedback = LayerFeedback(0);  //!< Feedback from Layer Precheck
+
+  bool idle_timeout = false;
 };
 
 class StrategyInterface {
  public:
-  virtual DisplayError Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts) = 0;
-  virtual DisplayError GetNextStrategy(StrategyConstraints *constraints) = 0;
+  virtual DisplayError Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts,
+                             StrategyConstraints *constraints) = 0;
+  virtual DisplayError GetNextStrategy() = 0;
   virtual DisplayError Stop() = 0;
   virtual DisplayError SetDrawMethod(const DisplayDrawMethod &draw_method) = 0;
   virtual DisplayError Reconfigure(const HWPanelInfo &hw_panel_info,
