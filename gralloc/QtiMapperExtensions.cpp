@@ -489,6 +489,7 @@ Return<void> QtiMapperExtensions::getMetadataBlob(void *src, getMetadataBlob_cb 
   _hidl_cb(error, out);
   return Void();
 }
+
 }  // namespace implementation
 }  // namespace V1_1
 }  // namespace mapperextensions
