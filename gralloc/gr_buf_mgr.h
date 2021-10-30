@@ -17,6 +17,12 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __GR_BUF_MGR_H__
 #define __GR_BUF_MGR_H__
 
@@ -59,6 +65,7 @@ class BufferManager {
   Error RereadBuffer(const private_handle_t *handle);
   Error GetAllHandles(std::vector<const private_handle_t *> *out_handle_list);
   int GetCustomDimensions(private_handle_t *handle, int *stride, int *height);
+  Error GetMetadataValue(private_handle_t *handle, int64_t metadatatype_value, void *out);
 
  private:
   BufferManager();

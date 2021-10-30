@@ -16,6 +16,8 @@ cc_library_shared {
     shared_libs: [
         "libqdMetaData",
         "libdl",
+        "libgralloctypes",
+        "libhidlbase",
         "android.hardware.graphics.common@1.2",
         "android.hardware.graphics.mapper@2.0",
         "android.hardware.graphics.mapper@2.1",
