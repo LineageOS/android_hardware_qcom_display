@@ -772,6 +772,7 @@ struct HWLayersInfo {
   int32_t demura_target_index = -1;  // Demura target layer index. -1 if not present.
   int32_t noise_layer_index = -1;    // Noise layer index. -1 if not present.
   int32_t cwb_target_index = -1;     // CWB target layer index. -1 if not present.
+  int32_t iwe_target_index = -1;     // IWE target layer index. -1 if not present.
   std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
@@ -887,6 +888,21 @@ struct HWMixerAttributes {
 struct Resolution {
   uint32_t x_pixels;
   uint32_t y_pixels;
+};
+
+class FrameBufferObject : public LayerBufferObject {
+ public:
+  explicit FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
+                             uint32_t width, uint32_t height);
+  ~FrameBufferObject();
+  uint32_t GetFbId();
+  bool IsEqual(LayerBufferFormat format, uint32_t width, uint32_t height);
+
+ private:
+  uint32_t fb_id_;
+  LayerBufferFormat format_;
+  uint32_t width_;
+  uint32_t height_;
 };
 
 }  // namespace sdm

@@ -273,32 +273,28 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
   }
 }
 
-class FrameBufferObject : public LayerBufferObject {
- public:
-  explicit FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
+FrameBufferObject::FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
                              uint32_t width, uint32_t height)
-    :fb_id_(fb_id), format_(format), width_(width), height_(height) {
-  }
+  :fb_id_(fb_id), format_(format), width_(width), height_(height) {
+}
 
-  ~FrameBufferObject() {
-    DRMMaster *master;
-    DRMMaster::GetInstance(&master);
-    int ret = master->RemoveFbId(fb_id_);
-    if (ret < 0) {
-      DLOGE("Removing fb_id %d failed with error %d", fb_id_, errno);
-    }
+FrameBufferObject::~FrameBufferObject() {
+  DRMMaster *master;
+  DRMMaster::GetInstance(&master);
+  int ret = master->RemoveFbId(fb_id_);
+  if (ret < 0) {
+    DLOGE("Removing fb_id %d failed with error %d", fb_id_, errno);
   }
-  uint32_t GetFbId() { return fb_id_; }
-  bool IsEqual(LayerBufferFormat format, uint32_t width, uint32_t height) {
+}
+
+uint32_t FrameBufferObject::GetFbId() {
+  return fb_id_;
+}
+
+bool FrameBufferObject::IsEqual(LayerBufferFormat format,
+                                uint32_t width, uint32_t height) {
     return (format == format_ && width == width_ && height == height_);
-  }
-
- private:
-  uint32_t fb_id_;
-  LayerBufferFormat format_;
-  uint32_t width_;
-  uint32_t height_;
-};
+}
 
 HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
   buffer_allocator_(buffer_allocator) {
