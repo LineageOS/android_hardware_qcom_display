@@ -121,6 +121,7 @@ enum LayerComposition {
 
   kCompositionCWBTarget,     //!< This layer will hold result of composition for layers marked for
                              //!< CWB composition in case of Idle fallback.
+  kCompositionIWE,           //!< This layer will hold the result of first pass composition.
 };
 
 enum LayerUpdate {
@@ -234,6 +235,9 @@ struct LayerFlags {
                               //!< This flag is reserved(4) for private usage
       uint32_t has_metadata_refresh_rate : 1;
                               //!< This flag is used to mark if layer uses metadata refresh rate
+      uint32_t skip_iwe : 1;
+                              //!< This flag shall be set to indicate that this layer
+                              //!< is handled by IWE for two phase composition.
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -358,6 +362,8 @@ struct LayerStackFlags {
       uint32_t scaling_rgb_layer_present : 1;  //!< This flag indicates scaling rgb layer presence
 
       bool use_metadata_refresh_rate : 1;
+
+      uint32_t iwe_present : 1;  //!< This flag shall be set to true to indicate stack has iwe layer
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
