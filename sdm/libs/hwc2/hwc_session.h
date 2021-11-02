@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, 2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -430,7 +430,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int bw_mode_release_fd_ = -1;
   qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;
-  bool hdmi_is_primary_ = false;
+  bool pluggable_is_primary_ = false;
+  bool null_display_active_ = false;
   bool is_composer_up_ = false;
   Locker callbacks_lock_;
   std::mutex mutex_lum_;
