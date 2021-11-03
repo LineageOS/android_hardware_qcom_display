@@ -72,6 +72,9 @@ static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 static const uint32_t kBrightnessScaleMax = 100;
 static const uint32_t kSvBlScaleMax = 65535;
+Locker HWCSession::vm_release_locker_[HWCCallbacks::kNumDisplays];
+std::bitset<HWCCallbacks::kNumDisplays> HWCSession::clients_waiting_for_vm_release_;
+
 
 // Map the known color modes to dataspace.
 int32_t GetDataspaceFromColorMode(ColorMode mode) {
@@ -3251,6 +3254,14 @@ void HWCSession::DisplayPowerReset() {
   std::future<void> power_reset_future = std::async(&HWCSession::PerformDisplayPowerReset, this);
 }
 
+void HWCSession::VmReleaseDone(hwc2_display_t display) {
+  SCOPE_LOCK(vm_release_locker_[display]);
+  if (clients_waiting_for_vm_release_.test(display)) {
+    vm_release_locker_[display].Signal();
+  }
+  DLOGI("Signal vm release done!! for display %d", display);
+}
+
 void HWCSession::HandleSecureSession() {
   std::bitset<kSecureMax> secure_sessions = 0;
   hwc2_display_t client_id = HWCCallbacks::kNumDisplays;
@@ -3836,6 +3847,16 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   return ret;
 }
 
+int HWCSession::WaitForVmRelease(hwc2_display_t display) {
+  SCOPE_LOCK(vm_release_locker_[display]);
+  clients_waiting_for_vm_release_.set(display);
+  int ret = vm_release_locker_[display].WaitFinite(kVmReleaseTimeoutMs);
+  if (ret != 0) {
+    DLOGE("Timed out with error %d for display %" PRIu64, ret, display);
+  }
+  return ret;
+}
+
 android::status_t HWCSession::HandleTUITransition(int disp_id, int event) {
   switch(event) {
     case qService::IQService::TUI_TRANSITION_PREPARE:
@@ -3924,7 +3945,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     callbacks_.Refresh(target_display);
 
     DLOGI("Waiting for device assign");
-    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    int ret = WaitForVmRelease(target_display);
     if (ret != 0) {
       DLOGE("Device assign failed with error %d", ret);
       return -EINVAL;
@@ -4038,7 +4059,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     callbacks_.Refresh(target_display);
     int ret = WaitForCommitDone(target_display, kClientTrustedUI);
     if (ret != 0) {
-      DLOGE("WaitForCommitDone failed with error %d", ret);
+      DLOGE("WaitForVmRelease failed with error %d", ret);
       return -EINVAL;
     }
   }

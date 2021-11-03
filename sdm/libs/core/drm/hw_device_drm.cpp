@@ -1747,8 +1747,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   SetupAtomic(scoped_ref, hw_layers_info, false /* validate */,
                                    &release_fence_fd, &retire_fence_fd);
 
-  bool sync_commit = synchronous_commit_ || first_cycle_ ||
-                    (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd);
+  bool sync_commit = synchronous_commit_ || first_cycle_;
 
   if (hw_layers_info->elapse_timestamp > 0) {
     struct timespec t = {0, 0};

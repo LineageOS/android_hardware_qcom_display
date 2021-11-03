@@ -74,6 +74,7 @@ class HWEventHandler {
   virtual void HandleBacklightEvent(float brightness_level) = 0;
   virtual void MMRMEvent(uint32_t clk) = 0;
   virtual void HandlePowerEvent() = 0;
+  virtual void HandleVmReleaseEvent() = 0;
 
  protected:
   virtual ~HWEventHandler() { }

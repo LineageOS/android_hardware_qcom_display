@@ -73,6 +73,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void Histogram(int histogram_fd, uint32_t blob_id) override;
   void MMRMEvent(uint32_t clk) override;
   void HandlePowerEvent() override;
+  void HandleVmReleaseEvent() override;
 
   void UpdateColorModes();
   void InitializeColorModesFromColorspace();

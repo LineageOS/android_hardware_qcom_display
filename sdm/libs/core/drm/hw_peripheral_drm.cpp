@@ -474,9 +474,6 @@ DisplayError HWPeripheralDRM::ControlIdlePowerCollapse(bool enable, bool synchro
     return kErrorNone;
   }
   idle_pc_state_ = enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
-  // As idle PC is disabled after subsequent commit, Make sure to have synchrounous commit and
-  // ensure TA accesses the display_cc registers after idle PC is disabled.
-  synchronous_commit_ = !enable ? synchronous : false;
   idle_pc_enabled_ = enable;
   return kErrorNone;
 }

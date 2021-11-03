@@ -187,6 +187,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void Histogram(int histogram_fd, uint32_t blob_id) override;
   void HandleBacklightEvent(float brightness_level) override;
   void HandlePowerEvent() override;
+  void HandleVmReleaseEvent() override;
 
   // Implement the DppsPropIntf
   DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size) override;

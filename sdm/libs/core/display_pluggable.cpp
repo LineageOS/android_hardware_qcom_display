@@ -466,11 +466,11 @@ void DisplayPluggable::UpdateColorModes() {
 }
 
 DisplayError DisplayPluggable::colorSamplingOn() {
-    return kErrorNone;
+  return kErrorNone;
 }
 
 DisplayError DisplayPluggable::colorSamplingOff() {
-    return kErrorNone;
+  return kErrorNone;
 }
 
 void DisplayPluggable::MMRMEvent(uint32_t clk) {
@@ -480,6 +480,9 @@ void DisplayPluggable::MMRMEvent(uint32_t clk) {
 
 void DisplayPluggable::HandlePowerEvent() {
   return ProcessPowerEvent();
+}
+
+void DisplayPluggable::HandleVmReleaseEvent() {
 }
 
 }  // namespace sdm

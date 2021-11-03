@@ -107,7 +107,8 @@ DisplayError DisplayBuiltIn::Init() {
                  HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD,
                  HWEvent::HW_RECOVERY,      HWEvent::HISTOGRAM,
                  HWEvent::BACKLIGHT_EVENT,  HWEvent::POWER_EVENT,
-                 HWEvent::MMRM,             HWEvent::IDLE_NOTIFY};
+                 HWEvent::MMRM,             HWEvent::IDLE_NOTIFY,
+                 HWEvent::VM_RELEASE_EVENT};
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_.push_back(HWEvent::IDLE_POWER_COLLAPSE);
   }
@@ -2209,6 +2210,11 @@ DisplayError DisplayBuiltIn::SetDppsFeatureLocked(void *payload, size_t size) {
 
 void DisplayBuiltIn::HandlePowerEvent() {
   return ProcessPowerEvent();
+}
+
+void DisplayBuiltIn::HandleVmReleaseEvent() {
+  if (event_handler_)
+    event_handler_->HandleEvent(kVmReleaseDone);
 }
 
 DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {

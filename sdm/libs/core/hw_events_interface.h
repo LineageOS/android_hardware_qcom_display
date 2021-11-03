@@ -50,6 +50,7 @@ enum HWEvent {
   BACKLIGHT_EVENT,
   MMRM,
   POWER_EVENT,
+  VM_RELEASE_EVENT,
 };
 
 class HWEventsInterface {

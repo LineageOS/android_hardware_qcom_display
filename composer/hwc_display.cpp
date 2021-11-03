@@ -1474,6 +1474,14 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
     case kPostIdleTimeout:
       display_idle_ = true;
       break;
+    case kVmReleaseDone: {
+      if (event_handler_) {
+        event_handler_->VmReleaseDone(id_);
+      } else {
+        DLOGW("Cannot execute VmReleaseDone (client_id = %" PRId64 "), event_handler_ is null",
+              id_);
+      }
+    } break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
