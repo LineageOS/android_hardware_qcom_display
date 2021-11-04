@@ -41,11 +41,11 @@ ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
 endif
 
-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
+ifneq (,$(call is-board-platform-in-list2, $(MSM_VIDC_TARGET_LIST)))
     common_flags += -DVENUS_COLOR_FORMAT
 endif
 
-ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
+ifneq (,$(call is-board-platform-in-list2, $(MASTER_SIDE_CP_TARGET_LIST)))
     common_flags += -DMASTER_SIDE_CP
 endif
 
