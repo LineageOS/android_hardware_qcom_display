@@ -24,6 +24,7 @@
 
 #include <dlfcn.h>
 #include <signal.h>
+#include <malloc.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/locker.h>
@@ -156,7 +157,11 @@ DisplayError CoreImpl::Deinit() {
 
   comp_mgr_.Deinit();
   HWInfoInterface::Destroy(hw_info_intf_);
-
+#ifdef TRUSTED_VM
+  // release free memory from the heap, needed for Trusted_VM due to the limited
+  // carveout size
+  malloc_trim(0);
+#endif
   return kErrorNone;
 }
 
