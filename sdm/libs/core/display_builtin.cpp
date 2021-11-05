@@ -253,6 +253,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
       return kErrorNone;
     }
   }
+  error = ChangeFps();
 
   return kErrorNotValidated;
 }
@@ -2477,5 +2478,157 @@ void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
   cwb_layer_.composition = kCompositionCWBTarget;
   layer_stack->layers.push_back(&cwb_layer_);
 }
+
+uint32_t DisplayBuiltIn::GetUpdatingAppLayersCount(LayerStack *layer_stack) {
+  uint32_t updating_count = 0;
+
+  for (uint i = 0; i < layer_stack->layers.size(); i++) {
+    auto layer = layer_stack->layers.at(i);
+    if (layer->composition == kCompositionGPUTarget) {
+      break;
+    }
+    if (layer->flags.updating) {
+      updating_count++;
+    }
+  }
+
+  return updating_count;
+}
+
+DisplayError DisplayBuiltIn::ChangeFps() {
+  ClientLock lock(disp_mutex_);
+
+  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone ||
+      disable_dyn_fps_) {
+    return kErrorNotSupported;
+  }
+
+  uint32_t num_updating_layers = GetUpdatingLayersCount();
+  bool one_updating_layer = (num_updating_layers == 1);
+  uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
+
+  if (refresh_rate < hw_panel_info_.min_fps || refresh_rate > hw_panel_info_.max_fps) {
+    DLOGE("Invalid Fps = %d request", refresh_rate);
+    return kErrorParameters;
+  }
+
+  bool idle_screen = GetUpdatingAppLayersCount(disp_layer_stack_.stack) == 0;
+  if (!disp_layer_stack_.stack->force_refresh_rate && IdleFallbackLowerFps(idle_screen)
+      && !enable_qsync_idle_) {
+    refresh_rate = hw_panel_info_.min_fps;
+  }
+
+  if (current_refresh_rate_ != refresh_rate) {
+    DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
+    if (error != kErrorNone) {
+      // Attempt to update refresh rate can fail if rf interference settings is detected.
+      // Just drop min fps settting for now.
+      if (disp_layer_stack_.info.lower_fps) {
+        disp_layer_stack_.info.lower_fps = false;
+      }
+      return error;
+    }
+
+    error = comp_manager_->CheckEnforceSplit(display_comp_ctx_, refresh_rate);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+
+  // Set safe mode upon success.
+  if (enhance_idle_time_ && (refresh_rate == hw_panel_info_.min_fps) &&
+      (disp_layer_stack_.info.lower_fps)) {
+    comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+  }
+
+  // On success, set current refresh rate to new refresh rate
+  current_refresh_rate_ = refresh_rate;
+  deferred_config_.MarkDirty();
+
+  return ReconfigureDisplay();
+}
+
+bool DisplayBuiltIn::IdleFallbackLowerFps(bool idle_screen) {
+  if (!enhance_idle_time_) {
+    return (disp_layer_stack_.info.lower_fps);
+  }
+  if (!idle_screen || !disp_layer_stack_.info.lower_fps) {
+    return false;
+  }
+
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  uint64_t elapsed_time_ms = GetTimeInMs(now) - GetTimeInMs(idle_timer_start_);
+  bool can_lower = elapsed_time_ms >= UINT32(idle_time_ms_);
+  DLOGV_IF(kTagDisplay, "lower fps: %d", can_lower);
+
+  return can_lower;
+}
+
+uint32_t DisplayBuiltIn::GetUpdatingLayersCount() {
+  uint32_t updating_count = 0;
+
+  for (uint i = 0; i < disp_layer_stack_.stack->layers.size(); i++) {
+    auto layer = disp_layer_stack_.stack->layers.at(i);
+    if (layer->flags.updating) {
+      updating_count++;
+    }
+  }
+  return updating_count;
+}
+
+uint32_t DisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
+  LayerStack *layer_stack = disp_layer_stack_.stack;
+  if (layer_stack->force_refresh_rate) {
+    return layer_stack->force_refresh_rate;
+  }
+
+  uint32_t metadata_refresh_rate = CalculateMetaDataRefreshRate();
+  if (layer_stack->flags.use_metadata_refresh_rate && one_updating_layer &&
+      metadata_refresh_rate) {
+    return metadata_refresh_rate;
+  }
+
+  return active_refresh_rate_;
+}
+
+uint32_t DisplayBuiltIn::CalculateMetaDataRefreshRate() {
+  LayerStack *layer_stack = disp_layer_stack_.stack;
+  uint32_t metadata_refresh_rate = 0;
+  if (!layer_stack->flags.use_metadata_refresh_rate) {
+    return 0;
+  }
+
+  uint32_t max_refresh_rate = 0;
+  uint32_t min_refresh_rate = 0;
+  GetRefreshRateRange(&min_refresh_rate, &max_refresh_rate);
+
+  for (uint i = 0; i < layer_stack->layers.size(); i++) {
+    auto layer = layer_stack->layers.at(i);
+    if (layer->flags.has_metadata_refresh_rate && layer->frame_rate > metadata_refresh_rate) {
+      metadata_refresh_rate = SanitizeRefreshRate(layer->frame_rate, max_refresh_rate,
+                                                  min_refresh_rate);
+    }
+  }
+  return metadata_refresh_rate;
+}
+
+uint32_t DisplayBuiltIn::SanitizeRefreshRate(uint32_t req_refresh_rate, uint32_t max_refresh_rate,
+                                             uint32_t min_refresh_rate) {
+  uint32_t refresh_rate = req_refresh_rate;
+
+  if (refresh_rate < min_refresh_rate) {
+    // Pick the next multiple of request which is within the range
+    refresh_rate = (((min_refresh_rate / refresh_rate) +
+                     ((min_refresh_rate % refresh_rate) ? 1 : 0)) * refresh_rate);
+  }
+
+  if (refresh_rate > max_refresh_rate) {
+    refresh_rate = max_refresh_rate;
+  }
+
+  return refresh_rate;
+}
+
 
 }  // namespace sdm

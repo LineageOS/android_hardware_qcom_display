@@ -129,6 +129,7 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
+  active_refresh_rate_ = display_attributes_.fps;
 
   if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
     if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
@@ -1783,6 +1784,11 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   if (error != kErrorNone) {
     return error;
   }
+
+  // Cache last refresh rate set by SF
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &display_attributes);
+  active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
 }

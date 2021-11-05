@@ -486,7 +486,7 @@ int HWCDisplay::Init() {
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
     disp_null->Init();
-    use_metadata_refresh_rate_ = false;
+    layer_stack_.flags.use_metadata_refresh_rate = false;
     display_intf_ = disp_null;
     DLOGI("Enabling null display mode for display type %d", type_);
   } else {
@@ -678,7 +678,7 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
-  metadata_refresh_rate_ = 0;
+  layer_stack_.flags.use_metadata_refresh_rate = false;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.layer_id_support = true;
   layer_stack_.solid_fill_enabled = solid_fill_enable_;
@@ -800,8 +800,8 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.bottom = layer_buffer->height;
     }
 
-    if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
-      metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
+    if (hwc_layer->HasMetaDataRefreshRate()) {
+      layer->flags.has_metadata_refresh_rate = true;
     }
 
     display_rect_ = Union(display_rect_, layer->dst_rect);
@@ -2520,19 +2520,6 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
   return 0;
 }
 
-uint32_t HWCDisplay::GetUpdatingLayersCount(void) {
-  uint32_t updating_count = 0;
-
-  for (uint i = 0; i < layer_stack_.layers.size(); i++) {
-    auto layer = layer_stack_.layers.at(i);
-    if (layer->flags.updating) {
-      updating_count++;
-    }
-  }
-
-  return updating_count;
-}
-
 bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   auto layer = hwc_layer->GetSDMLayer();
   // Layer should be considered updating if
@@ -2542,23 +2529,6 @@ bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   //      geometry_changed as bit fields).
   return (layer->flags.single_buffer || hwc_layer->IsSurfaceUpdated() ||
           hwc_layer->GetGeometryChanges());
-}
-
-uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {
-  uint32_t refresh_rate = req_refresh_rate;
-
-  if (refresh_rate < min_refresh_rate_) {
-    // Pick the next multiple of request which is within the range
-    refresh_rate =
-        (((min_refresh_rate_ / refresh_rate) + ((min_refresh_rate_ % refresh_rate) ? 1 : 0)) *
-         refresh_rate);
-  }
-
-  if (refresh_rate > max_refresh_rate_) {
-    refresh_rate = max_refresh_rate_;
-  }
-
-  return refresh_rate;
 }
 
 DisplayClass HWCDisplay::GetDisplayClass() {

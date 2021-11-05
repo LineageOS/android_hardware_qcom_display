@@ -175,6 +175,13 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError PostHandleSecureEvent(SecureEvent secure_event) override;
   void InitCWBBuffer();
   void AppendCWBLayer(LayerStack *layer_stack);
+  uint32_t GetUpdatingAppLayersCount(LayerStack *layer_stack);
+  DisplayError ChangeFps();
+  uint32_t GetUpdatingLayersCount();
+  uint32_t GetOptimalRefreshRate(bool one_updating_layer);
+  uint32_t CalculateMetaDataRefreshRate();
+  uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate, uint32_t max_refresh_rate,
+                               uint32_t min_refresh_rate);
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -229,6 +236,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDppsFeatureLocked(void *payload, size_t size);
   DisplayError HandleDemuraLayer(LayerStack *layer_stack);
   void NotifyDppsHdrPresent(LayerStack *layer_stack);
+  bool IdleFallbackLowerFps(bool idle_screen);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;

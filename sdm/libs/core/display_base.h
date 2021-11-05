@@ -395,6 +395,7 @@ class DisplayBase : public DisplayInterface {
   int32_t noise_override_zpos_ = -1;  // holds the overriden zpos/idx, used to mark sde_preferred
   bool handle_idle_timeout_ = false;
   bool pending_commit_ = false;
+  uint32_t active_refresh_rate_ = 0;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
