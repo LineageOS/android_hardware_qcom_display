@@ -122,6 +122,7 @@
 // Disable 3D adaptive tone mapping support
 #define DISABLE_3D_ADAPTIVE_TM               DISPLAY_PROP("disable_3d_adaptive_tm")
 #define DISABLE_SDR_HISTOGRAM                DISPLAY_PROP("disable_sdr_histogram")
+#define ALLOW_3D_ADAPTIVE_TM_EXTERNAL        DISPLAY_PROP("allow_3d_adaptive_tm_external")
 // Disable SDR dimming support
 #define DISABLE_SDR_DIMMING                  DISPLAY_PROP("disable_sdr_dimming")
 #define FORCE_TONEMAPPING                    DISPLAY_PROP("force_tonemapping")
