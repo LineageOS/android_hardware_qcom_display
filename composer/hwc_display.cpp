@@ -973,6 +973,13 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
+      {
+        std::lock_guard<std::mutex> lock(cwb_state_lock_);
+        if (cwb_state_.cwb_disp_id == id_) {  // If CWB is requested or configured or
+          // tearing-down on disp id_, then flush cwb setup before the display power off.
+          ResetCwbState();
+        }
+      }  // releasing the cwb state lock
       break;
     case HWC2::PowerMode::On:
       if (mmrm_restricted_ && (display_class_ != DISPLAY_CLASS_BUILTIN) &&
@@ -3263,6 +3270,7 @@ void HWCDisplay::SetCwbState() {
 void HWCDisplay::ResetCwbState() {
   // Resets cwb state struct. Used in CWB teardown frame if flush_ is set.
   // Also called incase cwb active display is unplugged.
+  DLOGV_IF(kTagClient, "Resetting Cwb State.");
   cwb_state_ = {};
 }
 
