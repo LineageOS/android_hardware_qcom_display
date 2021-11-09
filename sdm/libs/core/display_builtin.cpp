@@ -662,34 +662,14 @@ DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
   return DisplayBase::CommitLocked(layer_stack);
 }
 
-void DisplayBuiltIn::ProcessSecureEvent() {
-  if (vm_cb_intf_) {
-    if (secure_event_ == kTUITransitionStart)
-      vm_cb_intf_->ExportHFCBuffer();
-    if (secure_event_ == kTUITransitionEnd)
-      vm_cb_intf_->FreeExportBuffer();
-  }
+DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
+  DisplayBase::PostCommit(hw_layers_info);
 
   if (pending_brightness_) {
     Fence::Wait(retire_fence_);
     SetPanelBrightness(cached_brightness_);
     pending_brightness_ = false;
-  } else {
-    if (secure_event_ == kTUITransitionStart) {
-      // Send the panel brightness event to secondary VM on TUI session start
-      SendBacklight();
-    }
   }
-
-  if (secure_event_ == kTUITransitionStart) {
-    // Send display config information to secondary VM on TUI session start
-    SendDisplayConfigs();
-  }
-}
-
-DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
-  DisplayBase::PostCommit(hw_layers_info);
-  ProcessSecureEvent();
 
   if (commit_event_enabled_) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
@@ -1058,12 +1038,6 @@ void DisplayBuiltIn::IdleTimeout() {
 void DisplayBuiltIn::PingPongTimeout() {
   ClientLock lock(disp_mutex_);
   hw_intf_->DumpDebugData();
-}
-
-void DisplayBuiltIn::ThermalEvent(int64_t thermal_level) {
-  ClientLock lock(disp_mutex_);
-  validated_ = false;
-  comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
 }
 
 void DisplayBuiltIn::IdlePowerCollapse() {
@@ -1794,41 +1768,6 @@ DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return hw_intf_->GetDynamicDSIClock(bit_clk_rate);
 }
 
-void DisplayBuiltIn::ResetPanel() {
-  DisplayError status = kErrorNone;
-  shared_ptr<Fence> release_fence = nullptr;
-  DisplayState last_display_state = {};
-
-  GetDisplayState(&last_display_state);
-  DLOGI("Power off display id = %d", display_id_);
-
-  status = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
-  if (status != kErrorNone) {
-    DLOGE("Power off for display id = %d failed with error = %d", display_id_, status);
-  }
-
-  DLOGI("Set display %d to state = %d", display_id_, last_display_state);
-  status = SetDisplayState(last_display_state, false /* teardown */, &release_fence);
-  if (status != kErrorNone) {
-     DLOGE("%d state for display id = %d failed with error = %d", last_display_state, display_id_,
-           status);
-  }
-
-  // If panel does not support current color modes, do not set color mode.
-  if (current_color_mode_.gamut && current_color_mode_.gamma &&
-      current_color_mode_.intent != snapdragoncolor::kMaxRenderIntent) {
-    status = SetStcColorMode(current_color_mode_);
-    if (status != kErrorNone) {
-      DLOGE("SetStcColorMode failed for display id = %d error = %d", display_id_, status);
-    }
-  }
-
-  status = SetVSyncState(true);
-  if (status != kErrorNone) {
-    DLOGE("Enable vsync failed for display id = %d with error = %d", display_id_, status);
-  }
-}
-
 DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
   *refresh_rate = current_refresh_rate_;
   return kErrorNone;
@@ -2294,20 +2233,28 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 
 
 // LCOV_EXCL_START
-DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
   ClientLock lock(disp_mutex_);
-  DisplayError error = DisplayBase::HandleSecureEvent(secure_event, needs_refresh);
-  if (error != kErrorNone) {
-    return error;
+  if (secure_event_ == kTUITransitionStart) {
+    if (vm_cb_intf_) {
+      vm_cb_intf_->ExportHFCBuffer();
+    }
+    if (!pending_brightness_) {
+      if (secure_event_ == kTUITransitionStart) {
+        // Send the panel brightness event to secondary VM on TUI session start
+        SendBacklight();
+      }
+    }
+    if (secure_event_ == kTUITransitionStart) {
+      // Send display config information to secondary VM on TUI session start
+      SendDisplayConfigs();
+    }
   }
-  if (secure_event == kTUITransitionStart && hw_panel_info_.mode == kModeVideo) {
-    SendDisplayConfigs();
+  if (secure_event_ == kTUITransitionEnd) {
+    if (vm_cb_intf_) {
+      vm_cb_intf_->FreeExportBuffer();
+    }
   }
-
-  if (secure_event == kTUITransitionEnd && vm_cb_intf_) {
-    vm_cb_intf_->FreeExportBuffer();
-  }
-
   return kErrorNone;
 }
 

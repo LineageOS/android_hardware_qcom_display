@@ -302,7 +302,7 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle,
   if (disp_layer_stack->info.demura_present)
     size_ff++;
   uint32_t app_layer_count = UINT32(disp_layer_stack->stack->layers.size()) - size_ff;
-  if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
+  if (display_comp_ctx->idle_fallback) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
   }
@@ -498,19 +498,6 @@ void CompManager::ProcessIdleTimeout(Handle display_ctx) {
   }
 
   display_comp_ctx->idle_fallback = true;
-}
-
-void CompManager::ProcessThermalEvent(Handle display_ctx, int64_t thermal_level) {
-  SCOPE_LOCK(locker_);
-
-  DisplayCompositionContext *display_comp_ctx =
-          reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-
-  if (thermal_level >= kMaxThermalLevel) {
-    display_comp_ctx->thermal_fallback_ = true;
-  } else {
-    display_comp_ctx->thermal_fallback_ = false;
-  }
 }
 
 void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {
@@ -848,6 +835,12 @@ DisplayError CompManager::GetDefaultQosData(Handle display_ctx, HWQosData *qos_d
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   return resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
                                  display_comp_ctx->display_resource_ctx, qos_data);
+}
+
+DisplayError CompManager::HandleCwbFrequencyBoost(bool isRequest) {
+  DisplayError error = kErrorNone;
+  error = resource_intf_->Perform(ResourceInterface::kCmdSetCwbBoost, &isRequest);
+  return error;
 }
 
 }  // namespace sdm

@@ -3924,6 +3924,18 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
       return -EINVAL;
     }
   }
+
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    if (hwc_display_[target_display]) {
+      if (hwc_display_[target_display]->PostHandleSecureEvent(kTUITransitionStart) != kErrorNone) {
+        return -EINVAL;
+      }
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
+    }
+  }
   return 0;
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
@@ -3964,6 +3976,19 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       return -EINVAL;
     }
   }
+
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    if (hwc_display_[target_display]) {
+      if (hwc_display_[target_display]->PostHandleSecureEvent(kTUITransitionEnd) != kErrorNone) {
+        return -EINVAL;
+      }
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
+    }
+  }
+
   return TUITransitionUnPrepare(disp_id);
 }
 

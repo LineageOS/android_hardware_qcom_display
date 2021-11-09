@@ -474,6 +474,9 @@ DisplayError HWPeripheralDRM::ControlIdlePowerCollapse(bool enable, bool synchro
     return kErrorNone;
   }
   idle_pc_state_ = enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
+  // As idle PC is disabled after subsequent commit, Make sure to have synchrounous commit and
+  // ensure TA accesses the display_cc registers after idle PC is disabled.
+  synchronous_commit_ = !enable ? synchronous : false;
   idle_pc_enabled_ = enable;
   return kErrorNone;
 }
@@ -598,7 +601,9 @@ DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data, SyncPoints 
 
 DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
   if (doze_poms_switch_done_ || pending_poms_switch_ || bit_clk_rate_) {
-    return kErrorNotSupported;
+    DLOGW("Bailing. Pending operations: doze_poms_switch_done_=%d, pending_poms_switch_=%d,"
+     "bit_clk_rate_=%d", doze_poms_switch_done_, pending_poms_switch_, bit_clk_rate_);
+    return kErrorDeferred;
   }
 
   HWDeviceDRM::SetDisplayAttributes(index);

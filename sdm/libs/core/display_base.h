@@ -158,6 +158,9 @@ class DisplayBase : public DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {
     return kErrorNotSupported;
   }

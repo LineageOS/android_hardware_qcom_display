@@ -381,6 +381,8 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
 DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
   if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {  // CWB requested
+    comp_manager_->HandleCwbFrequencyBoost(true);
+
     if (!cwb_config_) {  // Instantiate cwb_config_ if cwb was not enabled in previous draw cycle.
       cwb_config_ = new CwbConfig;
       needs_validate_ = true;  // Do not skip Validate in CWB setup frame.
@@ -462,6 +464,8 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
     cwb_config_ = NULL;
     disp_layer_stack_.info.hw_cwb_config = NULL;
     needs_validate_ = true;  // Do not skip Validate in CWB teardown frame.
+
+    comp_manager_->HandleCwbFrequencyBoost(false);
   }
   return error;
 }

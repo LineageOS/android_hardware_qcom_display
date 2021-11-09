@@ -751,7 +751,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame) && !hdr_layer) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;
     }
@@ -813,11 +813,6 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
-
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
-      layer->flags.is_game = true;
-      layer->input_buffer.flags.game = true;
-    }
 
     layer->flags.compatible = hwc_layer->IsLayerCompatible();
 
@@ -3011,7 +3006,11 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   }
 
   DisplayError error = display_intf_->SetActiveConfig(config);
-  if (error != kErrorNone) {
+  if (error == kErrorDeferred) {
+    DLOGW("Failed to set new config:%d from current config:%d! Error: %d",
+          config, current_config, error);
+    return HWC2::Error::BadConfig;
+  } else if (error != kErrorNone) {
     DLOGE("Failed to set new config:%d from current config:%d! Error: %d",
           config, current_config, error);
     return HWC2::Error::BadConfig;
@@ -3125,6 +3124,10 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   secure_event_ = secure_event;
 
   return kErrorNone;
+}
+
+DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
+  return display_intf_->PostHandleSecureEvent(secure_event);
 }
 
 int HWCDisplay::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,

@@ -715,12 +715,6 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].v_back_porch = mode.vtotal - mode.vsync_end;
   display_attributes_[index].v_total = mode.vtotal;
   display_attributes_[index].h_total = mode.htotal;
-  display_attributes_[index].is_device_split =
-      (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE ||
-       topology == DRMTopology::DUAL_LM_MERGE_DSC || topology == DRMTopology::DUAL_LM_DSC ||
-       topology == DRMTopology::DUAL_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE ||
-       topology == DRMTopology::QUAD_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE_DSC ||
-       topology == DRMTopology::QUAD_LM_DSC4HSMERGE);
 
   // TODO(user): This clock should no longer be used as mode's pixel clock for RFI connectors.
   // Driver can expose list of dynamic pixel clocks, userspace needs to support dynamic change.
@@ -736,17 +730,22 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
   display_attributes_[index].y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
   SetTopology(topology, &display_attributes_[index].topology);
+  SetTopologySplit(display_attributes_[index].topology,
+                   &display_attributes_[index].topology_num_split);
+  display_attributes_[index].is_device_split = (display_attributes_[index].topology_num_split > 1);
 
-  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
+  DLOGI(
+      "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
       " V_FRONT_PORCH: %d [RFI Adjusted : %s], V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d,"
-      " CLK: %dKHZ, TOPOLOGY: %d, HW_SPLIT: %d", index, display_attributes_[index].x_pixels,
-      display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
-      display_attributes_[index].y_dpi, display_attributes_[index].fps,
-      display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
-      display_attributes_[index].v_front_porch, adjusted ? "True" : "False",
-      display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
-      display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-      display_attributes_[index].topology, mixer_attributes_.split_type);
+      " CLK: %dKHZ, TOPOLOGY: %d [SPLIT NUMBER: %d], HW_SPLIT: %d",
+      index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
+      display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
+      display_attributes_[index].fps, display_attributes_[index].is_device_split,
+      display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
+      adjusted ? "True" : "False", display_attributes_[index].v_pulse_width,
+      display_attributes_[index].v_total, display_attributes_[index].h_total,
+      display_attributes_[index].clock_khz, display_attributes_[index].topology,
+      display_attributes_[index].topology_num_split, mixer_attributes_.split_type);
 
   return kErrorNone;
 }
@@ -1745,7 +1744,8 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   SetupAtomic(scoped_ref, hw_layers_info, false /* validate */,
                                    &release_fence_fd, &retire_fence_fd);
 
-  bool sync_commit = synchronous_commit_ || first_cycle_;
+  bool sync_commit = synchronous_commit_ || first_cycle_ ||
+                    (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd);
 
   if (hw_layers_info->elapse_timestamp > 0) {
     struct timespec t = {0, 0};
@@ -2184,8 +2184,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  uint32_t topology_num_split = 0;
-  GetTopologySplit(display_attributes_[index].topology, &topology_num_split);
+  uint32_t topology_num_split = display_attributes_[index].topology_num_split;
   if (mixer_attributes.width % topology_num_split != 0) {
     DLOGW("Uneven LM split: topology:%d supported_split:%d mixer_width:%d",
           display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
@@ -2732,7 +2731,7 @@ void HWDeviceDRM::SetTUIState() {
   }
 }
 
-void HWDeviceDRM::GetTopologySplit(HWTopology hw_topology, uint32_t *split_number) {
+void HWDeviceDRM::SetTopologySplit(HWTopology hw_topology, uint32_t *split_number) {
   switch (hw_topology) {
     case kDualLM:
     case kDualLMDSC:

@@ -64,7 +64,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   DisplayError VSync(int64_t timestamp) override;
   DisplayError Blank(bool blank) override { return kErrorNone; }
   void IdleTimeout() override {}
-  void ThermalEvent(int64_t thermal_level) override {}
   void CECMessage(char *message) override;
   void IdlePowerCollapse() override {}
   void PingPongTimeout() override {}

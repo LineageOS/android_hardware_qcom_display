@@ -112,6 +112,7 @@ class CompManager {
   DisplayError GetHDR10PlusCapability(bool *hdr_plus_support);
   DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError GetDefaultQosData(Handle display_ctx, HWQosData *qos_data);
+  DisplayError HandleCwbFrequencyBoost(bool isRequest);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -130,7 +131,6 @@ class CompManager {
     uint32_t max_strategies = 0;
     uint32_t remaining_strategies = 0;
     bool idle_fallback = false;
-    bool thermal_fallback_ = false;
     // Using primary panel flag of hw panel to configure Constraints. We do not need other hw
     // panel parameters for now.
     bool is_primary_panel = false;
