@@ -1211,6 +1211,8 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
       return INT32(error);
+    } else if (mode == HWC2::PowerMode::Off && cwb_.IsCwbActiveOnDisplay(display)) {
+      cwb_.PresentDisplayDone(display);
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
@@ -3207,6 +3209,8 @@ void HWCSession::PerformDisplayPowerReset() {
                                                    true /* teardown */);
       if (status != HWC2::Error::None) {
         DLOGE("Power off for display = %d failed with error = %d", INT32(display), status);
+      } else if (cwb_.IsCwbActiveOnDisplay(display)) {
+        cwb_.PresentDisplayDone(display);
       }
     }
   }

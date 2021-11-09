@@ -3277,6 +3277,12 @@ void HWCDisplay::ResetCwbState() {
 HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
                                           shared_ptr<Fence> acquire_fence,
                                           CwbConfig cwb_config, CWBClient client) {
+  if (current_power_mode_ == HWC2::PowerMode::Off ||
+      current_power_mode_ == HWC2::PowerMode::DozeSuspend) {
+    DLOGW("CWB requested on either Powered-Off or Doze-Suspended display.");
+    return HWC2::Error::BadDisplay;
+  }
+
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
   if (cwb_state_.cwb_disp_id != -1 && cwb_state_.cwb_disp_id != id_) {
     // cwb is already Active on a display other than on which it is requested.

@@ -355,6 +355,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                        const CwbConfig &cwb_config, const native_handle_t *buffer,
                        hwc2_display_t display_type);
+    bool IsCwbActiveOnDisplay(hwc2_display_t disp_type);
 
    private:
     struct QueueNode {
