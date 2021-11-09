@@ -35,6 +35,8 @@
 #include "drm_dpps_mgr_intf.h"
 #include <mutex>
 
+#define MAX_DISPLAY_COUNT 2
+
 namespace sde_drm {
 
 struct DRMDppsPropInfo {
