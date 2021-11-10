@@ -206,7 +206,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void *output_buffer_base_ = nullptr;
   bool pending_refresh_ = true;
   bool enable_optimize_refresh_ = false;
-  bool enable_poms_during_doze_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;

@@ -651,14 +651,14 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
 
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
         " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ," \
-        " TOPOLOGY: %d, HW_SPLIT: %d", index, display_attributes_[index].x_pixels,
+        " TOPOLOGY: %d, HW_SPLIT: %d SMART_PANEL: %d", index, display_attributes_[index].x_pixels,
         display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
         display_attributes_[index].y_dpi, display_attributes_[index].fps,
         display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
         display_attributes_[index].v_front_porch, display_attributes_[index].v_pulse_width,
         display_attributes_[index].v_total, display_attributes_[index].h_total,
         display_attributes_[index].clock_khz, display_attributes_[index].topology,
-        mixer_attributes_.split_type);
+        mixer_attributes_.split_type, display_attributes_[index].smart_panel);
 
   return kErrorNone;
 }
