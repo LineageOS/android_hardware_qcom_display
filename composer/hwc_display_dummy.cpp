@@ -122,4 +122,12 @@ void HWCDisplayDummy::SetConfigInfo(
   num_configs_ = num_configs;
 }
 
+HWC2::Error HWCDisplayDummy::SetActiveConfigWithConstraints(
+    hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
+    VsyncPeriodChangeTimeline *out_timeline) {
+
+  ALOGI("Config change not allowed in async power mode transition");
+  return HWC2::Error::Unsupported;
+}
+
 }  // namespace sdm

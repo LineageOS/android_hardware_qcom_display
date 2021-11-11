@@ -275,7 +275,7 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   }
 
   uint32_t app_layer_count = UINT32(hw_layers->info.stack->layers.size()) - 1;
-  if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
+  if (display_comp_ctx->idle_fallback) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
   }
@@ -430,19 +430,6 @@ void CompManager::ProcessIdleTimeout(Handle display_ctx) {
   }
 
   display_comp_ctx->idle_fallback = true;
-}
-
-void CompManager::ProcessThermalEvent(Handle display_ctx, int64_t thermal_level) {
-  SCOPE_LOCK(locker_);
-
-  DisplayCompositionContext *display_comp_ctx =
-          reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-
-  if (thermal_level >= kMaxThermalLevel) {
-    display_comp_ctx->thermal_fallback_ = true;
-  } else {
-    display_comp_ctx->thermal_fallback_ = false;
-  }
 }
 
 void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {
