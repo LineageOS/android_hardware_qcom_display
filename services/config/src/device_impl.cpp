@@ -61,7 +61,6 @@ int DeviceImpl::CreateInstance(ClientContext *intf) {
 Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
                                         const sp<IDisplayConfigCallback>& callback,
                                         registerClient_cb _hidl_cb) {
-  ALOGI("Register client:%s", client_name.c_str());
   int32_t error = 0;
   std::string client_name_str = client_name.c_str();
   if (client_name_str.empty()) {
@@ -102,6 +101,9 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
 
   device_client->SetDeviceConfigIntf(intf);
 
+  std::lock_guard<std::mutex> lock(death_service_mutex_);
+  ALOGI("Register client id: %lu name: %s device client: %p", client_handle, client_name.c_str(),
+      device_client.get());
   display_config_map_.emplace(std::make_pair(client_handle, device_client));
   _hidl_cb(error, client_handle);
   return Void();
@@ -116,6 +118,7 @@ void DeviceImpl::serviceDied(uint64_t client_handle,
     ConfigInterface *intf = client->GetDeviceConfigIntf();
     intf_->UnRegisterClientContext(intf);
     client.reset();
+    ALOGW("Client id:%lu service died", client_handle);
     display_config_map_.erase(itr);
   }
 }
