@@ -311,6 +311,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
+  virtual void PerformDisplayPowerReset();
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate);
 

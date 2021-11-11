@@ -3186,7 +3186,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
     map_info->Reset();
 }
 
-void HWCSession::DisplayPowerReset() {
+void HWCSession::PerformDisplayPowerReset() {
   // Wait until all commands are flushed.
   std::lock_guard<std::mutex> lock(command_seq_mutex_);
   // Acquire lock on all displays.
@@ -3243,6 +3243,12 @@ void HWCSession::DisplayPowerReset() {
   }
 
   callbacks_.Refresh(vsync_source);
+}
+
+void HWCSession::DisplayPowerReset() {
+  // Do Power Reset in a different thread to avoid blocking of SDM event thread
+  // when disconnecting display.
+  std::future<void> power_reset_future = std::async(&HWCSession::PerformDisplayPowerReset, this);
 }
 
 void HWCSession::HandleSecureSession() {
