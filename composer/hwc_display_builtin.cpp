@@ -1347,7 +1347,7 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     return;
   }
 
-  if (current_refresh_rate_ < 120) {
+  if (active_refresh_rate_ < 120) {
     return;
   }
 
@@ -1373,22 +1373,22 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     return;
   }
 
-  auto it = mixed_mode_threshold_.find(current_refresh_rate_);
+  auto it = mixed_mode_threshold_.find(active_refresh_rate_);
   if (it != mixed_mode_threshold_.end()) {
     if (gpu_layer_count < it->second) {
       DLOGV_IF(kTagResources, "Number of GPU layers :%d does not meet mixed mode perf hints "
-               "threshold:%d for %d fps", gpu_layer_count, it->second, current_refresh_rate_);
+               "threshold:%d for %d fps", gpu_layer_count, it->second, active_refresh_rate_);
       return;
     }
   } else {
     DLOGV_IF(kTagResources, "Mixed mode perf hints is not supported for %d fps",
-             current_refresh_rate_);
+             active_refresh_rate_);
     return;
   }
 
-  // Send hints when the number of GPU layers reaches the threshold for the current refresh rate.
+  // Send hints when the number of GPU layers reaches the threshold for the active refresh rate.
   DLOGV_IF(kTagResources, "Reached max GPU layers for %dfps. Set perf hint for large comp cycle",
-           current_refresh_rate_);
+           active_refresh_rate_);
   int hwc_tid = gettid();
   cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
 }
