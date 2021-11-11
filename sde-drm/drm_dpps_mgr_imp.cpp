@@ -313,6 +313,9 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   dpps_feature_[kFeatureLtmHistEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureLtmWbPbEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureLtmOffEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
+
+  ltm_buffers_ctrl_map_.reserve(MAX_DISPLAY_COUNT);
+  ltm_buffers_map_.reserve(MAX_DISPLAY_COUNT);
 }
 
 void DRMDppsManagerImp::CacheDppsFeature(uint32_t obj_id, va_list args) {
