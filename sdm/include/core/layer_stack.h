@@ -257,6 +257,11 @@ struct LayerRequestFlags {
       uint32_t src_tone_map: 1;    //!< This flag will be set by SDM when the layer needs
                                    //!< source tone map.
       uint32_t rc: 1;  //!< This flag will be set by SDM when the layer is drawn by RC HW.
+      uint32_t update_format: 1;   //!< This flag will be set by SDM when layer format is updated
+                                   //!< The buffer format is mentioned in LayerRequest
+      uint32_t update_color_metadata: 1;  //!< This flag will be set by SDM when layer color
+                                          //!< metadata is updated. The color metadata is
+                                          //!< mentioned in LayerRequest
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.
@@ -273,6 +278,10 @@ struct LayerRequestFlags {
 struct LayerRequest {
   LayerRequestFlags flags;  // Flags associated with this request
   LayerBufferFormat format = kFormatRGBA8888;  // Requested format
+  ColorMetaData color_metadata = { .colorPrimaries = ColorPrimaries_BT709_5,
+                                   .range = Range_Full,
+                                   .transfer = Transfer_sRGB };
+                                  // Requested color metadata
   uint32_t width = 0;  // Requested unaligned width.
   uint32_t height = 0;  // Requested unalighed height
 };

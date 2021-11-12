@@ -45,6 +45,7 @@
 using PerFrameMetadataKey =
     android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
 using vendor::qti::hardware::display::composer::V3_1::IQtiComposerClient;
+using android::hardware::graphics::common::V1_2::Dataspace;
 
 namespace sdm {
 
@@ -55,6 +56,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range);
 bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata);
 bool IsBT2020(const ColorPrimaries &color_primary);
 int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds);
+DisplayError ColorMetadataToDataspace(ColorMetaData color_metadata, Dataspace *dataspace);
 
 enum LayerTypes {
   kLayerUnknown = 0,
