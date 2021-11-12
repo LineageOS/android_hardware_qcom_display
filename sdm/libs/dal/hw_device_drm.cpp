@@ -1619,8 +1619,13 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   }
 
   if (transfer_time_updated_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TRANSFER_TIME, token_.conn_id,
-                              transfer_time_updated_);
+    // Skip updating the driver if driver is the one providing new transfer time
+    if (connector_info_.modes[current_mode_index_].transfer_time_us != transfer_time_updated_) {
+      UpdateTransferTime(transfer_time_updated_);
+    } else {
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TRANSFER_TIME, token_.conn_id,
+                                transfer_time_updated_);
+    }
   }
 
   if (first_cycle_) {
@@ -2634,6 +2639,14 @@ DisplayError HWDeviceDRM::UpdateTransferTime(uint32_t transfer_time) {
   PopulateHWPanelInfo();
   transfer_time_updated_ = transfer_time;
   synchronous_commit_ = true;
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_JITTER_CONFIG, token_.conn_id, jitter_type, value,
+                            time);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_TRANSFER_TIME, token_.conn_id,
+                            &transfer_time_updated_);
   return kErrorNone;
 }
 

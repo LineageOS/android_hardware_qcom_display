@@ -375,6 +375,9 @@ class HWCDisplay : public DisplayEventHandler {
                                                const double *matrix) {
     return HWC2::Error::Unsupported;
   }
+  virtual DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) {
     return kErrorNotSupported;
   }

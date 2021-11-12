@@ -510,10 +510,22 @@ enum struct DRMOps {
    */
   RESET_PANEL_FEATURES,
   /*
-   * Op: Set new transfer time va;lue for the current mode
+   * Op: Set new transfer time value for the current mode
    * Arg: uint32_t - New transfer time to be used
    */
   CONNECTOR_SET_TRANSFER_TIME,
+  /*
+   * Op: Get new transfer time value for the current mode from driver
+   * Arg: int * - Pointer to an integer that will hold the returned transfer time
+   */
+  CONNECTOR_GET_TRANSFER_TIME,
+  /*
+   * Op: Configures watchdog TE Jitter
+   * Arg: uint32_t - Jitter Type (0:2)
+   *      float    - Max jitter in percentage (0:10%)
+   *      uint32_t - Time in ms for long term jitter
+   */
+  CONNECTOR_SET_JITTER_CONFIG,
   /*
    * Op: set LLC cache state
    * Arg: uint32_t - Connector ID
@@ -589,6 +601,12 @@ struct DRMRect {
   uint32_t top;     // Top-most pixel coordinate.
   uint32_t right;   // Right-most pixel coordinate.
   uint32_t bottom;  // Bottom-most pixel coordinate.
+};
+
+struct DRMJitterConfig {
+  uint32_t type;    // Jitter type.
+  uint32_t value;   // Jitter value in percentage.
+  uint32_t time;    // Jitter time in ms.
 };
 
 enum struct DRMCWbCaptureMode {

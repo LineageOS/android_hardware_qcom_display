@@ -1051,6 +1051,16 @@ class DisplayInterface {
   */
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
 
+  /*! @brief Method to set Jitter configuration.
+
+    @param[in] jitter_type Jitter type; 0 - None, 1 - Instantaneous jitter, 2 - Long term jitter.
+    @param[in] value Max jitter value in percentage (0-10%).
+    @param[in] time Jitter time (for LTJ).
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) = 0;
+
   /*! @brief Method to get the current DSI clock rate
 
     @param[out] bit_clk_rate DSI bit clock rate in HZ

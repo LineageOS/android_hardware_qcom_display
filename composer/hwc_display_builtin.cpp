@@ -1022,6 +1022,18 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
   return error;
 }
 
+DisplayError HWCDisplayBuiltIn::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  DisplayError error = display_intf_->SetJitterConfig(jitter_type, value, time);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set jitter configuration.");
+    return error;
+  }
+
+  callbacks_->Refresh(id_);
+
+  return kErrorNone;
+}
+
 DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   DisablePartialUpdateOneFrame();
   DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);

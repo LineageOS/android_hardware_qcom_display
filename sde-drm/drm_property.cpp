@@ -217,6 +217,8 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "dimming_dyn_ctrl") { return DRMProperty::DIMMING_DYN_CTRL; }
   if (name == "dimming_min_bl") { return DRMProperty::DIMMING_MIN_BL; }
   if (name == "dyn_transfer_time") { return DRMProperty::DYN_TRANSFER_TIME; }
+  if (name == "jitter_config") { return DRMProperty::JITTER_CONFIG; }
+  if (name == "transfer_time") { return DRMProperty::TRANSFER_TIME; }
   if (name == "cache_state") { return DRMProperty::CACHE_STATE; }
   if (name == "early_fence_line") { return DRMProperty::EARLY_FENCE_LINE; }
   if (name == "dnsc_blur") { return DRMProperty::DNSC_BLR; }

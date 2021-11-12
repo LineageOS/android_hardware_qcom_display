@@ -107,6 +107,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
                                           uint32_t v_end, uint32_t factor_in, uint32_t factor_out);
+  virtual DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time);
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
