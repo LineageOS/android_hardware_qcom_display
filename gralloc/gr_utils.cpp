@@ -96,6 +96,7 @@ bool IsYuvFormat(int format) {
     case static_cast<int>(PixelFormat::Y16):
     case static_cast<int>(PixelFormat::RAW12):
     case static_cast<int>(PixelFormat::RAW10):
+    case HAL_PIXEL_FORMAT_RAW8:
     case static_cast<int>(PixelFormat::YV12):
     case static_cast<int>(PixelFormat::Y8):
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
