@@ -337,6 +337,8 @@ struct LayerStackFlags {
       uint32_t reserved3 : 1;  //!< This flag is reserved(3) for private usage
 
       uint32_t reserved4 : 1;  //!< This flag is reserved(4) for private usage
+
+      uint32_t scaling_rgb_layer_present : 1;  //!< This flag indicates scaling rgb layer presence
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
