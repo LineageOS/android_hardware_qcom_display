@@ -342,6 +342,7 @@ class DisplayBase : public DisplayInterface {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   bool disable_pu_on_dest_scaler_ = false;
+  bool de_enabled_ = false;
   bool pu_pending_ = false;
   uint32_t num_color_modes_ = 0;
   std::vector<SDEDisplayMode> color_modes_;

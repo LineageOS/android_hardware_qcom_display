@@ -2878,10 +2878,11 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   if (de_data.enable) {
-    disable_pu_on_dest_scaler_ = true;
+    de_enabled_  = true;
   } else {
-    SetPUonDestScaler();
+    de_enabled_ = false;
   }
+  SetPUonDestScaler();
 
   return kErrorNone;
 }
@@ -3210,7 +3211,7 @@ void DisplayBase::SetPUonDestScaler() {
   uint32_t display_height = display_attributes_.y_pixels;
 
   disable_pu_on_dest_scaler_ = (mixer_width != display_width ||
-                                mixer_height != display_height);
+                                mixer_height != display_height) || de_enabled_;
 }
 
 void DisplayBase::ClearColorInfo() {
@@ -3846,10 +3847,11 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
     // TODO(user): Temporary changes, to be removed when DRM driver supports
     // Partial update with Destination scaler enabled.
     if (de_data.enable) {
-      disable_pu_on_dest_scaler_ = true;
+      de_enabled_  = true;
     } else {
-      SetPUonDestScaler();
+      de_enabled_  = false;
     }
+    SetPUonDestScaler();
 
     de_tuning_cfg_data->cfg_pending = false;
   }
