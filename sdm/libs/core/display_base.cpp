@@ -23,6 +23,7 @@
 */
 
 #include <stdio.h>
+#include <malloc.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/formats.h>
@@ -247,6 +248,11 @@ DisplayError DisplayBase::Deinit() {
   }
 
   CloseFd(&cached_framebuffer_.planes[0].fd);
+#ifdef TRUSTED_VM
+  // release free memory from the heap, needed for Trusted_VM due to the limited
+  // carveout size
+  malloc_trim(0);
+#endif
   return kErrorNone;
 }
 
