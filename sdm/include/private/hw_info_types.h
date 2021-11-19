@@ -884,6 +884,11 @@ struct HWMixerAttributes {
   }
 };
 
+struct Resolution {
+  uint32_t x_pixels;
+  uint32_t y_pixels;
+};
+
 }  // namespace sdm
 
 #endif  // __HW_INFO_TYPES_H__
