@@ -771,6 +771,7 @@ struct HWLayersInfo {
   int32_t stitch_target_index = -1;  // Blit target layer index. -1 if not present.
   int32_t demura_target_index = -1;  // Demura target layer index. -1 if not present.
   int32_t noise_layer_index = -1;    // Noise layer index. -1 if not present.
+  int32_t cwb_target_index = -1;     // CWB target layer index. -1 if not present.
   std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
@@ -814,6 +815,9 @@ struct HWLayersInfo {
                                        //!< driver by SDM.
   bool stitch_present = false;  // Indicates there is stitch layer or not
   bool demura_present = false;  // Indicates there is demura layer or not
+  bool cwb_present = false;  // Indicates there is cwb layer or not
+  bool lower_fps = false;  // This field hints to lower the fps in case of idle fallback
+  bool enable_self_refresh = false;  // This field hints to enable self refresh when idle timeout
 };
 
 struct DispLayerStack {

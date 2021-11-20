@@ -34,6 +34,7 @@
 #include <private/noise_plugin_intf.h>
 #include <private/noise_plugin_dbg.h>
 
+#include <limits.h>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -311,6 +312,8 @@ class DisplayBase : public DisplayInterface {
   DisplayError NoiseInit();
   DisplayError HandleNoiseLayer(LayerStack *layer_stack);
   void PrepareForAsyncTransition();
+  virtual void IdleTimeout() {}
+  std::chrono::system_clock::time_point WaitUntil();
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;
@@ -390,6 +393,9 @@ class DisplayBase : public DisplayInterface {
   NoisePlugInFactoryIntf *noise_plugin_factory_intf_ = nullptr;
   bool noise_plugin_override_en_ = false;
   int32_t noise_override_zpos_ = -1;  // holds the overriden zpos/idx, used to mark sde_preferred
+  bool handle_idle_timeout_ = false;
+  bool pending_commit_ = false;
+  uint32_t active_refresh_rate_ = 0;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
@@ -430,6 +436,7 @@ class DisplayBase : public DisplayInterface {
   std::condition_variable cv_;
   LayerBuffer cached_framebuffer_ = {};
   Layer noise_layer_ = {};
+  DisplayError ConfigureCwbForIdleFallback(LayerStack *layer_stack);
 };
 
 }  // namespace sdm

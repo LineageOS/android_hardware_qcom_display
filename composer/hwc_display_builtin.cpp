@@ -114,11 +114,11 @@ int HWCDisplayBuiltIn::Init() {
     cpu_hint_ = NULL;
   }
 
-  use_metadata_refresh_rate_ = true;
+  layer_stack_.flags.use_metadata_refresh_rate = true;
   int disable_metadata_dynfps = 0;
   HWCDebugHandler::Get()->GetProperty(DISABLE_METADATA_DYNAMIC_FPS_PROP, &disable_metadata_dynfps);
   if (disable_metadata_dynfps) {
-    use_metadata_refresh_rate_ = false;
+    layer_stack_.flags.use_metadata_refresh_rate = false;
   }
 
   int status = HWCDisplay::Init();
@@ -249,31 +249,9 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
 
   SetCwbState();
 
-  uint32_t num_updating_layers = GetUpdatingLayersCount();
-  bool one_updating_layer = (num_updating_layers == 1);
-  uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  bool idle_screen = GetUpdatingAppLayersCount() == 0;
-  DisplayError error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_,
-                                                     idle_screen);
-
-  // Get the refresh rate set.
+  uint32_t refresh_rate = 0;
   display_intf_->GetRefreshRate(&refresh_rate);
-  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
-
-  if (error == kErrorNone) {
-    if (vsync_source && ((current_refresh_rate_ < refresh_rate) ||
-                         (enhance_idle_time_ && (current_refresh_rate_ != refresh_rate)))) {
-      DTRACE_BEGIN("HWC2::Vsync::Enable");
-      // Display is ramping up from idle.
-      // Client realizes need for resync upon change in config.
-      // Since we know config has changed, triggering vsync proactively
-      // can help in reducing pipeline delays to enable events.
-      SetVsyncEnabled(HWC2::Vsync::Enable);
-      DTRACE_END();
-    }
-    // On success, set current refresh rate to new refresh rate.
-    current_refresh_rate_ = refresh_rate;
-  }
+  current_refresh_rate_ = refresh_rate;
 
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
@@ -658,7 +636,7 @@ void HWCDisplayBuiltIn::SetMetaDataRefreshRateFlag(bool enable) {
   if (disable_metadata_dynfps) {
     return;
   }
-  use_metadata_refresh_rate_ = enable;
+  layer_stack_.flags.use_metadata_refresh_rate = enable;
 }
 
 void HWCDisplayBuiltIn::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color) {
@@ -724,27 +702,16 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
 
 void HWCDisplayBuiltIn::ForceRefreshRate(uint32_t refresh_rate) {
   if ((refresh_rate && (refresh_rate < min_refresh_rate_ || refresh_rate > max_refresh_rate_)) ||
-      force_refresh_rate_ == refresh_rate) {
+      layer_stack_.force_refresh_rate == refresh_rate) {
     // Cannot honor force refresh rate, as its beyond the range or new request is same
     return;
   }
 
-  force_refresh_rate_ = refresh_rate;
+  layer_stack_.force_refresh_rate = refresh_rate;
 
   callbacks_->Refresh(id_);
 
   return;
-}
-
-uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
-  if (force_refresh_rate_) {
-    return force_refresh_rate_;
-  } else if (use_metadata_refresh_rate_ && one_updating_layer && metadata_refresh_rate_) {
-    return metadata_refresh_rate_;
-  }
-
-  DLOGV_IF(kTagClient, "active_refresh_rate_: %d", active_refresh_rate_);
-  return active_refresh_rate_;
 }
 
 void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms) {
@@ -1433,6 +1400,10 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retir
   }*/
 
   pending_commit_ = false;
+
+  if (layer_stack_.request_flags.trigger_refresh) {
+    callbacks_->Refresh(id_);
+  }
 
   return status;
 }

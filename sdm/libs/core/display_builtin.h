@@ -26,6 +26,7 @@
 #define __DISPLAY_BUILTIN_H__
 
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #include <core/dpps_interface.h>
 #include <core/ipc_interface.h>
@@ -172,6 +173,15 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError PrePrepare(LayerStack *layer_stack) override;
   DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) override;
   DisplayError PostHandleSecureEvent(SecureEvent secure_event) override;
+  void InitCWBBuffer();
+  void AppendCWBLayer(LayerStack *layer_stack);
+  uint32_t GetUpdatingAppLayersCount(LayerStack *layer_stack);
+  DisplayError ChangeFps();
+  uint32_t GetUpdatingLayersCount();
+  uint32_t GetOptimalRefreshRate(bool one_updating_layer);
+  uint32_t CalculateMetaDataRefreshRate();
+  uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate, uint32_t max_refresh_rate,
+                               uint32_t min_refresh_rate);
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -226,12 +236,12 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDppsFeatureLocked(void *payload, size_t size);
   DisplayError HandleDemuraLayer(LayerStack *layer_stack);
   void NotifyDppsHdrPresent(LayerStack *layer_stack);
+  bool IdleFallbackLowerFps(bool idle_screen);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
-  bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
   bool panel_feature_init_ = false;
@@ -279,6 +289,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   int hfc_buffer_fd_ = -1;
   uint32_t hfc_buffer_size_ = 0;
   DisplayIPCVmCallbackImpl *vm_cb_intf_ = nullptr;
+  bool enable_cwb_idle_fallback_ = false;
+  Layer cwb_layer_ = {};
 };
 
 }  // namespace sdm
