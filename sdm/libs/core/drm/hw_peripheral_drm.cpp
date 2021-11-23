@@ -712,6 +712,12 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
     }
   }
 
+  // Tear down the Concurrent Writeback topology, while powering off.
+  if (cwb_config_.enabled) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    DLOGI("Tear down the Concurrent Writeback topology");
+  }
+
   err = HWDeviceDRM::PowerOff(teardown);
   if (err != kErrorNone) {
     return err;
