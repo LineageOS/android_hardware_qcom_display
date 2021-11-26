@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -696,7 +696,7 @@ class DisplayInterface {
 
     @return \link void \endlink
   */
-  virtual DisplayError GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+  virtual DisplayError GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                               uint32_t *y_pixels) = 0;
 
   /*! @brief Method to set the mode of the primary display.
