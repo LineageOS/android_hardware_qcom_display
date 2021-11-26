@@ -66,7 +66,6 @@ std::bitset<HWCSession::kClientMax>
 shared_ptr<Fence> HWCSession::retire_fence_[HWCCallbacks::kNumDisplays];
 int HWCSession::commit_error_[HWCCallbacks::kNumDisplays] = { 0 };
 Locker HWCSession::display_config_locker_;
-Locker HWCSession::system_locker_;
 std::mutex HWCSession::command_seq_mutex_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
@@ -790,7 +789,6 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
-  SCOPE_LOCK(system_locker_);
   if (display >= HWCCallbacks::kNumDisplays) {
     DLOGW("Invalid Display : display = %" PRIu64, display);
     return HWC2_ERROR_BAD_DISPLAY;
@@ -3108,7 +3106,6 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   DLOGI("Notify hotplug display disconnected: client id = %d", UINT32(client_id));
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
-  SCOPE_LOCK(system_locker_);
   // Wait until all commands are flushed.
   std::lock_guard<std::mutex> hwc_lock(command_seq_mutex_);
   {
