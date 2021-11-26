@@ -115,8 +115,10 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
     return error;
   }
 
+  Resolution fb_resolution = {fb_config.x_pixels, fb_config.y_pixels};
+
   error = resource_intf_->RegisterDisplay(display_id, type, display_attributes, hw_panel_info,
-                                          mixer_attributes,
+                                          mixer_attributes, fb_resolution,
                                           &display_comp_ctx->display_resource_ctx);
   if (error != kErrorNone) {
     strategy->Deinit();
@@ -223,8 +225,11 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(comp_handle);
 
+  Resolution fb_resolution = {fb_config.x_pixels, fb_config.y_pixels};
+
   error = resource_intf_->ReconfigureDisplay(display_comp_ctx->display_resource_ctx,
-                                             display_attributes, hw_panel_info, mixer_attributes);
+                                             display_attributes, hw_panel_info, mixer_attributes,
+                                             fb_resolution);
   if (error != kErrorNone) {
     DLOGW("ReconfigureDisplay returned error=%d", error);
     return error;

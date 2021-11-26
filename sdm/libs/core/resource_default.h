@@ -45,12 +45,14 @@ class ResourceDefault : public ResourceInterface {
                                        const HWDisplayAttributes &display_attributes,
                                        const HWPanelInfo &hw_panel_info,
                                        const HWMixerAttributes &mixer_attributes,
+                                       const Resolution &fb_resolution,
                                        Handle *display_ctx);
   virtual DisplayError UnregisterDisplay(Handle display_ctx);
   virtual DisplayError ReconfigureDisplay(Handle display_ctx,
                                           const HWDisplayAttributes &display_attributes,
                                           const HWPanelInfo &hw_panel_info,
-                                          const HWMixerAttributes &mixer_attributes);
+                                          const HWMixerAttributes &mixer_attributes,
+                                          const Resolution &fb_resolution);
   virtual DisplayError Start(Handle display_ctx, LayerStack *layer_stack);
   virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
@@ -127,6 +129,7 @@ class ResourceDefault : public ResourceInterface {
     HWBlockType hw_block_type;
     uint64_t frame_count;
     HWMixerAttributes mixer_attributes;
+    Resolution fb_resolution;
 
     DisplayResourceContext() : hw_block_type(kHWBlockMax), frame_count(0) {}
   };
