@@ -19,6 +19,42 @@
  * limitations under the License.
  */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <cutils/properties.h>
 #include <errno.h>
 #include <math.h>
@@ -1339,7 +1375,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
 }
 
 HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                           int32_t format, const CwbConfig &cwb_config) {
+                                           int32_t format, CwbConfig &cwb_config) {
   bool dump_output_to_file = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("Requested o/p dump enable = %d", dump_output_to_file);
 
@@ -1368,7 +1404,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
 
   // Allocate and map output buffer
   const CwbTapPoint &tap_point = cwb_config.tap_point;
-  if (GetCwbBufferResolution(tap_point, &output_buffer_info_.buffer_config.width,
+  if (GetCwbBufferResolution(&cwb_config, &output_buffer_info_.buffer_config.width,
                              &output_buffer_info_.buffer_config.height)) {
     DLOGW("Buffer Resolution setting failed.");
     return HWC2::Error::BadConfig;
@@ -3106,12 +3142,13 @@ DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
   return display_intf_->PostHandleSecureEvent(secure_event);
 }
 
-int HWCDisplay::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+int HWCDisplay::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                        uint32_t *y_pixels) {
   if (!x_pixels || !y_pixels) {
     return -1;
   }
-  DisplayError ret = display_intf_->GetCwbBufferResolution(cwb_tappoint, x_pixels, y_pixels);
+  DisplayError ret = display_intf_->GetCwbBufferResolution(cwb_config, x_pixels,
+                                                           y_pixels);
   if (ret != kErrorNone) {
     DLOGE("Failed to get Output buffer resolution.");
     return -1;
@@ -3347,16 +3384,15 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
 
   DisplayError error = kErrorNone;
   uint32_t buffer_width = 0, buffer_height = 0;
-  error = display_intf_->GetCwbBufferResolution(tap_point, &buffer_width, &buffer_height);
+  error = display_intf_->GetCwbBufferResolution(&cwb_config_, &buffer_width,
+                                                &buffer_height);
   if (error) {
-    DLOGE("Configuring CWB Full rect failed.");
+    DLOGE("Configuring CWB Buffer allocation failed.");
     if (error == kErrorParameters) {
       return HWC2::Error::BadParameter;
     } else {
       return HWC2::Error::Unsupported;
     }
-  } else {
-    full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
   }
 
   DLOGV_IF(kTagClient, "CWB config from client: tap_point %d, CWB ROI Rect(%f %f %f %f), "

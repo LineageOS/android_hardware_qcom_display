@@ -1,8 +1,6 @@
 /*
 * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -22,6 +20,42 @@
 * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <stdio.h>
@@ -364,11 +398,12 @@ DisplayError DisplayBase::InitRC() {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                                  uint32_t *y_pixels) {
   DisplayError error = kErrorNotSupported;
   DisplayConfigVariableInfo display_config;
 
+  CwbTapPoint cwb_tappoint = cwb_config->tap_point;
   if (cwb_tappoint == CwbTapPoint::kDsppTapPoint || cwb_tappoint == CwbTapPoint::kDemuraTapPoint) {
     // To dump post-processed (DSPP) output for CWB, use Panel resolution.
     uint32_t active_index = 0;
@@ -376,8 +411,16 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
     if (error == kErrorNone) {
       error = GetRealConfig(active_index, &display_config);
       if (error == kErrorNone) {
-        *x_pixels = display_config.x_pixels;
-        *y_pixels = display_config.y_pixels;
+        cwb_config->cwb_full_rect.right = display_config.x_pixels;
+        cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
+        LayerRect cwb_roi = cwb_config->cwb_roi;
+        if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+          *x_pixels = cwb_roi.right - cwb_roi.left;
+          *y_pixels = cwb_roi.bottom - cwb_roi.top;
+        } else {
+          *x_pixels = display_config.x_pixels;
+          *y_pixels = display_config.y_pixels;
+        }
       }
     }
   } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
@@ -385,8 +428,16 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
     // a CWB active frame, then LM resolution is reconfigured to FB resolution in PrePrepare phase.
     error = GetFrameBufferConfig(&display_config);
     if (error == kErrorNone) {
-      *x_pixels = display_config.x_pixels;
-      *y_pixels = display_config.y_pixels;
+      cwb_config->cwb_full_rect.right = display_config.x_pixels;
+      cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
+      LayerRect cwb_roi = cwb_config->cwb_roi;
+      if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+        *x_pixels = cwb_roi.right - cwb_roi.left;
+        *y_pixels = cwb_roi.bottom - cwb_roi.top;
+        } else {
+          *x_pixels = display_config.x_pixels;
+          *y_pixels = display_config.y_pixels;
+        }
     }
   }
   return error;
@@ -413,14 +464,11 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
                                    : CwbTapPoint::kLmTapPoint;
 
       uint32_t buffer_width = 0, buffer_height = 0;
-      error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+      error = GetCwbBufferResolution(cwb_config_, &buffer_width, &buffer_height);
       if (error != kErrorNone) {
         DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
         return error;
       }
-
-      // Setting full frame ROI
-      cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
       DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
       cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
     } else {  // Cwb client has set the cwb config in LayerStack.cwb_config .
@@ -2432,7 +2480,7 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
       DLOGE("Output buffer has invalid color format.");
       return kErrorParameters;
     }
-    ApplyCwbRoiRestrictions(roi, full_frame, cwb_alignment_factor);
+    ApplyCwbRoiRestrictions(roi, full_frame, cwb_alignment_factor, format);
   }
 
   // For cmd mode : Incase CWB Client sets cwb_config.pu_as_cwb_roi as true, then PU ROI would be
@@ -4009,14 +4057,13 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
   if (layer_stack->cwb_config == NULL) {
     cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
     uint32_t buffer_width = 0, buffer_height = 0;
-    error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+    error = GetCwbBufferResolution(cwb_config_, &buffer_width, &buffer_height);
     if (error != kErrorNone) {
       DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
       return error;
     }
 
     // Setting full frame ROI
-    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
     DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
     cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
   }
