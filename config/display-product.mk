@@ -231,6 +231,12 @@ else
         SOONG_CONFIG_qtidisplay_var2 := true
         SOONG_CONFIG_qtidisplay_var3 := true
     endif
+    ifneq ($(BUILD_DISPLAY_TECHPACK_SOURCE_VARIANT), true)
+        SOONG_CONFIG_qtidisplay_var1 := true
+        SOONG_CONFIG_qtidisplay_var2 := true
+    endif
+endif
+
     ifeq (,$(wildcard $(QCPATH)/display-noship))
         SOONG_CONFIG_qtidisplay_var1 := true
     endif
@@ -238,7 +244,6 @@ else
     ifeq (,$(wildcard $(QCPATH)/display))
         SOONG_CONFIG_qtidisplay_var2 := true
     endif
-endif
 
 
 
