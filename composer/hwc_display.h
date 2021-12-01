@@ -209,6 +209,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
                                      uint32_t *y_pixels);
   virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
+  virtual DisplayError TeardownCwbForVirtualDisplay(void) {
+    return kErrorNotSupported;
+  }
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
