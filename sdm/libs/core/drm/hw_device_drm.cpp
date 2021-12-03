@@ -1401,8 +1401,15 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
 
+          // Account for PMA block activation directly at translation time to preserve layer
+          // blending definition and avoid issues when a layer structure is reused.
           DRMBlendType blending = DRMBlendType::UNDEFINED;
-          SetBlending(layer.blending, &blending);
+          LayerBlending layer_blend = layer.blending;
+          if (layer_blend ==  kBlendingPremultiplied && pipe_info->inverse_pma_info.inverse_pma) {
+            layer_blend = kBlendingCoverage;
+            DLOGI_IF(kTagDriverConfig, "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
+          }
+          SetBlending(layer_blend, &blending);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
 
           DRMRect src = {};
