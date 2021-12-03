@@ -143,7 +143,6 @@ cc_library_headers {
     vendor: true,
     export_include_dirs: [
         "include",
-        "libcopybit",
         "libdrmutils",
         "libqdutils",
         "libqservice",
