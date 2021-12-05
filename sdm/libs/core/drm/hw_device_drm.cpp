@@ -1075,6 +1075,10 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
       cmd_mode_index_ = current_mode_index_;
     }
   }
+  if (current_mode.mode.hdisplay == to_set.mode.hdisplay &&
+    current_mode.mode.vdisplay == to_set.mode.vdisplay) {
+    seamless_mode_switch_ = true;
+  }
 }
 
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
@@ -1165,7 +1169,9 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   ResetROI();
   int64_t retire_fence_fd = -1;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  if (!IsSeamlessTransition()) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
@@ -1177,7 +1183,9 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
 
   int ret = NullCommit(false /* synchronous */, false /* retain_planes */);
   if (ret) {
-    DLOGE("Failed with error: %d", ret);
+    DLOGE("Failed with error: %d, dynamic_fps=%d, seamless_mode_switch_=%d, vrefresh_=%d,"
+     "panel_mode_changed_=%d bit_clk_rate_=%d", ret, hw_panel_info_.dynamic_fps,
+     seamless_mode_switch_, vrefresh_, panel_mode_changed_, bit_clk_rate_);
     return kErrorHardware;
   }
 
@@ -1687,6 +1695,7 @@ DisplayError HWDeviceDRM::Validate(HWLayersInfo *hw_layers_info) {
     DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
+    seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
     err = kErrorHardware;
   }
@@ -1787,6 +1796,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
+    seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
     return kErrorHardware;
   }
@@ -1847,6 +1857,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   pending_power_state_ = kPowerStateNone;
   // Inherently a real commit ensures null commit properties have happened, so update the member
   first_null_cycle_ = false;
+  seamless_mode_switch_ = false;
 
   SetTUIState();
 
