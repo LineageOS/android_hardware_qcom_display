@@ -65,6 +65,7 @@ namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
+using HwcClientTargetProperty = composer_V2_4::IComposerClient::ClientTargetProperty;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfig;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback;
 using ::aidl::vendor::qti::hardware::display::config::CameraSmoothOp;
@@ -263,6 +264,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
   int32_t SetDimmingEnable(hwc2_display_t display, int32_t int_enabled);
   int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
+  int32_t GetClientTargetProperty(hwc2_display_t display,
+                                  HwcClientTargetProperty *outClientTargetProperty);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,

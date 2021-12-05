@@ -1568,6 +1568,7 @@ Error QtiComposerClient::CommandReader::postValidateDisplay(uint32_t& types_coun
   std::vector<IComposerClient::Composition> compositionTypes;
   std::vector<Layer> requestedLayers;
   std::vector<uint32_t> requestMasks;
+  IComposerClient::ClientTargetProperty clientTargetProperty;
   changedLayers.resize(types_count);
   compositionTypes.resize(types_count);
   auto err = mClient.hwc_session_->GetChangedCompositionTypes(mDisplay, &types_count,
@@ -1609,8 +1610,17 @@ Error QtiComposerClient::CommandReader::postValidateDisplay(uint32_t& types_coun
     requestMasks.clear();
   }
 
+  err = mClient.hwc_session_->GetClientTargetProperty(mDisplay, &clientTargetProperty);
+  if (err != HWC2_ERROR_NONE) {
+    // todo: reset to default values
+    return static_cast<Error>(err);
+  }
+
   mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
   mWriter.setDisplayRequests(display_reqs, requestedLayers, requestMasks);
+  if (mClient.mUseCallback24_) {
+    mWriter.setClientTargetProperty(clientTargetProperty);
+  }
 
   return static_cast<Error>(err);
 }

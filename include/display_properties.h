@@ -156,6 +156,8 @@
 #define ENABLE_PRIMARY_RECONFIG_REQUEST      DISPLAY_PROP("enable_primary_reconfig_request")
 // SDM verbose logging
 #define ENABLE_VERBOSE_LOG                   DISPLAY_PROP("enable_verbose_log")
+// HDR10 GPU Target
+#define ENABLE_HDR10_GPU_TARGET              DISPLAY_PROP("enable_hdr10_gpu_target")
 
 // Add all vendor.display properties above
 

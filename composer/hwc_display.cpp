@@ -841,13 +841,6 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.layers.push_back(sdm_client_target);
 
   layer_stack_.elapse_timestamp = elapse_timestamp_;
-  // fall back frame composition to GPU when client target is 10bit
-  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
-  // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
-    // Must fall back to client composition
-    MarkLayersForClientComposition();
-  }
 
   layer_stack_.client_incompatible =
       dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
@@ -1250,12 +1243,6 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
-  int translated_dataspace = TranslateFromLegacyDataspace(dataspace);
-  if (client_target_->GetLayerDataspace() != translated_dataspace) {
-    DLOGW("New Dataspace = %d not matching Dataspace from color mode = %d",
-           translated_dataspace, client_target_->GetLayerDataspace());
-    return HWC2::Error::BadParameter;
-  }
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_handle_ = target;
   client_acquire_fence_ = acquire_fence;
@@ -3460,6 +3447,34 @@ DisplayError HWCDisplay::HandleQsyncState(const QsyncEventData &qsync_data) {
                                        qsync_data.refresh_rate,
                                        qsync_data.qsync_refresh_rate);
   return kErrorNone;
+}
+
+HWC2::Error HWCDisplay::GetClientTargetProperty(ClientTargetProperty *out_client_target_property) {
+
+  Layer *client_layer = client_target_->GetSDMLayer();
+  if (!client_layer->request.flags.update_format) {
+    return HWC2::Error::None;
+  }
+  int32_t format = 0;
+  uint64_t flags = 0;
+  auto err = buffer_allocator_->SetBufferInfo(client_layer->request.format, &format, &flags);
+  if (err) {
+    DLOGE("Invalid format: %s requested", GetFormatString(client_layer->request.format));
+    return HWC2::Error::BadParameter;
+  }
+  Dataspace dataspace;
+  DisplayError error = ColorMetadataToDataspace(client_layer->request.color_metadata, &dataspace);
+  if (error != kErrorNone) {
+    DLOGE("Invalid Dataspace requested: Primaries = %d Transfer = %d ds = %d",
+          client_layer->request.color_metadata.colorPrimaries,
+          client_layer->request.color_metadata.transfer, dataspace);
+    return HWC2::Error::BadParameter;
+  }
+  out_client_target_property->dataspace = dataspace;
+  out_client_target_property->pixelFormat =
+      (android::hardware::graphics::common::V1_2::PixelFormat)format;
+
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm
