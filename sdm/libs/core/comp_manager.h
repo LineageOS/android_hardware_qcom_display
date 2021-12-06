@@ -89,6 +89,7 @@ class CompManager {
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
   bool CheckResourceState(Handle display_ctx, bool *res_exhausted, HWDisplayAttributes attr);
+  DisplayError GetConcurrencyFps(DisplayConcurrencyType type, float *fps);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
   DisplayError FreeDemuraFetchResources(const uint32_t &display_id);

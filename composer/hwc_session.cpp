@@ -773,6 +773,65 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled
   callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
 }
 
+
+void HWCSession::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType type,
+                                      bool concurrency_begin) {
+  DisplayConfigVariableInfo var_info;
+  Attributes attributes;
+  hwc2_display_t target_display = GetActiveBuiltinDisplay();
+  hwc2_config_t current_config = 0;
+
+  if(target_display >= HWCCallbacks::kNumDisplays) {
+    return;
+  }
+
+  hwc_display_[target_display]->GetActiveConfig(&current_config);
+  int error = hwc_display_[target_display]->GetDisplayAttributesForConfig(INT(current_config),
+                                                                          &var_info);
+  if(error) {
+    return;
+  }
+
+  Concurrency concurrency;
+  attributes.vsyncPeriod = (1 / fps) * 1000000;
+  attributes.xRes = var_info.x_pixels;
+  attributes.yRes = var_info.y_pixels;
+  attributes.xDpi = var_info.x_dpi;
+  attributes.yDpi = var_info.y_dpi;
+  attributes.panelType = DisplayPortType::DEFAULT;
+  attributes.isYuv = var_info.is_yuv;
+  switch (type) {
+    case DisplayConcurrencyType::kConcurrencyWfd:
+      concurrency = Concurrency::WFD;
+    break;
+      case DisplayConcurrencyType::kConcurrencyDp:
+      concurrency = Concurrency::DP;
+    break;
+      case DisplayConcurrencyType::kConcurrencyCamera:
+      concurrency = Concurrency::CAMERA;
+    break;
+      case DisplayConcurrencyType::kConcurrencyCwb:
+      concurrency = Concurrency::CWB;
+    break;
+    case DisplayConcurrencyType::kConcurrencyNone:
+    case DisplayConcurrencyType::kConcurrencyMax:
+      return;
+  }
+
+  if(concurrency_begin) {
+    NotifyFpsMitigation(target_display, attributes, concurrency);
+    callbacks_.Refresh(target_display);
+    int ret = WaitForCommitDone(target_display, kClientConcurrency);
+    if (ret != 0) {
+      DLOGE("WaitForCommitDone failed with error %d for %d", ret, kClientConcurrency);
+    }
+    return;
+  }
+
+  std::thread(&HWCSession::NotifyFpsMitigation, this,
+              target_display, attributes, concurrency).detach();
+}
+
 void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = idle_callback_.lock();
   if (!callback) {
@@ -1337,7 +1396,7 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
 
       int32_t display_id = GetVirtualDisplayId();
       status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                               client_id, display_id, width, height,
+                                               this, client_id, display_id, width, height,
                                                format, set_min_lum_, set_max_lum_, &hwc_display);
       // TODO(user): validate width and height support
       if (status) {

@@ -484,6 +484,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id);
   virtual DisplayError HandleEvent(DisplayEvent event);
   virtual DisplayError HandleQsyncState(const QsyncEventData &qsync_data);
+  virtual DisplayError NotifyFpsMitigation(const float fps, DisplayConcurrencyType concurrency,
+                                           bool concurrency_begin);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
                                 shared_ptr<Fence> &retire_fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);

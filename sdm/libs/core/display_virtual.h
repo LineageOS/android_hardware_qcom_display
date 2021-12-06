@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -40,6 +40,7 @@ class DisplayVirtual : public DisplayBase {
                  HWInfoInterface *hw_info_intf, BufferAllocator *buffer_allocator,
                  CompManager *comp_manager);
   virtual DisplayError Init();
+  virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
@@ -76,6 +77,8 @@ class DisplayVirtual : public DisplayBase {
  protected:
   float set_max_lum_ = -1.0;
   float set_min_lum_ = -1.0;
+  bool async_vds_creation_ = false;
+  bool disable_mitigated_fps_ = false;
 };
 
 }  // namespace sdm
