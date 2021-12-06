@@ -831,6 +831,11 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // From now, till power-state transition ends, for operations that need to be non-blocking, do
   // those operations on the dummy display.
 
+  if (mode == HWC2::PowerMode::Off || mode == HWC2::PowerMode::DozeSuspend) {
+    hwc_session_->active_displays_.erase(disp_id);
+  } else {
+    hwc_session_->active_displays_.insert(disp_id);
+  }
   // Perform the actual [synchronous] power-state change.
   hwc_session_->hwc_display_[disp_id]->SetPowerMode(mode, false /* teardown */);
 

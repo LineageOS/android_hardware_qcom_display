@@ -349,6 +349,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static int commit_error_[HWCCallbacks::kNumDisplays];
   static Locker vm_release_locker_[HWCCallbacks::kNumDisplays];
   static std::bitset<HWCCallbacks::kNumDisplays> clients_waiting_for_vm_release_;
+  static std::set<hwc2_display_t> active_displays_;
 
  private:
   class CWB {
@@ -646,7 +647,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
   bool primary_pending_ = true;
   Locker primary_display_lock_;
-  std::map <hwc2_display_t, sdm::DisplayType> map_active_displays_;
 };
 }  // namespace sdm
 
