@@ -151,6 +151,7 @@ enum DisplayEvent {
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
   kSyncInvalidateDisplay,   // Event triggered by Non-DrawCycle threads to Invalidate display.
   kPostIdleTimeout,         // Event triggered after entering idle.
+  kVmReleaseDone,           // Event triggered after releasing the mdp hw to secondary vm.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */

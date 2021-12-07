@@ -118,6 +118,9 @@ enum LayerComposition {
 
   kCompositionStitchTarget,  //!< This layer will hold result of composition for layers marked fo
                              //!< Blit composition.
+
+  kCompositionCWBTarget,     //!< This layer will hold result of composition for layers marked for
+                             //!< CWB composition in case of Idle fallback.
 };
 
 enum LayerUpdate {
@@ -218,6 +221,9 @@ struct LayerFlags {
 
       uint32_t is_noise : 1;  //!< This flag shall be set by SDM to indicate this layer as noise
 
+      uint32_t is_cwb : 1;    //!< This flag shall be set by SDM to indicate that this layer is
+                              //!< CWB output layer
+
       uint32_t reserved1 : 1;
                               //!< This flag is reserved(1) for private usage
       uint32_t reserved2 : 1;
@@ -226,6 +232,8 @@ struct LayerFlags {
                               //!< This flag is reserved(3) for private usage
       uint32_t reserved4 : 1;
                               //!< This flag is reserved(4) for private usage
+      uint32_t has_metadata_refresh_rate : 1;
+                              //!< This flag is used to mark if layer uses metadata refresh rate
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -337,6 +345,10 @@ struct LayerStackFlags {
       uint32_t reserved3 : 1;  //!< This flag is reserved(3) for private usage
 
       uint32_t reserved4 : 1;  //!< This flag is reserved(4) for private usage
+
+      uint32_t scaling_rgb_layer_present : 1;  //!< This flag indicates scaling rgb layer presence
+
+      bool use_metadata_refresh_rate : 1;
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -523,6 +535,16 @@ struct CwbConfig {
   @sa DisplayInterface::Commit
 */
 
+struct LayerStackRequestFlags {
+  union {
+    struct {
+      uint32_t trigger_refresh : 1;
+    };
+    uint32_t request_flags = 0;  //!< For initialization purpose only.
+                                 //!< Shall not be refered directly.
+  };
+};
+
 struct LayerStack {
   std::vector<Layer *> layers = {};    //!< Vector of layer pointers.
 
@@ -557,6 +579,10 @@ struct LayerStack {
   bool validate_only = false;
   bool client_incompatible = false;    //!< Flag to disable async commit when client target is
                                        //!< not compatible.
+
+  LayerStackRequestFlags request_flags;  //!< request flags on this LayerStack by SDM.
+
+  uint32_t force_refresh_rate = 0;
 };
 
 }  // namespace sdm

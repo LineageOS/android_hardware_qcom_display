@@ -869,7 +869,10 @@ DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
   hw_displays_info->clear();
   sde_drm::DRMConnectorsInfo conns_info = {};
   int drm_err = drm_mgr_intf_->GetConnectorsInfo(&conns_info);
-  if (drm_err) {
+  if (drm_err == -ENODEV) {
+    DLOGW("DRM Driver error %d while getting displays' status!", drm_err);
+    return kErrorUndefined;
+  } else if (drm_err) {
     DLOGE("DRM Driver error %d while getting displays' status!", drm_err);
     return kErrorUndefined;
   }

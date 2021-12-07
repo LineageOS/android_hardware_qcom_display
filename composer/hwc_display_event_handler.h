@@ -37,6 +37,7 @@ class HWCDisplayEventHandler {
   virtual void DisplayPowerReset() = 0;
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate) = 0;
+  virtual void VmReleaseDone(hwc2_display_t display) = 0;
 
  protected:
   virtual ~HWCDisplayEventHandler() {}

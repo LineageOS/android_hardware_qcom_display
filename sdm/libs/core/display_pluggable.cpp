@@ -105,7 +105,7 @@ DisplayError DisplayPluggable::Init() {
   GetScanSupport();
   underscan_supported_ = (scan_support_ == kScanAlwaysUnderscanned) || (scan_support_ == kScanBoth);
 
-  event_list_ = {HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT, HWEvent::CEC_READ_MESSAGE,
+  event_list_ = {HWEvent::VSYNC, HWEvent::EXIT, HWEvent::CEC_READ_MESSAGE,
                  HWEvent::HW_RECOVERY, HWEvent::POWER_EVENT};
 
   error = HWEventsInterface::Create(display_id_, kPluggable, this, event_list_, hw_intf_,
@@ -466,11 +466,11 @@ void DisplayPluggable::UpdateColorModes() {
 }
 
 DisplayError DisplayPluggable::colorSamplingOn() {
-    return kErrorNone;
+  return kErrorNone;
 }
 
 DisplayError DisplayPluggable::colorSamplingOff() {
-    return kErrorNone;
+  return kErrorNone;
 }
 
 void DisplayPluggable::MMRMEvent(uint32_t clk) {
@@ -480,6 +480,9 @@ void DisplayPluggable::MMRMEvent(uint32_t clk) {
 
 void DisplayPluggable::HandlePowerEvent() {
   return ProcessPowerEvent();
+}
+
+void DisplayPluggable::HandleVmReleaseEvent() {
 }
 
 }  // namespace sdm

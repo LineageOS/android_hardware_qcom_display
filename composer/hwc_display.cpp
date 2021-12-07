@@ -486,7 +486,7 @@ int HWCDisplay::Init() {
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
     disp_null->Init();
-    use_metadata_refresh_rate_ = false;
+    layer_stack_.flags.use_metadata_refresh_rate = false;
     display_intf_ = disp_null;
     DLOGI("Enabling null display mode for display type %d", type_);
   } else {
@@ -678,7 +678,7 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
-  metadata_refresh_rate_ = 0;
+  layer_stack_.flags.use_metadata_refresh_rate = false;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.layer_id_support = true;
   layer_stack_.solid_fill_enabled = solid_fill_enable_;
@@ -734,6 +734,10 @@ void HWCDisplay::BuildLayerStack() {
     if (layer->input_buffer.flags.secure_display) {
       layer_stack_.flags.secure_present = true;
       is_secure = true;
+    }
+
+    if (IS_RGB_FORMAT(layer->input_buffer.format) && hwc_layer->IsScalingPresent()) {
+      layer_stack_.flags.scaling_rgb_layer_present = true;
     }
 
     if (hwc_layer->IsSingleBuffered() &&
@@ -796,8 +800,8 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.bottom = layer_buffer->height;
     }
 
-    if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
-      metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
+    if (hwc_layer->HasMetaDataRefreshRate()) {
+      layer->flags.has_metadata_refresh_rate = true;
     }
 
     display_rect_ = Union(display_rect_, layer->dst_rect);
@@ -969,6 +973,13 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
+      {
+        std::lock_guard<std::mutex> lock(cwb_state_lock_);
+        if (cwb_state_.cwb_disp_id == id_) {  // If CWB is requested or configured or
+          // tearing-down on disp id_, then flush cwb setup before the display power off.
+          ResetCwbState();
+        }
+      }  // releasing the cwb state lock
       break;
     case HWC2::PowerMode::On:
       if (mmrm_restricted_ && (display_class_ != DISPLAY_CLASS_BUILTIN) &&
@@ -1447,16 +1458,6 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
-    case kIdleTimeout: {
-      SCOPE_LOCK(HWCSession::locker_[id_]);
-      if (pending_commit_) {
-        // If idle timeout event comes in between prepare
-        // and commit, drop it since device is not really
-        // idle.
-        return kErrorNotSupported;
-      }
-      break;
-    }
     case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
       // TODO(user): Following scenario need to be addressed
@@ -1474,6 +1475,14 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
     case kPostIdleTimeout:
       display_idle_ = true;
       break;
+    case kVmReleaseDone: {
+      if (event_handler_) {
+        event_handler_->VmReleaseDone(id_);
+      } else {
+        DLOGW("Cannot execute VmReleaseDone (client_id = %" PRId64 "), event_handler_ is null",
+              id_);
+      }
+    } break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -2518,19 +2527,6 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
   return 0;
 }
 
-uint32_t HWCDisplay::GetUpdatingLayersCount(void) {
-  uint32_t updating_count = 0;
-
-  for (uint i = 0; i < layer_stack_.layers.size(); i++) {
-    auto layer = layer_stack_.layers.at(i);
-    if (layer->flags.updating) {
-      updating_count++;
-    }
-  }
-
-  return updating_count;
-}
-
 bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   auto layer = hwc_layer->GetSDMLayer();
   // Layer should be considered updating if
@@ -2540,23 +2536,6 @@ bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   //      geometry_changed as bit fields).
   return (layer->flags.single_buffer || hwc_layer->IsSurfaceUpdated() ||
           hwc_layer->GetGeometryChanges());
-}
-
-uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {
-  uint32_t refresh_rate = req_refresh_rate;
-
-  if (refresh_rate < min_refresh_rate_) {
-    // Pick the next multiple of request which is within the range
-    refresh_rate =
-        (((min_refresh_rate_ / refresh_rate) + ((min_refresh_rate_ % refresh_rate) ? 1 : 0)) *
-         refresh_rate);
-  }
-
-  if (refresh_rate > max_refresh_rate_) {
-    refresh_rate = max_refresh_rate_;
-  }
-
-  return refresh_rate;
 }
 
 DisplayClass HWCDisplay::GetDisplayClass() {
@@ -3291,6 +3270,7 @@ void HWCDisplay::SetCwbState() {
 void HWCDisplay::ResetCwbState() {
   // Resets cwb state struct. Used in CWB teardown frame if flush_ is set.
   // Also called incase cwb active display is unplugged.
+  DLOGV_IF(kTagClient, "Resetting Cwb State.");
   cwb_state_ = {};
 }
 

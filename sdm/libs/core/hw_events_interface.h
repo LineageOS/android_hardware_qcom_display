@@ -38,7 +38,6 @@ class HWInterface;
 enum HWEvent {
   VSYNC = 0,
   EXIT,
-  IDLE_NOTIFY,
   CEC_READ_MESSAGE,
   SHOW_BLANK_EVENT,
   THERMAL_LEVEL,
@@ -50,6 +49,7 @@ enum HWEvent {
   BACKLIGHT_EVENT,
   MMRM,
   POWER_EVENT,
+  VM_RELEASE_EVENT,
 };
 
 class HWEventsInterface {

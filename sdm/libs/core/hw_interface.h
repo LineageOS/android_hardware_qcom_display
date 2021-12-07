@@ -64,7 +64,6 @@ class HWEventHandler {
  public:
   virtual DisplayError VSync(int64_t timestamp) = 0;
   virtual DisplayError Blank(bool blank) = 0;
-  virtual void IdleTimeout() = 0;
   virtual void CECMessage(char *message) = 0;
   virtual void IdlePowerCollapse() = 0;
   virtual void PingPongTimeout() = 0;
@@ -74,6 +73,7 @@ class HWEventHandler {
   virtual void HandleBacklightEvent(float brightness_level) = 0;
   virtual void MMRMEvent(uint32_t clk) = 0;
   virtual void HandlePowerEvent() = 0;
+  virtual void HandleVmReleaseEvent() = 0;
 
  protected:
   virtual ~HWEventHandler() { }

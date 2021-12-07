@@ -126,8 +126,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   enum ClientCommitDone {
     kClientPartialUpdate,
     kClientIdlepowerCollapse,
-    kClientTrustedUI,
     kClientTeardownCWB,
+    kClientTrustedUI,
     kClientMax
   };
 
@@ -311,8 +311,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
+  virtual void PerformDisplayPowerReset();
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate);
+  virtual void VmReleaseDone(hwc2_display_t display);
 
   int32_t SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled);
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
@@ -337,11 +339,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
-  static Locker system_locker_;
   static std::mutex command_seq_mutex_;
   static std::bitset<kClientMax> clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
   static shared_ptr<Fence> retire_fence_[HWCCallbacks::kNumDisplays];
   static int commit_error_[HWCCallbacks::kNumDisplays];
+  static Locker vm_release_locker_[HWCCallbacks::kNumDisplays];
+  static std::bitset<HWCCallbacks::kNumDisplays> clients_waiting_for_vm_release_;
 
  private:
   class CWB {
@@ -467,6 +470,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   static const int kExternalConnectionTimeoutMs = 500;
   static const int kCommitDoneTimeoutMs = 100;
+  static const int kVmReleaseTimeoutMs = 100;
   uint32_t throttling_refresh_rate_ = 60;
   std::mutex hotplug_mutex_;
   std::condition_variable hotplug_cv_;
@@ -582,6 +586,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
   int WaitForCommitDone(hwc2_display_t display, int client_id);
   void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
+  int WaitForVmRelease(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

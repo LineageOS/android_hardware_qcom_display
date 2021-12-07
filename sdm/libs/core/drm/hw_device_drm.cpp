@@ -1170,10 +1170,24 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
+  if (cwb_config_.cwb_disp_id == display_id_ && cwb_config_.enabled) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    DLOGI("Tearing down the CWB topology");
+  }
+
   int ret = NullCommit(false /* synchronous */, false /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
+  }
+
+  if (cwb_config_.cwb_disp_id == display_id_) {  // Incase display power-off in cwb active/teardown
+    // state, then reset cwb_display_id to un-block other displays from performing CWB.
+    if (cwb_config_.enabled) {
+      FlushConcurrentWriteback();
+    } else {  // for CWB Post-teardown (the frame following teardown) frame
+      cwb_config_.cwb_disp_id = -1;
+    }
   }
 
   sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
@@ -1301,6 +1315,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   bool buffer_update = hw_layers_info->updates_mask.test(kSwapBuffers);
   bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
                        hw_layers_info->flags.geometry_changed;
+  bool update_luts = hw_layers_info->updates_mask.test(kUpdateLuts);
 
   if (hw_panel_info_.partial_update && update_config) {
     if (IsFullFrameUpdate(*hw_layers_info)) {
@@ -1441,6 +1456,8 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
           SetMultiRectMode(pipe_info->flags, &multirect_mode);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
 
+          SetSsppTonemapFeatures(pipe_info);
+        } else if (update_luts) {
           SetSsppTonemapFeatures(pipe_info);
         }
 
@@ -1744,8 +1761,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   SetupAtomic(scoped_ref, hw_layers_info, false /* validate */,
                                    &release_fence_fd, &retire_fence_fd);
 
-  bool sync_commit = synchronous_commit_ || first_cycle_ ||
-                    (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd);
+  bool sync_commit = synchronous_commit_ || first_cycle_;
 
   if (hw_layers_info->elapse_timestamp > 0) {
     struct timespec t = {0, 0};
@@ -2789,7 +2805,8 @@ bool HWDeviceDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bo
   }
 
   if (cwb_config_.cwb_disp_id != -1 && cwb_config_.cwb_disp_id != display_id_) {
-    DLOGW("CWB already on-going for display : %d", cwb_config_.cwb_disp_id);
+    // Either cwb is currently active or tearing down on display cwb_config_.cwb_disp_id
+    DLOGW("CWB already busy with display : %d", cwb_config_.cwb_disp_id);
     return false;
   } else {
     cwb_config_.cwb_disp_id = display_id_;
@@ -2993,6 +3010,9 @@ DisplayError HWDeviceDRM::GetFeatureSupportStatus(const HWFeature feature, uint3
 void HWDeviceDRM::FlushConcurrentWriteback() {
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
   TeardownConcurrentWriteback();
+  cwb_config_.cwb_disp_id = -1;
+  DLOGI("Flushing out CWB Config. cwb_enabled = %d , cwb_disp_id : %d", cwb_config_.enabled,
+        cwb_config_.cwb_disp_id);
 }
 
 DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,

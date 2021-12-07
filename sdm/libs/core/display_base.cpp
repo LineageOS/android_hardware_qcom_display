@@ -23,6 +23,7 @@
 */
 
 #include <stdio.h>
+#include <malloc.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/formats.h>
@@ -129,6 +130,7 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
+  active_refresh_rate_ = display_attributes_.fps;
 
   if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
     if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
@@ -247,6 +249,11 @@ DisplayError DisplayBase::Deinit() {
   }
 
   CloseFd(&cached_framebuffer_.planes[0].fd);
+#ifdef TRUSTED_VM
+  // release free memory from the heap, needed for Trusted_VM due to the limited
+  // carveout size
+  malloc_trim(0);
+#endif
   return kErrorNone;
 }
 
@@ -771,6 +778,17 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   CacheDisplayComposition();
 
+  if (error == kErrorNone) {
+    error = ConfigureCwbForIdleFallback(layer_stack);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+
+  if (disp_layer_stack_.info.enable_self_refresh) {
+    hw_intf_->EnableSelfRefresh();
+  }
+
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
 
   return error;
@@ -1204,9 +1222,13 @@ void DisplayBase::CommitThread() {
     disp_mutex_.worker_cv.notify_one();
 
     // Wait for client thread to signal. Handle spurious interrupts.
-    disp_mutex_.worker_cv.wait(disp_mutex_.worker_mutex, [this] {
-      return disp_mutex_.worker_busy;
-    });
+    if (!(disp_mutex_.worker_cv.wait_until(disp_mutex_.worker_mutex, WaitUntil(), [this] {
+      return (disp_mutex_.worker_busy);
+    }))) {
+      DLOGI("Received idle timeout");
+      IdleTimeout();
+      continue;
+    }
 
     if (disp_mutex_.worker_exit) {
       DLOGI("Terminate commit thread.");
@@ -1230,7 +1252,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   // part of first validate
   if (first_cycle_) {
     hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
-    hw_events_intf_->SetEventState(HWEvent::IDLE_NOTIFY, true);
     hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
     hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
     hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
@@ -1239,6 +1260,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 #endif
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
+  if (layer_stack->request_flags.trigger_refresh) {
+    layer_stack->output_buffer = nullptr;
+  }
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
@@ -1767,6 +1791,11 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
     return error;
   }
 
+  // Cache last refresh rate set by SF
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &display_attributes);
+  active_refresh_rate_ = display_attributes.fps;
+
   return ReconfigureDisplay();
 }
 
@@ -2036,6 +2065,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionGPUTarget:     return "GPU_TARGET";
   case kCompositionStitchTarget:  return "STITCH_TARGET";
   case kCompositionDemura:        return "DEMURA";
+  case kCompositionCWBTarget:     return "CWB_TARGET";
   default:                        return "UNKNOWN";
   }
 }
@@ -2848,10 +2878,11 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   if (de_data.enable) {
-    disable_pu_on_dest_scaler_ = true;
+    de_enabled_  = true;
   } else {
-    SetPUonDestScaler();
+    de_enabled_ = false;
   }
+  SetPUonDestScaler();
 
   return kErrorNone;
 }
@@ -3180,7 +3211,7 @@ void DisplayBase::SetPUonDestScaler() {
   uint32_t display_height = display_attributes_.y_pixels;
 
   disable_pu_on_dest_scaler_ = (mixer_width != display_width ||
-                                mixer_height != display_height);
+                                mixer_height != display_height) || de_enabled_;
 }
 
 void DisplayBase::ClearColorInfo() {
@@ -3816,10 +3847,11 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
     // TODO(user): Temporary changes, to be removed when DRM driver supports
     // Partial update with Destination scaler enabled.
     if (de_data.enable) {
-      disable_pu_on_dest_scaler_ = true;
+      de_enabled_  = true;
     } else {
-      SetPUonDestScaler();
+      de_enabled_  = false;
     }
+    SetPUonDestScaler();
 
     de_tuning_cfg_data->cfg_pending = false;
   }
@@ -3915,6 +3947,54 @@ void DisplayBase::PrepareForAsyncTransition() {
   // To prevent accidental usage, reset all such internal pointers referring to caller structures
   //    so that an instant fatal error is observed in place of prolonged corruption.
   disp_layer_stack_.stack = nullptr;
+}
+
+std::chrono::system_clock::time_point DisplayBase::WaitUntil() {
+  int idle_time_ms = disp_layer_stack_.info.set_idle_time_ms;
+  std::chrono::system_clock::time_point timeout_time;
+  // Indefinite wait if state is off or idle timeout has triggered
+  if (state_ == kStateOff || idle_time_ms == 0 || handle_idle_timeout_) {
+    timeout_time = std::chrono::system_clock::from_time_t(INT_MAX);
+  } else {
+    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+    timeout_time = current_time + std::chrono::milliseconds(idle_time_ms);
+  }
+  return timeout_time;
+}
+
+DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
+  DisplayError error = kErrorNone;
+  if (!layer_stack->request_flags.trigger_refresh) {
+    return error;
+  }
+
+  comp_manager_->HandleCwbFrequencyBoost(true);
+
+  cwb_config_ = new CwbConfig;
+  if (layer_stack->cwb_config == NULL) {
+    cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
+    uint32_t buffer_width = 0, buffer_height = 0;
+    error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+    if (error != kErrorNone) {
+      DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
+      return error;
+    }
+
+    // Setting full frame ROI
+    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
+    DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+    cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
+  }
+
+  disp_layer_stack_.info.hw_cwb_config = cwb_config_;
+  error = ValidateCwbConfigInfo(disp_layer_stack_.info.hw_cwb_config,
+                                layer_stack->output_buffer->format);
+  if (error != kErrorNone) {
+    DLOGE("CWB_config validation failed.");
+    return error;
+  }
+
+  return error;
 }
 
 }  // namespace sdm

@@ -91,13 +91,14 @@ void Strategy::GenerateROI(DispLayerStack *disp_layer_stack, const PUConstraints
   return GenerateROI();
 }
 
-DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts) {
+DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts,
+                             StrategyConstraints *constraints) {
   DisplayError error = kErrorNone;
   disp_layer_stack_ = disp_layer_stack;
   extn_start_success_ = false;
 
   if (strategy_intf_) {
-    error = strategy_intf_->Start(disp_layer_stack_, max_attempts);
+    error = strategy_intf_->Start(disp_layer_stack_, max_attempts, constraints);
     if (error == kErrorNone || error == kErrorNeedsValidate || error == kErrorNeedsLutRegen) {
       extn_start_success_ = true;
       return error;
@@ -117,14 +118,14 @@ DisplayError Strategy::Stop() {
   return kErrorNone;
 }
 
-DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
+DisplayError Strategy::GetNextStrategy() {
   if (!disable_gpu_comp_ && !disp_layer_stack_->info.gpu_target_index) {
     DLOGE("GPU composition is enabled and GPU target buffer not provided.");
     return kErrorNotSupported;
   }
 
   if (extn_start_success_) {
-    return strategy_intf_->GetNextStrategy(constraints);
+    return strategy_intf_->GetNextStrategy();
   }
 
   // Do not fallback to GPU if GPU comp is disabled.

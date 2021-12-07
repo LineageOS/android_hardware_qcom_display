@@ -122,6 +122,7 @@
 // Disable 3D adaptive tone mapping support
 #define DISABLE_3D_ADAPTIVE_TM               DISPLAY_PROP("disable_3d_adaptive_tm")
 #define DISABLE_SDR_HISTOGRAM                DISPLAY_PROP("disable_sdr_histogram")
+#define ALLOW_3D_ADAPTIVE_TM_EXTERNAL        DISPLAY_PROP("allow_3d_adaptive_tm_external")
 // Disable SDR dimming support
 #define DISABLE_SDR_DIMMING                  DISPLAY_PROP("disable_sdr_dimming")
 #define FORCE_TONEMAPPING                    DISPLAY_PROP("force_tonemapping")
@@ -138,6 +139,7 @@
 #define DISABLE_DEMURA_PRIMARY               DISPLAY_PROP("disable_demura_primary")
 #define DISABLE_DEMURA_SECONDARY             DISPLAY_PROP("disable_demura_secondary")
 #define DISABLE_DEMURA_PANEL_REPLACEMENT     DISPLAY_PROP("disable_demura_panel_replacement")
+#define DISABLE_DEMURA_OPT_SINGLELM          DISPLAY_PROP("disable_demura_opt_singlelm")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
@@ -170,6 +172,9 @@
 #define WINDOW_RECT_PROP_SECONDARY           DISPLAY_PROP("window_rect_secondary")
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
+#define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")
+#define ENABLE_CWB_IDLE_FALLBACK             DISPLAY_PROP("enable_cwb_idle_fallback")
+
 // Add all other.properties above
 // End of property
 #endif  // __DISPLAY_PROPERTIES_H__

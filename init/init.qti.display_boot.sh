@@ -41,6 +41,7 @@ case "$target" in
     #SOC ID for Waipio is 457
     #SOC ID for Cape MSM is 530
     #SOC ID for Cape APQ is 531
+    #SOC ID for Cape 4g is 540
     case "$soc_hwid" in
         457)
         setprop vendor.gralloc.use_dma_buf_heaps 1
@@ -51,8 +52,9 @@ case "$target" in
         setprop vendor.display.enable_spec_fence 1
         setprop vendor.display.thermal.version 1
         setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 3
         ;;
-        530|531)
+        530|531|540)
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_allow_idle_fallback 1

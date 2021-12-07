@@ -66,12 +66,14 @@ std::bitset<HWCSession::kClientMax>
 shared_ptr<Fence> HWCSession::retire_fence_[HWCCallbacks::kNumDisplays];
 int HWCSession::commit_error_[HWCCallbacks::kNumDisplays] = { 0 };
 Locker HWCSession::display_config_locker_;
-Locker HWCSession::system_locker_;
 std::mutex HWCSession::command_seq_mutex_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 static const uint32_t kBrightnessScaleMax = 100;
 static const uint32_t kSvBlScaleMax = 65535;
+Locker HWCSession::vm_release_locker_[HWCCallbacks::kNumDisplays];
+std::bitset<HWCCallbacks::kNumDisplays> HWCSession::clients_waiting_for_vm_release_;
+
 
 // Map the known color modes to dataspace.
 int32_t GetDataspaceFromColorMode(ColorMode mode) {
@@ -787,7 +789,6 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
-  SCOPE_LOCK(system_locker_);
   if (display >= HWCCallbacks::kNumDisplays) {
     DLOGW("Invalid Display : display = %" PRIu64, display);
     return HWC2_ERROR_BAD_DISPLAY;
@@ -3105,7 +3106,6 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   DLOGI("Notify hotplug display disconnected: client id = %d", UINT32(client_id));
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
-  SCOPE_LOCK(system_locker_);
   // Wait until all commands are flushed.
   std::lock_guard<std::mutex> hwc_lock(command_seq_mutex_);
   {
@@ -3186,7 +3186,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
     map_info->Reset();
 }
 
-void HWCSession::DisplayPowerReset() {
+void HWCSession::PerformDisplayPowerReset() {
   // Wait until all commands are flushed.
   std::lock_guard<std::mutex> lock(command_seq_mutex_);
   // Acquire lock on all displays.
@@ -3243,6 +3243,20 @@ void HWCSession::DisplayPowerReset() {
   }
 
   callbacks_.Refresh(vsync_source);
+}
+
+void HWCSession::DisplayPowerReset() {
+  // Do Power Reset in a different thread to avoid blocking of SDM event thread
+  // when disconnecting display.
+  std::thread(&HWCSession::PerformDisplayPowerReset, this).detach();
+}
+
+void HWCSession::VmReleaseDone(hwc2_display_t display) {
+  SCOPE_LOCK(vm_release_locker_[display]);
+  if (clients_waiting_for_vm_release_.test(display)) {
+    vm_release_locker_[display].Signal();
+  }
+  DLOGI("Signal vm release done!! for display %d", display);
 }
 
 void HWCSession::HandleSecureSession() {
@@ -3830,6 +3844,16 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   return ret;
 }
 
+int HWCSession::WaitForVmRelease(hwc2_display_t display) {
+  SCOPE_LOCK(vm_release_locker_[display]);
+  clients_waiting_for_vm_release_.set(display);
+  int ret = vm_release_locker_[display].WaitFinite(kVmReleaseTimeoutMs);
+  if (ret != 0) {
+    DLOGE("Timed out with error %d for display %" PRIu64, ret, display);
+  }
+  return ret;
+}
+
 android::status_t HWCSession::HandleTUITransition(int disp_id, int event) {
   switch(event) {
     case qService::IQService::TUI_TRANSITION_PREPARE:
@@ -3918,7 +3942,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     callbacks_.Refresh(target_display);
 
     DLOGI("Waiting for device assign");
-    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    int ret = WaitForVmRelease(target_display);
     if (ret != 0) {
       DLOGE("Device assign failed with error %d", ret);
       return -EINVAL;
@@ -4032,7 +4056,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     callbacks_.Refresh(target_display);
     int ret = WaitForCommitDone(target_display, kClientTrustedUI);
     if (ret != 0) {
-      DLOGE("WaitForCommitDone failed with error %d", ret);
+      DLOGE("WaitForVmRelease failed with error %d", ret);
       return -EINVAL;
     }
   }
