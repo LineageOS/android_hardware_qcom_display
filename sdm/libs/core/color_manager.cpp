@@ -544,17 +544,15 @@ DisplayError ColorManagerProxy::Prepare() {
 }
 
 bool ColorManagerProxy::IsValidateNeeded() {
-  needs_update_ = NeedAssetsUpdate();
-  if (needs_update_) {
-    return needs_update_;
-  }
-
+  bool dirty = false;
   {
     Locker &locker(pp_features_.GetLocker());
     SCOPE_LOCK(locker);
-    bool dirty = pp_features_.IsSwAssetDirty();
-    return dirty;
+    dirty = pp_features_.IsSwAssetDirty();
   }
+
+  needs_update_ = NeedAssetsUpdate();
+  return (dirty || needs_update_ || apply_mode_);
 }
 
 DisplayError ColorManagerProxy::ApplySwAssets() {
