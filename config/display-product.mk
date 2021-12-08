@@ -1,37 +1,6 @@
 # Display product definitions
-PRODUCT_PACKAGES += \
-    android.hardware.graphics.mapper@4.0-impl-qti-display \
-    android.hardware.graphics.mapper-impl-qti-display.xml \
-    vendor.qti.hardware.display.mapper@4.0.vendor \
-    vendor.qti.hardware.display.allocator-service \
-    vendor.qti.hardware.display.allocator-service.rc \
-    vendor.qti.hardware.display.allocator-service.xml \
-    vendor.qti.hardware.display.composer-service \
-    vendor.qti.hardware.display.composer-service.rc \
-    vendor.qti.hardware.display.composer-service.xml \
-    libsdmcore \
-    libsdmutils \
-    libqdutils \
-    libqdMetaData \
-    libqdMetaData.system \
-    libdisplayconfig \
-    libgralloc.qti \
-    libdisplayconfig.qti \
-    libdisplayconfig.vendor \
-    libdisplayconfig.qti.vendor \
-    vendor.display.config@2.0.vendor \
-    vendor.qti.hardware.display.config.vendor \
-    init.qti.display_boot.sh \
-    init.qti.display_boot.rc \
-    modetest
-
-
-#oem_services library
-PRODUCT_PACKAGES += \
-    libfilefinder \
-    vendor.qti.hardware.display.demura-service.rc \
-    vendor.qti.hardware.display.demura-service.xml \
-    vendor.qti.hardware.display.demura-service
+include hardware/qcom/display/config/display-modules.mk
+PRODUCT_PACKAGES += $(DISPLAY_MODULES_HARDWARE)
 
 ifneq ($(TARGET_HAS_LOW_RAM),true)
 #QDCM calibration xml file for 2k panel
