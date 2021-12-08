@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
 * met:
@@ -182,6 +184,7 @@
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")
 #define ENABLE_CWB_IDLE_FALLBACK             DISPLAY_PROP("enable_cwb_idle_fallback")
+#define DISABLE_LLCC_DURING_AOD              DISPLAY_PROP("disable_llcc_during_aod")
 
 // Add all other.properties above
 // End of property

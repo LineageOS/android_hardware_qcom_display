@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -446,6 +448,7 @@ DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_la
   display_comp_ctx->idle_fallback = false;
   display_comp_ctx->first_cycle_ = false;
   display_comp_ctx->constraints.idle_timeout = false;
+  display_comp_ctx->constraints.gpu_fallback_mode = false;
 
   DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
            StringDisplayList(registered_displays_).c_str(), display_comp_ctx->display_id,
@@ -487,6 +490,18 @@ void CompManager::ProcessIdleTimeout(Handle display_ctx) {
   }
 
   display_comp_ctx->idle_fallback = true;
+}
+
+void CompManager::DoGpuFallback(Handle display_ctx) {
+  DTRACE_SCOPED();
+  SCOPE_LOCK(locker_);
+
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  if (display_comp_ctx) {
+    display_comp_ctx->constraints.gpu_fallback_mode = true;
+  }
 }
 
 void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {

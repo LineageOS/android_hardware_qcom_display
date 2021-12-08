@@ -225,6 +225,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack);
+  virtual void EnableLlccDuringAodMode(LayerStack *layer_stack);
 
  protected:
   struct DisplayMutex {
@@ -368,6 +369,7 @@ class DisplayBase : public DisplayInterface {
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
+  bool disable_llcc_during_aod_ = false;
   bool custom_mixer_resolution_ = false;
   bool vsync_enable_pending_ = false;
   HWPowerState pending_power_state_ = kPowerStateNone;

@@ -207,6 +207,10 @@ DisplayError DisplayBase::Init() {
   if (Debug::Get()->GetProperty(MMRM_FLOOR_CLK_VOTE, &prop) == kErrorNone) {
     mmrm_floor_clk_vote_ = prop;
   }
+  prop = 0;
+  if (Debug::Get()->GetProperty(DISABLE_LLCC_DURING_AOD, &prop) == kErrorNone) {
+    disable_llcc_during_aod_ = (prop == 1);
+  }
 
   SetupPanelFeatureFactory();
 
@@ -614,6 +618,8 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
 
+  EnableLlccDuringAodMode(layer_stack);
+
   // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     return kErrorPermission;
@@ -690,6 +696,24 @@ DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
   return error;
 }
 
+void DisplayBase::EnableLlccDuringAodMode(LayerStack *layer_stack) {
+  if ((!disable_llcc_during_aod_) && ((state_ == kStateDoze) || (state_ == kStateDozeSuspend)) &&
+      (hw_panel_info_.mode == kModeVideo)) {
+    // Set CACHE_STATE property as part of Doze/Doze-suspend commit or subsequent commits
+    // with video mode panel.
+    disp_layer_stack_.info.enable_self_refresh = true;
+    hw_intf_->EnableSelfRefresh();
+
+    uint32_t size_ff = 1;  // gpu target layer always present
+    uint32_t app_layer_count = UINT32(layer_stack->layers.size()) - size_ff;
+    // Switch to Single-layer/GPU comp during Doze/Doze-suspend mode with video mode panel.
+    // Avoid GPU comp, if there is only one app layer.
+    if (app_layer_count > 1) {
+      comp_manager_->DoGpuFallback(display_comp_ctx_);
+    }
+  }
+}
+
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
@@ -701,6 +725,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
+
+  EnableLlccDuringAodMode(layer_stack);
 
   // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
