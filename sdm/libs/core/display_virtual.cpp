@@ -171,6 +171,10 @@ DisplayError DisplayVirtual::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
+  if (error == kErrorNeedsLutRegen && (ForceToneMapUpdate(layer_stack) == kErrorNone)) {
+    return kErrorNone;
+  }
+
   // Clean display layer stack for reuse.
   disp_layer_stack_ = DispLayerStack();
 
