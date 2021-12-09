@@ -37,7 +37,7 @@ DisplayError SetCSC(const private_handle_t *handle, ColorMetaData *color_metadat
     ColorSpace_t csc = ITU_R_601;
     err = getMetaData(const_cast<private_handle_t *>(handle),  GET_COLOR_SPACE, &csc);
 
-    if (err != 0) {
+    if (err == 0) {
       if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
         color_metadata->range = Range_Full;
       }
