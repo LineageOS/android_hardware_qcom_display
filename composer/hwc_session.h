@@ -40,6 +40,7 @@
 #include <unordered_map>
 #include <string>
 #include <memory>
+#include <core/display_interface.h>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
