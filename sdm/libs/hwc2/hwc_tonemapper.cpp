@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -198,6 +198,16 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
             return 0;
           }
         }
+
+        // Check if there is any change in secure flag and update accordingly.
+        // FB target buffer will be set after strategy selection so initially
+        // this flag may not be updated correctly.
+        if (layer->input_buffer.flags.secure != layer->request.flags.secure) {
+          DLOGI_IF(kTagClient,"Updating secure flag for FB target %d",
+                   layer->input_buffer.flags.secure);
+          layer->request.flags.secure = layer->input_buffer.flags.secure;
+        }
+
         error = AcquireToneMapSession(layer, &session_index, layer_stack->blend_cs);
         fb_session_index_ = INT(session_index);
         break;
