@@ -1116,12 +1116,14 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
 
   if (fb_width != sdm_layer->input_buffer.unaligned_width ||
       fb_height != sdm_layer->input_buffer.unaligned_height) {
+      DLOGI("fb_w: %d fb_h: %d", fb_width, fb_height);
     if (SetFrameBufferConfig(sdm_layer->input_buffer.unaligned_width,
                              sdm_layer->input_buffer.unaligned_height)) {
       return HWC2::Error::BadParameter;
     }
   }
 
+  DLOGI("Buffer w: h: %d %d", sdm_layer->input_buffer.unaligned_width, sdm_layer->input_buffer.unaligned_height);
   return HWC2::Error::None;
 }
 
