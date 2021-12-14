@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -34,6 +34,8 @@
 #include "drm_property.h"
 #include "drm_dpps_mgr_intf.h"
 #include <mutex>
+
+#define MAX_DISPLAY_COUNT 2
 
 namespace sde_drm {
 
