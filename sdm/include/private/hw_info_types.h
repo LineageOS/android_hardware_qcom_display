@@ -761,6 +761,7 @@ struct HWQosData {
 enum UpdateType {
   kUpdateResources,  // Indicates Strategy & RM execution, which can update resources.
   kSwapBuffers,      // Indicates Strategy & RM execution, which can update buffer handler and crop.
+  kUpdateLuts,       // Indicates TM only Strategy execution, which can update SSPP color features.
   kUpdateMax,
 };
 
@@ -770,6 +771,7 @@ struct HWLayersInfo {
   int32_t stitch_target_index = -1;  // Blit target layer index. -1 if not present.
   int32_t demura_target_index = -1;  // Demura target layer index. -1 if not present.
   int32_t noise_layer_index = -1;    // Noise layer index. -1 if not present.
+  int32_t cwb_target_index = -1;     // CWB target layer index. -1 if not present.
   std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
@@ -813,6 +815,9 @@ struct HWLayersInfo {
                                        //!< driver by SDM.
   bool stitch_present = false;  // Indicates there is stitch layer or not
   bool demura_present = false;  // Indicates there is demura layer or not
+  bool cwb_present = false;  // Indicates there is cwb layer or not
+  bool lower_fps = false;  // This field hints to lower the fps in case of idle fallback
+  bool enable_self_refresh = false;  // This field hints to enable self refresh when idle timeout
 };
 
 struct DispLayerStack {
@@ -826,7 +831,8 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_back_porch = 0;   //!< Vertical back porch of panel
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t clock_khz = 0;      //!< Stores the pixel clock of panel in khz
-  HWTopology topology = kUnknown;  //!< Stores the topology information.
+  HWTopology topology = kUnknown;   //!< Stores the topology information.
+  uint32_t topology_num_split = 1;  //!< Stores the topology split number information.
 
   bool operator !=(const HWDisplayAttributes &display_attributes) {
     return ((is_device_split != display_attributes.is_device_split) ||
@@ -843,7 +849,8 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
             (v_total != display_attributes.v_total) ||
             (is_yuv != display_attributes.is_yuv) ||
             (clock_khz != display_attributes.clock_khz) ||
-            (topology != display_attributes.topology));
+            (topology != display_attributes.topology) ||
+            (topology_num_split != display_attributes.topology_num_split));
   }
 
   bool operator ==(const HWDisplayAttributes &display_attributes) {
@@ -875,6 +882,11 @@ struct HWMixerAttributes {
   bool IsValid() {
     return (width > 0 && height > 0);
   }
+};
+
+struct Resolution {
+  uint32_t x_pixels;
+  uint32_t y_pixels;
 };
 
 }  // namespace sdm

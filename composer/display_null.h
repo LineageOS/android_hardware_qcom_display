@@ -118,6 +118,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
   MAKE_NO_OP(HandleSecureEvent(SecureEvent, bool *))
+  MAKE_NO_OP(PostHandleSecureEvent(SecureEvent))
   MAKE_NO_OP(SetQSyncMode(QSyncMode))
   MAKE_NO_OP(ControlIdlePowerCollapse(bool, bool))
   MAKE_NO_OP(SetDisplayDppsAdROI(void *))
@@ -128,8 +129,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
   MAKE_NO_OP(SetBLScale(uint32_t))
   MAKE_NO_OP(GetPanelBlMaxLvl(uint32_t *))
-  MAKE_NO_OP(SetDimmingBlLut(void *, size_t))
-  MAKE_NO_OP(EnableDimmingBacklightEvent(void *, size_t))
+  MAKE_NO_OP(SetDimmingConfig(void *, size_t))
+  MAKE_NO_OP(SetDimmingEnable(int int_enabled))
+  MAKE_NO_OP(SetDimmingMinBl(int min_bl))
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))
   MAKE_NO_OP(colorSamplingOn());
   MAKE_NO_OP(colorSamplingOff());

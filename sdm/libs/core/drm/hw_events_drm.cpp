@@ -68,6 +68,9 @@
 #ifndef SDE_RECOVERY_DISPLAY_POWER_RESET
 #define SDE_RECOVERY_DISPLAY_POWER_RESET 2
 #endif
+#ifndef DRM_EVENT_VM_RELEASE
+#define DRM_EVENT_VM_RELEASE 0X8000000E
+#endif
 
 #define __CLASS__ "HWEventsDRM"
 
@@ -105,15 +108,6 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events |= POLLIN;
         // Clear any existing data
         Sys::pread_(poll_fds_[i].fd, data, kMaxStringLength, 0);
-      } break;
-      case HWEvent::IDLE_NOTIFY: {
-        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
-        if (poll_fds_[i].fd < 0) {
-          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
-          return kErrorResources;
-        }
-        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
-        idle_notify_index_ = i;
       } break;
       case HWEvent::IDLE_POWER_COLLAPSE: {
         poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
@@ -181,6 +175,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         power_event_index_ = i;
       } break;
+      case HWEvent::VM_RELEASE_EVENT: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        vm_release_event_index_ = i;
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -199,9 +202,6 @@ DisplayError HWEventsDRM::SetEventParser() {
     switch (event_data.event_type) {
       case HWEvent::VSYNC:
         event_data.event_parser = &HWEventsDRM::HandleVSync;
-        break;
-      case HWEvent::IDLE_NOTIFY:
-        event_data.event_parser = &HWEventsDRM::HandleIdleTimeout;
         break;
       case HWEvent::CEC_READ_MESSAGE:
         event_data.event_parser = &HWEventsDRM::HandleCECMessage;
@@ -235,6 +235,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::POWER_EVENT:
         event_data.event_parser = &HWEventsDRM::HandlePowerEvent;
+        break;
+      case HWEvent::VM_RELEASE_EVENT:
+        event_data.event_parser = &HWEventsDRM::HandleVmReleaseEvent;
         break;
       default:
         error = kErrorParameters;
@@ -302,11 +305,11 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 
 #ifndef TRUSTED_VM
   SetEventState(HWEvent::PANEL_DEAD, true);
-  SetEventState(HWEvent::IDLE_NOTIFY, true);
   SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
   SetEventState(HWEvent::HW_RECOVERY, true);
   SetEventState(HWEvent::HISTOGRAM, true);
   SetEventState(HWEvent::MMRM, true);
+  SetEventState(HWEvent::VM_RELEASE_EVENT, true);
 #endif
 
   return kErrorNone;
@@ -314,19 +317,15 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 
 DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
-  RegisterPanelDead(false);
-  RegisterIdleNotify(false);
-  RegisterIdlePowerCollapse(false);
-  if (!disable_hw_recovery_) {
-    RegisterHwRecovery(false);
-  }
-  if (enable_hist_interrupt_) {
-    RegisterHistogram(false);
-  }
-  if (!disable_mmrm_) {
-    RegisterMMRM(false);
-  }
-  RegisterPowerEvents(false);
+
+  SetEventState(HWEvent::PANEL_DEAD, false);
+  SetEventState(HWEvent::IDLE_POWER_COLLAPSE, false);
+  SetEventState(HWEvent::HW_RECOVERY, false);
+  SetEventState(HWEvent::HISTOGRAM, false);
+  SetEventState(HWEvent::MMRM, false);
+  SetEventState(HWEvent::POWER_EVENT, false);
+  SetEventState(HWEvent::VM_RELEASE_EVENT, false);
+
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
   pthread_join(event_thread_, NULL);
@@ -376,9 +375,6 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
     case HWEvent::PANEL_DEAD: {
       RegisterPanelDead(enable);
     } break;
-    case HWEvent::IDLE_NOTIFY: {
-      RegisterIdleNotify(enable);
-    } break;
     case HWEvent::IDLE_POWER_COLLAPSE: {
       RegisterIdlePowerCollapse(enable);
     } break;
@@ -396,6 +392,9 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
       if (!disable_mmrm_) {
         RegisterMMRM(enable);
       }
+    } break;
+    case HWEvent::VM_RELEASE_EVENT: {
+      RegisterVmReleaseEvents(enable);
     } break;
     default:
       DLOGE("Event not supported");
@@ -439,15 +438,12 @@ void HWEventsDRM::CloseFds() {
         poll_fds_[i].fd = -1;
       } break;
       case HWEvent::MMRM:
-      case HWEvent::IDLE_NOTIFY:
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PANEL_DEAD:
       case HWEvent::HW_RECOVERY:
       case HWEvent::HISTOGRAM:
-        drmClose(poll_fds_[i].fd);
-        poll_fds_[i].fd = -1;
-        break;
       case HWEvent::POWER_EVENT:
+      case HWEvent::VM_RELEASE_EVENT:
         drmClose(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
         break;
@@ -497,12 +493,12 @@ void *HWEventsDRM::DisplayEventHandler() {
       switch (event_data_list_[i].event_type) {
         case HWEvent::VSYNC:
         case HWEvent::PANEL_DEAD:
-        case HWEvent::IDLE_NOTIFY:
         case HWEvent::IDLE_POWER_COLLAPSE:
         case HWEvent::HW_RECOVERY:
         case HWEvent::HISTOGRAM:
         case HWEvent::MMRM:
         case HWEvent::POWER_EVENT:
+        case HWEvent::VM_RELEASE_EVENT:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -647,33 +643,7 @@ DisplayError HWEventsDRM::RegisterHistogram(bool enable) {
   }
 
   if (ret) {
-    DLOGE("register idle notify enable:%d failed", enable);
-    return kErrorResources;
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
-  if (idle_notify_index_ == UINT32_MAX) {
-    DLOGI("idle notify is not supported event");
-    return kErrorNone;
-  }
-
-  struct drm_msm_event_req req = {};
-  int ret = 0;
-
-  req.object_id = token_.crtc_id;
-  req.object_type = DRM_MODE_OBJECT_CRTC;
-  req.event = DRM_EVENT_IDLE_NOTIFY;
-  if (enable) {
-    ret = drmIoctl(poll_fds_[idle_notify_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
-  } else {
-    ret = drmIoctl(poll_fds_[idle_notify_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
-  }
-
-  if (ret) {
-    DLOGE("register idle notify enable:%d failed", enable);
+    DLOGE("register histogram enable:%d failed", enable);
     return kErrorResources;
   }
 
@@ -757,6 +727,32 @@ DisplayError HWEventsDRM::RegisterMMRM(bool enable) {
   return kErrorNone;
 }
 
+DisplayError HWEventsDRM::RegisterVmReleaseEvents(bool enable) {
+  if (vm_release_event_index_ == UINT32_MAX) {
+    DLOGI("Vm Release is not supported event");
+    return kErrorNone;
+  }
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.crtc_id;
+  req.object_type = DRM_MODE_OBJECT_CRTC;
+  req.event = DRM_EVENT_VM_RELEASE;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[vm_release_event_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[vm_release_event_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+
+  if (ret) {
+    DLOGE("register vm release event %s failed with ret %d", enable ? "enable" : "disable", ret);
+    return kErrorResources;
+  }
+
+  DLOGI("Register vm release event %s successful", enable ? "enable" : "disable");
+  return kErrorNone;
+}
+
 void HWEventsDRM::HandleVSync(char *data) {
   DisplayError ret = kErrorNone;
   vsync_handler_count_ = 0;  //  reset vsync handler count. lock not needed
@@ -836,48 +832,6 @@ void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned i
   int64_t timestamp = (int64_t)(tv_sec)*1000000000 + (int64_t)(tv_usec)*1000;
   DTRACE_SCOPED();
   ev_data->event_handler_->VSync(timestamp);
-}
-
-void HWEventsDRM::HandleIdleTimeout(char *data) {
-  char event_data[kMaxStringLength];
-  int32_t size;
-  struct drm_msm_event_resp *event_resp = NULL;
-
-  size = (int32_t)Sys::pread_(poll_fds_[idle_notify_index_].fd, event_data, kMaxStringLength, 0);
-  if (size < 0) {
-    return;
-  }
-
-  if (size > kMaxStringLength) {
-    DLOGE("event size %d is greater than event buffer size %d\n", size, kMaxStringLength);
-    return;
-  }
-
-  if (size < (int32_t)sizeof(*event_resp)) {
-    DLOGE("size %d exp %zd\n", size, sizeof(*event_resp));
-    return;
-  }
-
-  int32_t i = 0;
-
-  while (i < size) {
-    event_resp = (struct drm_msm_event_resp *)&event_data[i];
-    switch (event_resp->base.type) {
-      case DRM_EVENT_IDLE_NOTIFY:
-      {
-        DLOGV("Received Idle time event");
-        event_handler_->IdleTimeout();
-        break;
-      }
-      default: {
-        DLOGE("invalid event %d", event_resp->base.type);
-        break;
-      }
-    }
-    i += event_resp->base.length;
-  }
-
-  return;
 }
 
 void HWEventsDRM::HandleCECMessage(char *data) {
@@ -1085,6 +1039,21 @@ int HWEventsDRM::SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEven
   }
 
   return 0;
+}
+
+void HWEventsDRM::HandleVmReleaseEvent(char * /*data*/) {
+  auto constexpr expected_size = sizeof(drm_msm_event_resp) + sizeof(uint32_t);
+  std::array<char, expected_size> event_data{'\0'};
+  auto size = Sys::pread_(poll_fds_[vm_release_event_index_].fd, event_data.data(),
+                          event_data.size(), 0);
+  if (size != expected_size) {
+    DLOGE("event size %d is unexpected. skipping this vm release event", UINT32(size));
+    return;
+  }
+
+  auto msm_event = reinterpret_cast<struct drm_msm_event_resp *>(event_data.data());
+  DLOGI("vm release event data %d", *(reinterpret_cast<uint32_t *>(msm_event->data)));
+  event_handler_->HandleVmReleaseEvent();
 }
 
 }  // namespace sdm

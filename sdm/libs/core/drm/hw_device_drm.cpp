@@ -715,12 +715,6 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].v_back_porch = mode.vtotal - mode.vsync_end;
   display_attributes_[index].v_total = mode.vtotal;
   display_attributes_[index].h_total = mode.htotal;
-  display_attributes_[index].is_device_split =
-      (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE ||
-       topology == DRMTopology::DUAL_LM_MERGE_DSC || topology == DRMTopology::DUAL_LM_DSC ||
-       topology == DRMTopology::DUAL_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE ||
-       topology == DRMTopology::QUAD_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE_DSC ||
-       topology == DRMTopology::QUAD_LM_DSC4HSMERGE);
 
   // TODO(user): This clock should no longer be used as mode's pixel clock for RFI connectors.
   // Driver can expose list of dynamic pixel clocks, userspace needs to support dynamic change.
@@ -736,17 +730,22 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
   display_attributes_[index].y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
   SetTopology(topology, &display_attributes_[index].topology);
+  SetTopologySplit(display_attributes_[index].topology,
+                   &display_attributes_[index].topology_num_split);
+  display_attributes_[index].is_device_split = (display_attributes_[index].topology_num_split > 1);
 
-  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
+  DLOGI(
+      "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
       " V_FRONT_PORCH: %d [RFI Adjusted : %s], V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d,"
-      " CLK: %dKHZ, TOPOLOGY: %d, HW_SPLIT: %d", index, display_attributes_[index].x_pixels,
-      display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
-      display_attributes_[index].y_dpi, display_attributes_[index].fps,
-      display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
-      display_attributes_[index].v_front_porch, adjusted ? "True" : "False",
-      display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
-      display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-      display_attributes_[index].topology, mixer_attributes_.split_type);
+      " CLK: %dKHZ, TOPOLOGY: %d [SPLIT NUMBER: %d], HW_SPLIT: %d",
+      index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
+      display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
+      display_attributes_[index].fps, display_attributes_[index].is_device_split,
+      display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
+      adjusted ? "True" : "False", display_attributes_[index].v_pulse_width,
+      display_attributes_[index].v_total, display_attributes_[index].h_total,
+      display_attributes_[index].clock_khz, display_attributes_[index].topology,
+      display_attributes_[index].topology_num_split, mixer_attributes_.split_type);
 
   return kErrorNone;
 }
@@ -1076,6 +1075,10 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
       cmd_mode_index_ = current_mode_index_;
     }
   }
+  if (current_mode.mode.hdisplay == to_set.mode.hdisplay &&
+    current_mode.mode.vdisplay == to_set.mode.vdisplay) {
+    seamless_mode_switch_ = true;
+  }
 }
 
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
@@ -1166,15 +1169,33 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   ResetROI();
   int64_t retire_fence_fd = -1;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  if (!IsSeamlessTransition()) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
+  if (cwb_config_.cwb_disp_id == display_id_ && cwb_config_.enabled) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    DLOGI("Tearing down the CWB topology");
+  }
+
   int ret = NullCommit(false /* synchronous */, false /* retain_planes */);
   if (ret) {
-    DLOGE("Failed with error: %d", ret);
+    DLOGE("Failed with error: %d, dynamic_fps=%d, seamless_mode_switch_=%d, vrefresh_=%d,"
+     "panel_mode_changed_=%d bit_clk_rate_=%d", ret, hw_panel_info_.dynamic_fps,
+     seamless_mode_switch_, vrefresh_, panel_mode_changed_, bit_clk_rate_);
     return kErrorHardware;
+  }
+
+  if (cwb_config_.cwb_disp_id == display_id_) {  // Incase display power-off in cwb active/teardown
+    // state, then reset cwb_display_id to un-block other displays from performing CWB.
+    if (cwb_config_.enabled) {
+      FlushConcurrentWriteback();
+    } else {  // for CWB Post-teardown (the frame following teardown) frame
+      cwb_config_.cwb_disp_id = -1;
+    }
   }
 
   sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
@@ -1302,6 +1323,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   bool buffer_update = hw_layers_info->updates_mask.test(kSwapBuffers);
   bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
                        hw_layers_info->flags.geometry_changed;
+  bool update_luts = hw_layers_info->updates_mask.test(kUpdateLuts);
 
   if (hw_panel_info_.partial_update && update_config) {
     if (IsFullFrameUpdate(*hw_layers_info)) {
@@ -1387,8 +1409,15 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
 
+          // Account for PMA block activation directly at translation time to preserve layer
+          // blending definition and avoid issues when a layer structure is reused.
           DRMBlendType blending = DRMBlendType::UNDEFINED;
-          SetBlending(layer.blending, &blending);
+          LayerBlending layer_blend = layer.blending;
+          if (layer_blend ==  kBlendingPremultiplied && pipe_info->inverse_pma_info.inverse_pma) {
+            layer_blend = kBlendingCoverage;
+            DLOGI_IF(kTagDriverConfig, "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
+          }
+          SetBlending(layer_blend, &blending);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
 
           DRMRect src = {};
@@ -1442,6 +1471,8 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
           SetMultiRectMode(pipe_info->flags, &multirect_mode);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
 
+          SetSsppTonemapFeatures(pipe_info);
+        } else if (update_luts) {
           SetSsppTonemapFeatures(pipe_info);
         }
 
@@ -1664,6 +1695,7 @@ DisplayError HWDeviceDRM::Validate(HWLayersInfo *hw_layers_info) {
     DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
+    seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
     err = kErrorHardware;
   }
@@ -1764,6 +1796,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
+    seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
     return kErrorHardware;
   }
@@ -1824,6 +1857,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   pending_power_state_ = kPowerStateNone;
   // Inherently a real commit ensures null commit properties have happened, so update the member
   first_null_cycle_ = false;
+  seamless_mode_switch_ = false;
 
   SetTUIState();
 
@@ -2051,14 +2085,22 @@ DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
   }
 
   uint32_t mode_flag = 0;
+  sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
 
+  // Refresh rate change needed if new panel mode differs from current
   if (hw_display_mode == kModeCommand) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+    if (connector_info_.modes[cmd_mode_index_].mode.vrefresh != current_mode.mode.vrefresh) {
+      vrefresh_ = connector_info_.modes[cmd_mode_index_].mode.vrefresh;
+    }
     current_mode_index_ = cmd_mode_index_;
     connector_info_.modes[current_mode_index_].cur_panel_mode = mode_flag;
     DLOGI_IF(kTagDriverConfig, "switch panel mode to command");
   } else if (hw_display_mode == kModeVideo) {
     mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+    if (connector_info_.modes[video_mode_index_].mode.vrefresh != current_mode.mode.vrefresh) {
+      vrefresh_ = connector_info_.modes[video_mode_index_].mode.vrefresh;
+    }
     current_mode_index_ = video_mode_index_;
     connector_info_.modes[current_mode_index_].cur_panel_mode = mode_flag;
     DLOGI_IF(kTagDriverConfig, "switch panel mode to video");
@@ -2176,8 +2218,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  uint32_t topology_num_split = 0;
-  GetTopologySplit(display_attributes_[index].topology, &topology_num_split);
+  uint32_t topology_num_split = display_attributes_[index].topology_num_split;
   if (mixer_attributes.width % topology_num_split != 0) {
     DLOGW("Uneven LM split: topology:%d supported_split:%d mixer_width:%d",
           display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
@@ -2724,7 +2765,7 @@ void HWDeviceDRM::SetTUIState() {
   }
 }
 
-void HWDeviceDRM::GetTopologySplit(HWTopology hw_topology, uint32_t *split_number) {
+void HWDeviceDRM::SetTopologySplit(HWTopology hw_topology, uint32_t *split_number) {
   switch (hw_topology) {
     case kDualLM:
     case kDualLMDSC:
@@ -2782,7 +2823,8 @@ bool HWDeviceDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bo
   }
 
   if (cwb_config_.cwb_disp_id != -1 && cwb_config_.cwb_disp_id != display_id_) {
-    DLOGW("CWB already on-going for display : %d", cwb_config_.cwb_disp_id);
+    // Either cwb is currently active or tearing down on display cwb_config_.cwb_disp_id
+    DLOGW("CWB already busy with display : %d", cwb_config_.cwb_disp_id);
     return false;
   } else {
     cwb_config_.cwb_disp_id = display_id_;
@@ -2986,6 +3028,9 @@ DisplayError HWDeviceDRM::GetFeatureSupportStatus(const HWFeature feature, uint3
 void HWDeviceDRM::FlushConcurrentWriteback() {
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
   TeardownConcurrentWriteback();
+  cwb_config_.cwb_disp_id = -1;
+  DLOGI("Flushing out CWB Config. cwb_enabled = %d , cwb_disp_id : %d", cwb_config_.enabled,
+        cwb_config_.cwb_disp_id);
 }
 
 DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
@@ -3027,18 +3072,7 @@ DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::SetDimmingBlLut(void *payload, size_t size) {
-  if (!payload || size != sizeof(DRMPPFeatureInfo)) {
-    DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
-        sizeof(DRMPPFeatureInfo));
-      return kErrorParameters;
-  }
-
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
-  return kErrorNone;
-}
-
-DisplayError HWDeviceDRM::EnableDimmingBacklightEvent(void *payload, size_t size) {
+DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
   if (!payload || size != sizeof(DRMPPFeatureInfo)) {
     DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
         sizeof(DRMPPFeatureInfo));

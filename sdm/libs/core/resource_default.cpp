@@ -138,6 +138,7 @@ DisplayError ResourceDefault::RegisterDisplay(int32_t display_id, DisplayType ty
                                               const HWDisplayAttributes &display_attributes,
                                               const HWPanelInfo &hw_panel_info,
                                               const HWMixerAttributes &mixer_attributes,
+                                              const Resolution &fb_resolution,
                                               Handle *display_ctx) {
   DisplayError error = kErrorNone;
 
@@ -174,6 +175,7 @@ DisplayError ResourceDefault::RegisterDisplay(int32_t display_id, DisplayType ty
   display_resource_ctx->display_attributes = display_attributes;
   display_resource_ctx->hw_block_type = hw_block_type;
   display_resource_ctx->mixer_attributes = mixer_attributes;
+  display_resource_ctx->fb_resolution = fb_resolution;
 
   *display_ctx = display_resource_ctx;
   return error;
@@ -194,12 +196,14 @@ DisplayError ResourceDefault::UnregisterDisplay(Handle display_ctx) {
 DisplayError ResourceDefault::ReconfigureDisplay(Handle display_ctx,
                                                  const HWDisplayAttributes &display_attributes,
                                                  const HWPanelInfo &hw_panel_info,
-                                                 const HWMixerAttributes &mixer_attributes) {
+                                                 const HWMixerAttributes &mixer_attributes,
+                                                 const Resolution &fb_resolution) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
 
   display_resource_ctx->display_attributes = display_attributes;
   display_resource_ctx->mixer_attributes = mixer_attributes;
+  display_resource_ctx->fb_resolution = fb_resolution;
 
   return kErrorNone;
 }

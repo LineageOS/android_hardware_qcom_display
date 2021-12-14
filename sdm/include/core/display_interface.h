@@ -151,6 +151,7 @@ enum DisplayEvent {
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
   kSyncInvalidateDisplay,   // Event triggered by Non-DrawCycle threads to Invalidate display.
   kPostIdleTimeout,         // Event triggered after entering idle.
+  kVmReleaseDone,           // Event triggered after releasing the mdp hw to secondary vm.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
@@ -1071,24 +1072,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_level) = 0;
 
-  /*! @brief Method to set display dimming backlight LUT.
+  /*! @brief Method to set display dimming config.
 
-    @param[in] payload of dimming backlight LUT struct.
+    @param[in] payload of dimming config.
     @param[in] size of the payload.
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
-
- /*! @brief Method to enable/disable dimming backlight event.
-
-    @param[in] payload to enable/disable dimming backlight event.
-    @param[in] size of the payload.
-
-    @return \link DisplayError \endlink
-  */
-
-  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
+  virtual DisplayError SetDimmingConfig(void *payload, size_t size) = 0;
 
   /*! @brief Method to trigger a screen refresh and mark needs validate.
 
@@ -1215,6 +1206,30 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack) = 0;
+
+  /*! @brief Method to enable/disable display dimming feature.
+
+    @param[in] enable or disable
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingEnable(int int_enabled) = 0;
+
+  /*! @brief Method to set minimal backlight value for display dimming feature.
+
+    @param[in] minimal backlight value
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingMinBl(int min_bl) = 0;
+
+  /*! @brief Method to handle secure events after the successful transition.
+
+    @param[in] secure_event \link SecureEvent \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

@@ -44,7 +44,7 @@
 #include <vendor/qti/hardware/display/composer/3.1/IQtiComposerClient.h>
 
 using android::hardware::graphics::common::V1_2::ColorMode;
-using android::hardware::graphics::common::V1_1::Dataspace;
+using android::hardware::graphics::common::V1_2::Dataspace;
 using android::hardware::graphics::common::V1_1::RenderIntent;
 using android::hardware::graphics::common::V1_2::Hdr;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
@@ -52,6 +52,7 @@ using HwcAttribute = composer_V2_4::IComposerClient::Attribute;
 using VsyncPeriodChangeConstraints = composer_V2_4::IComposerClient::VsyncPeriodChangeConstraints;
 using VsyncPeriodChangeTimeline = composer_V2_4::VsyncPeriodChangeTimeline;
 using VsyncPeriodNanos = composer_V2_4::VsyncPeriodNanos;
+using ClientTargetProperty = composer_V2_4::IComposerClient::ClientTargetProperty;
 
 namespace sdm {
 
@@ -207,6 +208,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
                                   bool *power_on_pending, bool is_active_secure_display);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event);
   virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) { return 0; };
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
@@ -302,7 +304,6 @@ class HWCDisplay : public DisplayEventHandler {
   }
   bool IsFirstCommitDone() { return !first_cycle_; }
   virtual void ProcessActiveConfigChange();
-  DisplayDrawMethod GetDrawMethod() { return draw_method_; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -455,6 +456,17 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void IsMultiDisplay(bool is_multi_display) {
     is_multi_display_ = is_multi_display;
   }
+  virtual HWC2::Error SetDimmingEnable(int int_enabled) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetDimmingMinBl(int min_bl) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error GetClientTargetProperty(ClientTargetProperty *out_client_target_property);
+  virtual void GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
+                             int *active_config_index, uint32_t *num_configs);
+  virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
+                             int active_config_index, uint32_t num_configs) {};
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -485,7 +497,6 @@ class HWCDisplay : public DisplayEventHandler {
   void MarkLayersForClientComposition(void);
   void UpdateConfigs();
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
-  uint32_t GetUpdatingLayersCount(void);
   bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
@@ -552,8 +563,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t qsync_fps_ = 0;
   uint32_t current_refresh_rate_ = 0;
   bool use_metadata_refresh_rate_ = false;
-  uint32_t metadata_refresh_rate_ = 0;
-  uint32_t force_refresh_rate_ = 0;
   bool boot_animation_completed_ = false;
   bool shutdown_pending_ = false;
   std::bitset<kSecureMax> active_secure_sessions_ = 0;
@@ -640,6 +649,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool draw_method_set_ = false;
   bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
+  bool pending_fb_reconfig_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

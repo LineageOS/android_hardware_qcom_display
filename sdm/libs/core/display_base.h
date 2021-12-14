@@ -34,6 +34,7 @@
 #include <private/noise_plugin_intf.h>
 #include <private/noise_plugin_dbg.h>
 
+#include <limits.h>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -158,6 +159,9 @@ class DisplayBase : public DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {
     return kErrorNotSupported;
   }
@@ -177,8 +181,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
-  DisplayError SetDimmingBlLut(void *payload, size_t size);
-  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
+  DisplayError SetDimmingConfig(void *payload, size_t size);
+  DisplayError SetDimmingEnable(int int_enabled);
+  DisplayError SetDimmingMinBl(int min_bl);
   void ScreenRefresh();
   virtual bool CheckResourceState(bool *res_exhausted);
   virtual bool GameEnhanceSupported();
@@ -307,6 +312,8 @@ class DisplayBase : public DisplayInterface {
   DisplayError NoiseInit();
   DisplayError HandleNoiseLayer(LayerStack *layer_stack);
   void PrepareForAsyncTransition();
+  virtual void IdleTimeout() {}
+  std::chrono::system_clock::time_point WaitUntil();
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;
@@ -335,6 +342,7 @@ class DisplayBase : public DisplayInterface {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   bool disable_pu_on_dest_scaler_ = false;
+  bool de_enabled_ = false;
   bool pu_pending_ = false;
   uint32_t num_color_modes_ = 0;
   std::vector<SDEDisplayMode> color_modes_;
@@ -386,6 +394,9 @@ class DisplayBase : public DisplayInterface {
   NoisePlugInFactoryIntf *noise_plugin_factory_intf_ = nullptr;
   bool noise_plugin_override_en_ = false;
   int32_t noise_override_zpos_ = -1;  // holds the overriden zpos/idx, used to mark sde_preferred
+  bool handle_idle_timeout_ = false;
+  bool pending_commit_ = false;
+  uint32_t active_refresh_rate_ = 0;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
@@ -426,6 +437,7 @@ class DisplayBase : public DisplayInterface {
   std::condition_variable cv_;
   LayerBuffer cached_framebuffer_ = {};
   Layer noise_layer_ = {};
+  DisplayError ConfigureCwbForIdleFallback(LayerStack *layer_stack);
 };
 
 }  // namespace sdm

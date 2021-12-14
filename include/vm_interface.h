@@ -30,7 +30,7 @@
 #define SDM_COMP_SERVICE_INSTANCE 1
 
 #define VM_INTF_REVISION_MAJOR (1)
-#define VM_INTF_REVISION_MINOR (3)
+#define VM_INTF_REVISION_MINOR (4)
 
 #define VM_INTF_VERSION ((uint16_t) ((VM_INTF_REVISION_MAJOR << 8) | VM_INTF_REVISION_MINOR))
 
@@ -39,6 +39,7 @@ enum CommandId {
   kCmdSetBacklight = 1,
   kCmdSetDisplayConfig = 2,
   kCmdSetProperties = 3,
+  kCmdSetPanelBootParams = 4,
   kCmdMax,
 };
 
@@ -132,7 +133,7 @@ typedef struct RspSetDisplayConfigs_t {
   };
 } RspSetDisplayConfigs;
 
-// Command and Response structure definitions to start TUI session
+// Command and Response structure definitions to propagate the android property
 typedef struct CmdSetProperties_t {
   union {
     Properties props;
@@ -146,6 +147,19 @@ typedef struct RspSetProperties_t {
   };
 } RspSetProperties;
 
+// Command and Response structure to set panel boot parameters to insmod of display drivers
+typedef struct CmdSetPanelBootParam_t {
+  union {
+    char panel_boot_string[256];
+    uint32_t reserve[128] =  { 0 };
+  };
+} CmdSetPanelBootParam;
+
+typedef struct RspSetPanelBootParam_t {
+  union {
+    uint32_t reserve[128] = { 0 };
+  };
+} RspSetPanelBootParam;
 
 struct Command : CommandHeader {
   Command() {}
@@ -154,6 +168,7 @@ struct Command : CommandHeader {
     CmdSetBacklight cmd_set_backlight;
     CmdSetDisplayConfigs cmd_set_disp_configs;
     CmdSetProperties cmd_set_properties;
+    CmdSetPanelBootParam cmd_set_panel_boot_param;
   };
 };
 
@@ -164,6 +179,7 @@ struct Response : ResponseHeader {
     RspSetBacklight rsp_set_backlight;
     RspSetDisplayConfigs rsp_set_disp_configs;
     RspSetProperties rsp_set_properties;
+    RspSetPanelBootParam rsp_set_panel_boot_param;
   };
 };
 

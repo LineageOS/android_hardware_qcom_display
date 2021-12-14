@@ -52,6 +52,10 @@ struct LayerFeedback {
   // number of layers that must be removed from
   // contention list to avoid resource contention
   uint8_t contention_count_ = 0;
+
+  bool wfd_in_use_ = false;
+
+  bool cwb_in_use_ = false;
 };
 
 }  // namespace sdm

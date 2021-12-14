@@ -486,7 +486,7 @@ int HWCDisplay::Init() {
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
     disp_null->Init();
-    use_metadata_refresh_rate_ = false;
+    layer_stack_.flags.use_metadata_refresh_rate = false;
     display_intf_ = disp_null;
     DLOGI("Enabling null display mode for display type %d", type_);
   } else {
@@ -678,7 +678,7 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
-  metadata_refresh_rate_ = 0;
+  layer_stack_.flags.use_metadata_refresh_rate = false;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.layer_id_support = true;
   layer_stack_.solid_fill_enabled = solid_fill_enable_;
@@ -736,6 +736,10 @@ void HWCDisplay::BuildLayerStack() {
       is_secure = true;
     }
 
+    if (IS_RGB_FORMAT(layer->input_buffer.format) && hwc_layer->IsScalingPresent()) {
+      layer_stack_.flags.scaling_rgb_layer_present = true;
+    }
+
     if (hwc_layer->IsSingleBuffered() &&
        !(hwc_layer->IsRotationPresent() || hwc_layer->IsScalingPresent())) {
       layer->flags.single_buffer = true;
@@ -751,7 +755,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame) && !hdr_layer) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;
     }
@@ -796,8 +800,8 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.bottom = layer_buffer->height;
     }
 
-    if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
-      metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
+    if (hwc_layer->HasMetaDataRefreshRate()) {
+      layer->flags.has_metadata_refresh_rate = true;
     }
 
     display_rect_ = Union(display_rect_, layer->dst_rect);
@@ -813,11 +817,6 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
-
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
-      layer->flags.is_game = true;
-      layer->input_buffer.flags.game = true;
-    }
 
     layer->flags.compatible = hwc_layer->IsLayerCompatible();
 
@@ -842,13 +841,6 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.layers.push_back(sdm_client_target);
 
   layer_stack_.elapse_timestamp = elapse_timestamp_;
-  // fall back frame composition to GPU when client target is 10bit
-  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
-  // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
-    // Must fall back to client composition
-    MarkLayersForClientComposition();
-  }
 
   layer_stack_.client_incompatible =
       dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
@@ -974,6 +966,13 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
+      {
+        std::lock_guard<std::mutex> lock(cwb_state_lock_);
+        if (cwb_state_.cwb_disp_id == id_) {  // If CWB is requested or configured or
+          // tearing-down on disp id_, then flush cwb setup before the display power off.
+          ResetCwbState();
+        }
+      }  // releasing the cwb state lock
       break;
     case HWC2::PowerMode::On:
       if (mmrm_restricted_ && (display_class_ != DISPLAY_CLASS_BUILTIN) &&
@@ -1244,12 +1243,6 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
-  int translated_dataspace = TranslateFromLegacyDataspace(dataspace);
-  if (client_target_->GetLayerDataspace() != translated_dataspace) {
-    DLOGW("New Dataspace = %d not matching Dataspace from color mode = %d",
-           translated_dataspace, client_target_->GetLayerDataspace());
-    return HWC2::Error::BadParameter;
-  }
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_handle_ = target;
   client_acquire_fence_ = acquire_fence;
@@ -1452,16 +1445,6 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
-    case kIdleTimeout: {
-      SCOPE_LOCK(HWCSession::locker_[id_]);
-      if (pending_commit_) {
-        // If idle timeout event comes in between prepare
-        // and commit, drop it since device is not really
-        // idle.
-        return kErrorNotSupported;
-      }
-      break;
-    }
     case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
       // TODO(user): Following scenario need to be addressed
@@ -1479,6 +1462,14 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
     case kPostIdleTimeout:
       display_idle_ = true;
       break;
+    case kVmReleaseDone: {
+      if (event_handler_) {
+        event_handler_->VmReleaseDone(id_);
+      } else {
+        DLOGW("Cannot execute VmReleaseDone (client_id = %" PRId64 "), event_handler_ is null",
+              id_);
+      }
+    } break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -1897,6 +1888,18 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     DLOGI("Changing active config to %d", UINT32(pending_first_commit_config_));
     pending_first_commit_config_ = false;
     SetActiveConfig(pending_first_commit_config_index_);
+  }
+
+  if (pending_fb_reconfig_) {
+    hwc2_config_t current_config = 0;
+    GetActiveConfig(&current_config);
+    DisplayConfigVariableInfo current_config_info = {};
+    GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
+    // Set fb config if new resolution differs
+    if (SetFrameBufferResolution(current_config_info.x_pixels, current_config_info.y_pixels) != 0) {
+      DLOGE("Failed to set FB reolution for %d-%d", sdm_id_, type_);
+    }
+    pending_fb_reconfig_ = false;
   }
 
   return status;
@@ -2523,19 +2526,6 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
   return 0;
 }
 
-uint32_t HWCDisplay::GetUpdatingLayersCount(void) {
-  uint32_t updating_count = 0;
-
-  for (uint i = 0; i < layer_stack_.layers.size(); i++) {
-    auto layer = layer_stack_.layers.at(i);
-    if (layer->flags.updating) {
-      updating_count++;
-    }
-  }
-
-  return updating_count;
-}
-
 bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   auto layer = hwc_layer->GetSDMLayer();
   // Layer should be considered updating if
@@ -2545,23 +2535,6 @@ bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   //      geometry_changed as bit fields).
   return (layer->flags.single_buffer || hwc_layer->IsSurfaceUpdated() ||
           hwc_layer->GetGeometryChanges());
-}
-
-uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {
-  uint32_t refresh_rate = req_refresh_rate;
-
-  if (refresh_rate < min_refresh_rate_) {
-    // Pick the next multiple of request which is within the range
-    refresh_rate =
-        (((min_refresh_rate_ / refresh_rate) + ((min_refresh_rate_ % refresh_rate) ? 1 : 0)) *
-         refresh_rate);
-  }
-
-  if (refresh_rate > max_refresh_rate_) {
-    refresh_rate = max_refresh_rate_;
-  }
-
-  return refresh_rate;
 }
 
 DisplayClass HWCDisplay::GetDisplayClass() {
@@ -3011,7 +2984,11 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   }
 
   DisplayError error = display_intf_->SetActiveConfig(config);
-  if (error != kErrorNone) {
+  if (error == kErrorDeferred) {
+    DLOGW("Failed to set new config:%d from current config:%d! Error: %d",
+          config, current_config, error);
+    return HWC2::Error::BadConfig;
+  } else if (error != kErrorNone) {
     DLOGE("Failed to set new config:%d from current config:%d! Error: %d",
           config, current_config, error);
     return HWC2::Error::BadConfig;
@@ -3030,9 +3007,7 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   // Set fb config if new resolution differs
   if (info.x_pixels != current_config_info.x_pixels ||
       info.y_pixels != current_config_info.y_pixels) {
-    if (SetFrameBufferConfig(info.x_pixels, info.y_pixels)) {
-      return HWC2::Error::BadParameter;
-    }
+    pending_fb_reconfig_ = true;
   }
 
   return HWC2::Error::None;
@@ -3125,6 +3100,10 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   secure_event_ = secure_event;
 
   return kErrorNone;
+}
+
+DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
+  return display_intf_->PostHandleSecureEvent(secure_event);
 }
 
 int HWCDisplay::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
@@ -3288,12 +3267,19 @@ void HWCDisplay::SetCwbState() {
 void HWCDisplay::ResetCwbState() {
   // Resets cwb state struct. Used in CWB teardown frame if flush_ is set.
   // Also called incase cwb active display is unplugged.
+  DLOGV_IF(kTagClient, "Resetting Cwb State.");
   cwb_state_ = {};
 }
 
 HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
                                           shared_ptr<Fence> acquire_fence,
                                           CwbConfig cwb_config, CWBClient client) {
+  if (current_power_mode_ == HWC2::PowerMode::Off ||
+      current_power_mode_ == HWC2::PowerMode::DozeSuspend) {
+    DLOGW("CWB requested on either Powered-Off or Doze-Suspended display.");
+    return HWC2::Error::BadDisplay;
+  }
+
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
   if (cwb_state_.cwb_disp_id != -1 && cwb_state_.cwb_disp_id != id_) {
     // cwb is already Active on a display other than on which it is requested.
@@ -3388,7 +3374,9 @@ HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence)
   auto status = HWC2::Error::None;
 
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  if (readback_configured_ && output_buffer_.release_fence) {
+  if (readback_configured_ && (cwb_state_.cwb_client == kCWBClientExternal)) {
+    display_intf_->GetOutputBufferAcquireFence(release_fence);
+  } else if (readback_configured_ && output_buffer_.release_fence) {
     *release_fence = output_buffer_.release_fence;
     DLOGI("Successfully retrieved readback buffer fence for cwb clinet %d on tappoint %d",
           cwb_state_.cwb_client, cwb_config_.tap_point);
@@ -3471,4 +3459,39 @@ DisplayError HWCDisplay::HandleQsyncState(const QsyncEventData &qsync_data) {
   return kErrorNone;
 }
 
-}  // namespace sdm
+HWC2::Error HWCDisplay::GetClientTargetProperty(ClientTargetProperty *out_client_target_property) {
+
+  Layer *client_layer = client_target_->GetSDMLayer();
+  if (!client_layer->request.flags.update_format) {
+    return HWC2::Error::None;
+  }
+  int32_t format = 0;
+  uint64_t flags = 0;
+  auto err = buffer_allocator_->SetBufferInfo(client_layer->request.format, &format, &flags);
+  if (err) {
+    DLOGE("Invalid format: %s requested", GetFormatString(client_layer->request.format));
+    return HWC2::Error::BadParameter;
+  }
+  Dataspace dataspace;
+  DisplayError error = ColorMetadataToDataspace(client_layer->request.color_metadata, &dataspace);
+  if (error != kErrorNone) {
+    DLOGE("Invalid Dataspace requested: Primaries = %d Transfer = %d ds = %d",
+          client_layer->request.color_metadata.colorPrimaries,
+          client_layer->request.color_metadata.transfer, dataspace);
+    return HWC2::Error::BadParameter;
+  }
+  out_client_target_property->dataspace = dataspace;
+  out_client_target_property->pixelFormat =
+      (android::hardware::graphics::common::V1_2::PixelFormat)format;
+
+  return HWC2::Error::None;
+}
+
+void HWCDisplay::GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
+                               int *active_config_index, uint32_t *num_configs) {
+  *variable_config_map = variable_config_map_;
+  *active_config_index = active_config_index_;
+  *num_configs = num_configs_;
+}
+
+} //namespace sdm

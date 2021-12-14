@@ -39,6 +39,9 @@ case "$target" in
     "taro")
     #Set property to differentiate Waipio
     #SOC ID for Waipio is 457
+    #SOC ID for Cape MSM is 530
+    #SOC ID for Cape APQ is 531
+    #SOC ID for Cape 4g is 540
     case "$soc_hwid" in
         457)
         setprop vendor.gralloc.use_dma_buf_heaps 1
@@ -49,6 +52,34 @@ case "$target" in
         setprop vendor.display.enable_spec_fence 1
         setprop vendor.display.thermal.version 1
         setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 3
+        ;;
+        530|531|540)
+        setprop vendor.gralloc.use_dma_buf_heaps 1
+        setprop vendor.display.enable_posted_start_dyn 2
+        setprop vendor.display.enable_allow_idle_fallback 1
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_rotator_ui 1
+        setprop vendor.display.enable_spec_fence 1
+        setprop vendor.display.thermal.version 1
+        setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 2
+        setprop vendor.display.enable_qsync_idle 1
+        ;;
+        506|547)
+        # Set property for Diwali
+        # SOC ID for Diwali is 506
+        setprop vendor.gralloc.use_dma_buf_heaps 1
+        setprop vendor.display.enable_posted_start_dyn 2
+        setprop vendor.display.enable_allow_idle_fallback 1
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_rotator_ui 1
+        setprop vendor.display.enable_spec_fence 1
+        setprop vendor.display.thermal.version 1
+        setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 2
+        setprop vendor.display.enable_qsync_idle 1
+        ;;
     esac
     ;;
     "lahaina")

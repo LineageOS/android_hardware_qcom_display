@@ -23,11 +23,13 @@
 */
 
 #include <stdio.h>
+#include <malloc.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
+#include <drm_interface.h>
 
 #include <iomanip>
 #include <map>
@@ -128,6 +130,7 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
+  active_refresh_rate_ = display_attributes_.fps;
 
   if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
     if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
@@ -246,6 +249,11 @@ DisplayError DisplayBase::Deinit() {
   }
 
   CloseFd(&cached_framebuffer_.planes[0].fd);
+#ifdef TRUSTED_VM
+  // release free memory from the heap, needed for Trusted_VM due to the limited
+  // carveout size
+  malloc_trim(0);
+#endif
   return kErrorNone;
 }
 
@@ -380,6 +388,8 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
 DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
   if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {  // CWB requested
+    comp_manager_->HandleCwbFrequencyBoost(true);
+
     if (!cwb_config_) {  // Instantiate cwb_config_ if cwb was not enabled in previous draw cycle.
       cwb_config_ = new CwbConfig;
       needs_validate_ = true;  // Do not skip Validate in CWB setup frame.
@@ -461,6 +471,8 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
     cwb_config_ = NULL;
     disp_layer_stack_.info.hw_cwb_config = NULL;
     needs_validate_ = true;  // Do not skip Validate in CWB teardown frame.
+
+    comp_manager_->HandleCwbFrequencyBoost(false);
   }
   return error;
 }
@@ -647,7 +659,6 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
   DTRACE_SCOPED();
-  int level = 0;
   DisplayError error = kErrorNotSupported;
 
 
@@ -669,9 +680,6 @@ DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
     hw_config.right_pipe.lut_info.clear();
   }
 
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
-    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
-  }
   error = comp_manager_->ForceToneMapConfigure(display_comp_ctx_, &disp_layer_stack_);
   if (error == kErrorNone) {
     validated_ = true;
@@ -740,11 +748,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   CheckMMRMState();
 
-  int level = 0;
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
-    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
-  }
-
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &disp_layer_stack_);
     if (error != kErrorNone) {
@@ -774,6 +777,17 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   comp_manager_->PostPrepare(display_comp_ctx_, &disp_layer_stack_);
 
   CacheDisplayComposition();
+
+  if (error == kErrorNone) {
+    error = ConfigureCwbForIdleFallback(layer_stack);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+
+  if (disp_layer_stack_.info.enable_self_refresh) {
+    hw_intf_->EnableSelfRefresh();
+  }
 
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
 
@@ -1079,6 +1093,9 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
   if (!ret) {
     DLOGD_IF(kTagDisplay, "RC top_height = %d, RC bot_height = %d", rc_out_config->top_height,
              rc_out_config->bottom_height);
+    if (rc_out_config->rc_needs_full_roi) {
+      DisablePartialUpdateOneFrameInternal();
+    }
     hw_layers_info.rc_config = true;
     hw_layers_info.rc_layers_info.top_width = rc_out_config->top_width;
     hw_layers_info.rc_layers_info.top_height = rc_out_config->top_height;
@@ -1129,6 +1146,7 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
   } else {
     DLOGI_IF(kTagDisplay, "Status of RC mask data: %d.", (*mask_status).rc_mask_state);
     if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
+      DisablePartialUpdateOneFrameInternal();
       DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
                display_id_, display_type_);
       error = kErrorNeedsValidate;
@@ -1204,9 +1222,13 @@ void DisplayBase::CommitThread() {
     disp_mutex_.worker_cv.notify_one();
 
     // Wait for client thread to signal. Handle spurious interrupts.
-    disp_mutex_.worker_cv.wait(disp_mutex_.worker_mutex, [this] {
-      return disp_mutex_.worker_busy;
-    });
+    if (!(disp_mutex_.worker_cv.wait_until(disp_mutex_.worker_mutex, WaitUntil(), [this] {
+      return (disp_mutex_.worker_busy);
+    }))) {
+      DLOGI("Received idle timeout");
+      IdleTimeout();
+      continue;
+    }
 
     if (disp_mutex_.worker_exit) {
       DLOGI("Terminate commit thread.");
@@ -1230,7 +1252,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   // part of first validate
   if (first_cycle_) {
     hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
-    hw_events_intf_->SetEventState(HWEvent::IDLE_NOTIFY, true);
     hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
     hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
     hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
@@ -1239,6 +1260,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 #endif
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
+  if (layer_stack->request_flags.trigger_refresh) {
+    layer_stack->output_buffer = nullptr;
+  }
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
@@ -1368,6 +1392,11 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
       secure_event_ == kTUITransitionUnPrepare) {
     secure_event_ = kSecureEventMax;
+  }
+
+  int level = 0;
+  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
   }
 
   PostCommitLayerParams();
@@ -1600,7 +1629,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
         display_type_, teardown);
 
-  if (state == state_) {
+  if (state == state_ && (pending_power_state_ == kPowerStateNone)) {
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
@@ -1761,6 +1790,11 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   if (error != kErrorNone) {
     return error;
   }
+
+  // Cache last refresh rate set by SF
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &display_attributes);
+  active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
 }
@@ -2031,6 +2065,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionGPUTarget:     return "GPU_TARGET";
   case kCompositionStitchTarget:  return "STITCH_TARGET";
   case kCompositionDemura:        return "DEMURA";
+  case kCompositionCWBTarget:     return "CWB_TARGET";
   default:                        return "UNKNOWN";
   }
 }
@@ -2843,10 +2878,11 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   if (de_data.enable) {
-    disable_pu_on_dest_scaler_ = true;
+    de_enabled_  = true;
   } else {
-    SetPUonDestScaler();
+    de_enabled_ = false;
   }
+  SetPUonDestScaler();
 
   return kErrorNone;
 }
@@ -3175,7 +3211,7 @@ void DisplayBase::SetPUonDestScaler() {
   uint32_t display_height = display_attributes_.y_pixels;
 
   disable_pu_on_dest_scaler_ = (mixer_width != display_width ||
-                                mixer_height != display_height);
+                                mixer_height != display_height) || de_enabled_;
 }
 
 void DisplayBase::ClearColorInfo() {
@@ -3811,10 +3847,11 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
     // TODO(user): Temporary changes, to be removed when DRM driver supports
     // Partial update with Destination scaler enabled.
     if (de_data.enable) {
-      disable_pu_on_dest_scaler_ = true;
+      de_enabled_  = true;
     } else {
-      SetPUonDestScaler();
+      de_enabled_  = false;
     }
+    SetPUonDestScaler();
 
     de_tuning_cfg_data->cfg_pending = false;
   }
@@ -3834,27 +3871,65 @@ DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
   return err;
 }
 
-DisplayError DisplayBase::SetDimmingBlLut(void *payload, size_t size) {
+DisplayError DisplayBase::SetDimmingConfig(void *payload, size_t size) {
   ClientLock lock(disp_mutex_);
 
-  DisplayError err = hw_intf_->SetDimmingBlLut(payload, size);
+  DisplayError err = hw_intf_->SetDimmingConfig(payload, size);
   if (err) {
-    DLOGE("Failed to set dimming bl LUT %d", err);
+    DLOGE("Failed to set dimming config %d", err);
   } else {
-    DLOGI_IF(kTagDisplay, "Dimimng bl LUT is set successfully");
+    DLOGI_IF(kTagDisplay, "Dimimng config is set successfully");
     event_handler_->Refresh();
   }
   return err;
 }
 
-DisplayError DisplayBase::EnableDimmingBacklightEvent(void *payload, size_t size) {
-  ClientLock lock(disp_mutex_);
+DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
+  struct sde_drm::DRMPPFeatureInfo info = {};
+  GenericPayload payload;
+  bool *bl_ctrl = nullptr;
 
-  DisplayError err = hw_intf_->EnableDimmingBacklightEvent(payload, size);
-  if (err) {
-    DLOGE("Failed to set dimming backlight event %d", err);
+  int ret = payload.CreatePayload(bl_ctrl);
+  if (ret || !bl_ctrl) {
+    DLOGE("Create Payload failed with ret %d", ret);
+    return kErrorUndefined;
   }
-  return err;
+
+  *bl_ctrl = int_enabled? true : false;
+  info.id = sde_drm::kFeatureDimmingDynCtrl;
+  info.type = sde_drm::kPropRange;
+  info.version = 0;
+  info.payload = bl_ctrl;
+  info.payload_size = sizeof(bool);
+  info.is_event = false;
+
+  DLOGV_IF(kTagDisplay, "Display %d-%d set dimming enable %d", display_id_,
+    display_type_, int_enabled);
+  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+}
+
+DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
+  struct sde_drm::DRMPPFeatureInfo info = {};
+  GenericPayload payload;
+  int *bl = nullptr;
+
+  int ret = payload.CreatePayload(bl);
+  if (ret || !bl) {
+    DLOGE("Create Payload failed with ret %d", ret);
+    return kErrorUndefined;
+  }
+
+  *bl = min_bl;
+  info.id = sde_drm::kFeatureDimmingMinBl;
+  info.type = sde_drm::kPropRange;
+  info.version = 0;
+  info.payload = bl;
+  info.payload_size = sizeof(int);
+  info.is_event = false;
+
+  DLOGV_IF(kTagDisplay, "Display %d-%d set dimming min_bl %d", display_id_,
+    display_type_, min_bl);
+  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 /* this func is called by DC dimming feature only after PCC updates */
@@ -3872,6 +3947,54 @@ void DisplayBase::PrepareForAsyncTransition() {
   // To prevent accidental usage, reset all such internal pointers referring to caller structures
   //    so that an instant fatal error is observed in place of prolonged corruption.
   disp_layer_stack_.stack = nullptr;
+}
+
+std::chrono::system_clock::time_point DisplayBase::WaitUntil() {
+  int idle_time_ms = disp_layer_stack_.info.set_idle_time_ms;
+  std::chrono::system_clock::time_point timeout_time;
+  // Indefinite wait if state is off or idle timeout has triggered
+  if (state_ == kStateOff || idle_time_ms == 0 || handle_idle_timeout_) {
+    timeout_time = std::chrono::system_clock::from_time_t(INT_MAX);
+  } else {
+    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+    timeout_time = current_time + std::chrono::milliseconds(idle_time_ms);
+  }
+  return timeout_time;
+}
+
+DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
+  DisplayError error = kErrorNone;
+  if (!layer_stack->request_flags.trigger_refresh) {
+    return error;
+  }
+
+  comp_manager_->HandleCwbFrequencyBoost(true);
+
+  cwb_config_ = new CwbConfig;
+  if (layer_stack->cwb_config == NULL) {
+    cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
+    uint32_t buffer_width = 0, buffer_height = 0;
+    error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+    if (error != kErrorNone) {
+      DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
+      return error;
+    }
+
+    // Setting full frame ROI
+    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
+    DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+    cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
+  }
+
+  disp_layer_stack_.info.hw_cwb_config = cwb_config_;
+  error = ValidateCwbConfigInfo(disp_layer_stack_.info.hw_cwb_config,
+                                layer_stack->output_buffer->format);
+  if (error != kErrorNone) {
+    DLOGE("CWB_config validation failed.");
+    return error;
+  }
+
+  return error;
 }
 
 }  // namespace sdm

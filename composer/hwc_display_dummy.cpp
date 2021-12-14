@@ -114,4 +114,20 @@ HWC2::Error HWCDisplayDummy::SetClientTarget(buffer_handle_t target,
   return HWC2::Error::None;
 }
 
+void HWCDisplayDummy::SetConfigInfo(
+                      std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
+                      int active_config_index, uint32_t num_configs) {
+  variable_config_map_ = variable_config_map;
+  active_config_index_ = active_config_index;
+  num_configs_ = num_configs;
+}
+
+HWC2::Error HWCDisplayDummy::SetActiveConfigWithConstraints(
+    hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
+    VsyncPeriodChangeTimeline *out_timeline) {
+
+  ALOGI("Config change not allowed in async power mode transition");
+  return HWC2::Error::Unsupported;
+}
+
 }  // namespace sdm

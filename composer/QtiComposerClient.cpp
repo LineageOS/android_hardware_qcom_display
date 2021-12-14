@@ -566,6 +566,8 @@ Return<void> QtiComposerClient::executeCommands(uint32_t inLength,
                                                 executeCommands_cb _hidl_cb) {
   std::lock_guard<std::mutex> lock(mCommandMutex);
 
+  std::lock_guard<std::mutex> hwc_lock(hwc_session_->command_seq_mutex_);
+
   bool outChanged = false;
   uint32_t outLength = 0;
   hidl_vec<hidl_handle> outHandles;
@@ -789,6 +791,9 @@ Return<void> QtiComposerClient::executeCommands_2_2(uint32_t inLength,
                                                     executeCommands_2_2_cb _hidl_cb) {
   std::lock_guard<std::mutex> lock(mCommandMutex);
 
+  // This lock ensures that Client gets exclusive access to hwc display.
+  // Failing which return to SF will be blocked leading to fence timeouts.
+  std::lock_guard<std::mutex> hwc_lock(hwc_session_->command_seq_mutex_);
   bool outChanged = false;
   uint32_t outLength = 0;
   hidl_vec<hidl_handle> outHandles;
@@ -905,6 +910,7 @@ Return<void> QtiComposerClient::executeCommands_2_3(uint32_t inLength,
   // TODO(user): Implement combinedly w.r.t executeCommands_2_2
   std::lock_guard<std::mutex> lock(mCommandMutex);
 
+  std::lock_guard<std::mutex> hwc_lock(hwc_session_->command_seq_mutex_);
   bool outChanged = false;
   uint32_t outLength = 0;
   hidl_vec<hidl_handle> outHandles;
@@ -1562,6 +1568,7 @@ Error QtiComposerClient::CommandReader::postValidateDisplay(uint32_t& types_coun
   std::vector<IComposerClient::Composition> compositionTypes;
   std::vector<Layer> requestedLayers;
   std::vector<uint32_t> requestMasks;
+  IComposerClient::ClientTargetProperty clientTargetProperty;
   changedLayers.resize(types_count);
   compositionTypes.resize(types_count);
   auto err = mClient.hwc_session_->GetChangedCompositionTypes(mDisplay, &types_count,
@@ -1603,8 +1610,17 @@ Error QtiComposerClient::CommandReader::postValidateDisplay(uint32_t& types_coun
     requestMasks.clear();
   }
 
+  err = mClient.hwc_session_->GetClientTargetProperty(mDisplay, &clientTargetProperty);
+  if (err != HWC2_ERROR_NONE) {
+    // todo: reset to default values
+    return static_cast<Error>(err);
+  }
+
   mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
   mWriter.setDisplayRequests(display_reqs, requestedLayers, requestMasks);
+  if (mClient.mUseCallback24_) {
+    mWriter.setClientTargetProperty(clientTargetProperty);
+  }
 
   return static_cast<Error>(err);
 }

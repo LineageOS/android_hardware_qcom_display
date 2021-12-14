@@ -47,6 +47,7 @@ class ResourceInterface {
     kCmdGetRetireFence,
     kCmdNeedsValidate,
     kCmdSetBacklightLevel,
+    kCmdSetCwbBoost,
     kCmdMax,
   };
 
@@ -54,12 +55,14 @@ class ResourceInterface {
                                        const HWDisplayAttributes &display_attributes,
                                        const HWPanelInfo &hw_panel_info,
                                        const HWMixerAttributes &mixer_attributes,
+                                       const Resolution &fb_resolution,
                                        Handle *display_ctx) = 0;
   virtual DisplayError UnregisterDisplay(Handle display_ctx) = 0;
   virtual DisplayError ReconfigureDisplay(Handle display_ctx,
                                           const HWDisplayAttributes &display_attributes,
                                           const HWPanelInfo &hw_panel_info,
-                                          const HWMixerAttributes &mixer_attributes) = 0;
+                                          const HWMixerAttributes &mixer_attributes,
+                                          const Resolution &fb_resolution) = 0;
   virtual DisplayError Start(Handle display_ctx, LayerStack *layer_stack) = 0;
   virtual DisplayError Precheck(Handle display_ctx, DispLayerStack* disp_layer_stack,
                                 LayerFeedback* feedback) = 0;

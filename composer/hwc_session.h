@@ -40,6 +40,7 @@
 #include <unordered_map>
 #include <string>
 #include <memory>
+#include <core/display_interface.h>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -65,6 +66,7 @@ namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
+using HwcClientTargetProperty = composer_V2_4::IComposerClient::ClientTargetProperty;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfig;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback;
 using ::aidl::vendor::qti::hardware::display::config::CameraSmoothOp;
@@ -126,8 +128,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   enum ClientCommitDone {
     kClientPartialUpdate,
     kClientIdlepowerCollapse,
-    kClientTrustedUI,
     kClientTeardownCWB,
+    kClientTrustedUI,
     kClientMax
   };
 
@@ -261,6 +263,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
   int32_t SetDisplayBrightnessScale(const android::Parcel *input_parcel);
   int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
+  int32_t SetDimmingEnable(hwc2_display_t display, int32_t int_enabled);
+  int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
+  int32_t GetClientTargetProperty(hwc2_display_t display,
+                                  HwcClientTargetProperty *outClientTargetProperty);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
@@ -309,8 +315,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
+  virtual void PerformDisplayPowerReset();
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate);
+  virtual void VmReleaseDone(hwc2_display_t display);
 
   int32_t SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled);
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
@@ -335,10 +343,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
-  static Locker system_locker_;
+  static std::mutex command_seq_mutex_;
   static std::bitset<kClientMax> clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
   static shared_ptr<Fence> retire_fence_[HWCCallbacks::kNumDisplays];
   static int commit_error_[HWCCallbacks::kNumDisplays];
+  static Locker vm_release_locker_[HWCCallbacks::kNumDisplays];
+  static std::bitset<HWCCallbacks::kNumDisplays> clients_waiting_for_vm_release_;
 
  private:
   class CWB {
@@ -349,6 +359,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                        const CwbConfig &cwb_config, const native_handle_t *buffer,
                        hwc2_display_t display_type);
+    bool IsCwbActiveOnDisplay(hwc2_display_t disp_type);
 
    private:
     struct QueueNode {
@@ -464,6 +475,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   static const int kExternalConnectionTimeoutMs = 500;
   static const int kCommitDoneTimeoutMs = 100;
+  static const int kVmReleaseTimeoutMs = 100;
   uint32_t throttling_refresh_rate_ = 60;
   std::mutex hotplug_mutex_;
   std::condition_variable hotplug_cv_;
@@ -579,6 +591,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
   int WaitForCommitDone(hwc2_display_t display, int client_id);
   void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
+  int WaitForVmRelease(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

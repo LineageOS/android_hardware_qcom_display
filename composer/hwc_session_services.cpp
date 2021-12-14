@@ -814,6 +814,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   hwc_session_->hwc_display_[dummy_disp_id]->SetClientTarget(
                                        target, acquire_fence, dataspace, damage);
 
+  // Initialize the variable config map of dummy display using map of real display.
+  // Pass the real display's last active config index to dummy display.
+  std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map;
+  int active_config_index = -1;
+  uint32_t num_configs = 0;
+  hwc_session_->hwc_display_[disp_id]->GetConfigInfo(&variable_config_map, &active_config_index,
+                                                     &num_configs);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetConfigInfo(variable_config_map,
+                                                           active_config_index, num_configs);
 
   hwc_session_->locker_[dummy_disp_id].Unlock();  // Release the dummy display.
   // Release the display's power-state transition var read lock.
@@ -1129,6 +1138,7 @@ void HWCSession::CWB::ProcessRequests() {
   while (true) {
     QueueNode *node = nullptr;
     int status = 0;
+    HWC2::Error error = HWC2::Error::None;
 
     // Mutex scope
     // Just check if there is a next cwb request queued, exit the thread if nothing is pending.
@@ -1154,47 +1164,60 @@ void HWCSession::CWB::ProcessRequests() {
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker);
 
-      HWC2::Error error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
-                                                         kCWBClientExternal);
-      if (error != HWC2::Error::None) {
-        status = -1;
-      } else {
+      error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
+                                             kCWBClientExternal);
+      if (error == HWC2::Error::None) {
         DLOGI("Successfully configured CWB buffer.");
+      } else if (error == HWC2::Error::NoResources || error == HWC2::Error::Unsupported ||
+                 error == HWC2::Error::BadDisplay) {  // if cwb request is made either when another
+        // display/client is performing CWB or when CWB tearing down then notify warning status -2.
+        status = -2;
+      } else {  // notify error status -1 to the CWB client
+        status = -1;
       }
     }
 
-    hwc_session_->callbacks_.Refresh(node->display_type);
+    if (error != HWC2::Error::BadDisplay) {  // Don't wait if CWB requested on powered-off display.
+      hwc_session_->callbacks_.Refresh(node->display_type);
 
-    // Mutex scope
-    // Wait for the signal from commit thread to retrieve the CWB release fence
-    {
-      std::unique_lock<std::mutex> lock(mutex_);
-      cv_.wait(lock);
+      // Mutex scope
+      // Wait for the signal from commit thread to retrieve the CWB release fence
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait(lock);
+      }
     }
 
     if (!status) {
+      std::lock_guard<std::mutex> lock(command_seq_mutex_);
       shared_ptr<Fence> release_fence = nullptr;
       // Mutex scope
       {
         SCOPE_LOCK(locker);
-        hwc_display->GetReadbackBufferFence(&release_fence);
+        error = hwc_display->GetReadbackBufferFence(&release_fence);
+        if (error != HWC2::Error::None) {
+          status = -1;
+        }
       }
+      if (!status) {
+        bool is_waiting = true;
+        {
+          SCOPE_LOCK(fence_queue_lock_);
+          // check whether fence wait is going on in another async thread.
+          is_waiting = static_cast<bool>(fence_wait_queue_.size());
+          // push current cwb request's release fence in the fence wait queue.
+          DLOGI("Pushing release fence in fenece wait queue.");
+          fence_wait_queue_.push({release_fence, node});
+        }
+        if (!is_waiting) {  // incase of empty fence wait queue, create a new async thread
+          DLOGI("Creating AsyncFenceWaits async thread.");
+          // to perform fence wait on the cwb release fence.
+          fence_wait_future_ = std::async(HWCSession::CWB::AsyncFenceWaits, this);
+        }
+      }
+    }
 
-      bool is_waiting = true;
-      {
-        SCOPE_LOCK(fence_queue_lock_);
-        // check whether fence wait is going on in another async thread.
-        is_waiting = static_cast<bool>(fence_wait_queue_.size());
-        // push current cwb request's release fence in the fence wait queue.
-        DLOGI("Pushing release fence in fenece wait queue.");
-        fence_wait_queue_.push({release_fence, node});
-      }
-      if (!is_waiting) {  // incase of empty fence wait queue, create a new async thread
-        DLOGI("Creating AsyncFenceWaits async thread.");
-        // to perform fence wait on the cwb release fence.
-        fence_wait_future_ = std::async(HWCSession::CWB::AsyncFenceWaits, this);
-      }
-    } else {
+    if (status) {  // for erroneous status, notify the cwb client.
       NotifyCWBStatus(status, node);
     }
 
@@ -1280,6 +1303,11 @@ void HWCSession::CWB::PresentDisplayDone(hwc2_display_t disp_id) {
 
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.notify_one();
+}
+
+bool HWCSession::CWB::IsCwbActiveOnDisplay(hwc2_display_t disp_type) {
+  SCOPE_LOCK(queue_lock_);
+  return (queue_.size() && queue_.front()->display_type == disp_type) ? true : false;
 }
 
 int HWCSession::DisplayConfigImpl::SetQsyncMode(uint32_t disp_id, DisplayConfig::QsyncMode mode) {

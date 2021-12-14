@@ -43,8 +43,9 @@ class Strategy {
   DisplayError Init();
   DisplayError Deinit();
 
-  DisplayError Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts);
-  DisplayError GetNextStrategy(StrategyConstraints *constraints);
+  DisplayError Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts,
+                      StrategyConstraints *constraints);
+  DisplayError GetNextStrategy();
   DisplayError Stop();
   DisplayError SetDrawMethod(const DisplayDrawMethod &draw_method);
   DisplayError Reconfigure(const HWPanelInfo &hw_panel_info,

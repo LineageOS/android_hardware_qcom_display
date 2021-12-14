@@ -63,8 +63,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
   DisplayError Blank(bool blank) override { return kErrorNone; }
-  void IdleTimeout() override {}
-  void ThermalEvent(int64_t thermal_level) override {}
   void CECMessage(char *message) override;
   void IdlePowerCollapse() override {}
   void PingPongTimeout() override {}
@@ -74,6 +72,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void Histogram(int histogram_fd, uint32_t blob_id) override;
   void MMRMEvent(uint32_t clk) override;
   void HandlePowerEvent() override;
+  void HandleVmReleaseEvent() override;
 
   void UpdateColorModes();
   void InitializeColorModesFromColorspace();

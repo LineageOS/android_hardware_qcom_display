@@ -56,6 +56,8 @@ class DRMPPManager {
  private:
   int SetPPBlobProperty(drmModeAtomicReq *req, uint32_t obj_id, struct DRMPPPropInfo *prop_info,
                         DRMPPFeatureInfo &feature);
+  int SetPPRangeProperty(drmModeAtomicReq *req, uint32_t obj_id, struct DRMPPPropInfo *prop_info,
+                        DRMPPFeatureInfo &feature);
   void SetPPEvent(uint32_t obj_id, DRMPPFeatureInfo &feature);
 
   int fd_ = -1;

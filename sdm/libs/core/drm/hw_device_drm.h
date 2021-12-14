@@ -227,12 +227,11 @@ class HWDeviceDRM : public HWInterface {
   void SetTUIState();
   DisplayError ConfigureCWBDither(void *payload, uint32_t conn_id,
                                   sde_drm::DRMCWbCaptureMode mode);
-  void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
+  void SetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
-  DisplayError SetDimmingBlLut(void *payload, size_t size);
-  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
+  DisplayError SetDimmingConfig(void *payload, size_t size);
   DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
 
   class Registry {
@@ -262,6 +261,10 @@ class HWDeviceDRM : public HWInterface {
 
  protected:
   void SetDisplaySwitchMode(uint32_t index);
+  bool IsSeamlessTransition() {
+    return (hw_panel_info_.dynamic_fps && (vrefresh_ || seamless_mode_switch_)) ||
+     panel_mode_changed_ || bit_clk_rate_;
+  }
 
   const char *device_name_ = {};
   bool default_mode_ = false;
@@ -322,6 +325,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
+  bool seamless_mode_switch_ = false;
 };
 
 }  // namespace sdm

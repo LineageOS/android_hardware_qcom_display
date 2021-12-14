@@ -66,11 +66,14 @@ std::bitset<HWCSession::kClientMax>
 shared_ptr<Fence> HWCSession::retire_fence_[HWCCallbacks::kNumDisplays];
 int HWCSession::commit_error_[HWCCallbacks::kNumDisplays] = { 0 };
 Locker HWCSession::display_config_locker_;
-Locker HWCSession::system_locker_;
+std::mutex HWCSession::command_seq_mutex_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 static const uint32_t kBrightnessScaleMax = 100;
 static const uint32_t kSvBlScaleMax = 65535;
+Locker HWCSession::vm_release_locker_[HWCCallbacks::kNumDisplays];
+std::bitset<HWCCallbacks::kNumDisplays> HWCSession::clients_waiting_for_vm_release_;
+
 
 // Map the known color modes to dataspace.
 int32_t GetDataspaceFromColorMode(ColorMode mode) {
@@ -496,7 +499,7 @@ int32_t HWCSession::CreateLayer(hwc2_display_t display,
 int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_t *format,
                                          hwc2_display_t *out_display_id) {
   // TODO(user): Handle concurrency with HDMI
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+
   if (!out_display_id || !width || !height || !format) {
     return  HWC2_ERROR_BAD_PARAMETER;
   }
@@ -510,14 +513,6 @@ int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_
     return HWC2_ERROR_NONE;
   }
 
-  {
-    //On Non-QSSI builds we have to disable virtual display to avoid jank
-    Locker::ScopeLock lock_disp(locker_[active_builtin_disp_id]);
-    if (hwc_display_[active_builtin_disp_id]->GetDrawMethod() != kDrawUnifiedWithGPUTarget) {
-      DLOGW("Draw method is not UnifiedWithGPUTarget, failing Virtual Display Creation.");
-      return HWC2_ERROR_UNSUPPORTED;
-    }
-  }
   auto status = CreateVirtualDisplayObj(width, height, format, out_display_id);
   if (status == HWC2::Error::None) {
     DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d", *out_display_id, width, height);
@@ -794,7 +789,6 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
-  SCOPE_LOCK(system_locker_);
   if (display >= HWCCallbacks::kNumDisplays) {
     DLOGW("Invalid Display : display = %" PRIu64, display);
     return HWC2_ERROR_BAD_DISPLAY;
@@ -1198,8 +1192,14 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_NONE;
   }
 
+  // 1. For power transition cases other than Off->On or On->Off, async power mode
+  // will not be used. Hence, set override_mode to false for them.
+  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+  // in main thread path.
   if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
-     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
     override_mode = false;
   }
 
@@ -1217,6 +1217,8 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
       return INT32(error);
+    } else if (mode == HWC2::PowerMode::Off && cwb_.IsCwbActiveOnDisplay(display)) {
+      cwb_.PresentDisplayDone(display);
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
@@ -1257,6 +1259,14 @@ int32_t HWCSession::SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled)
   }
 
   return CallDisplayFunction(display, &HWCDisplay::SetVsyncEnabled, enabled);
+}
+
+int32_t HWCSession::SetDimmingEnable(hwc2_display_t display, int32_t int_enabled) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDimmingEnable, int_enabled);
+}
+
+int32_t HWCSession::SetDimmingMinBl(hwc2_display_t display, int32_t min_bl) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDimmingMinBl, min_bl);
 }
 
 int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support) {
@@ -1806,6 +1816,30 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       int port_id = 0;
       status = GetDisplayPortId(disp_id, &port_id);
       output_parcel->writeInt32(port_id);
+    }
+    break;
+
+    case qService::IQService::SET_DIMMING_ENABLE: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int enable = input_parcel->readInt32();
+      status = SetDimmingEnable(disp_id, enable);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
+    case qService::IQService::SET_DIMMING_MIN_BL: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int min_bl = input_parcel->readInt32();
+      status = SetDimmingMinBl(disp_id, min_bl);
+      output_parcel->writeInt32(status);
     }
     break;
 
@@ -3080,7 +3114,8 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   DLOGI("Notify hotplug display disconnected: client id = %d", UINT32(client_id));
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
-  SCOPE_LOCK(system_locker_);
+  // Wait until all commands are flushed.
+  std::lock_guard<std::mutex> hwc_lock(command_seq_mutex_);
   {
     SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
@@ -3159,7 +3194,9 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
     map_info->Reset();
 }
 
-void HWCSession::DisplayPowerReset() {
+void HWCSession::PerformDisplayPowerReset() {
+  // Wait until all commands are flushed.
+  std::lock_guard<std::mutex> lock(command_seq_mutex_);
   // Acquire lock on all displays.
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY;
     display < HWCCallbacks::kNumDisplays; display++) {
@@ -3178,6 +3215,8 @@ void HWCSession::DisplayPowerReset() {
                                                    true /* teardown */);
       if (status != HWC2::Error::None) {
         DLOGE("Power off for display = %d failed with error = %d", INT32(display), status);
+      } else if (cwb_.IsCwbActiveOnDisplay(display)) {
+        cwb_.PresentDisplayDone(display);
       }
     }
   }
@@ -3214,6 +3253,20 @@ void HWCSession::DisplayPowerReset() {
   }
 
   callbacks_.Refresh(vsync_source);
+}
+
+void HWCSession::DisplayPowerReset() {
+  // Do Power Reset in a different thread to avoid blocking of SDM event thread
+  // when disconnecting display.
+  std::thread(&HWCSession::PerformDisplayPowerReset, this).detach();
+}
+
+void HWCSession::VmReleaseDone(hwc2_display_t display) {
+  SCOPE_LOCK(vm_release_locker_[display]);
+  if (clients_waiting_for_vm_release_.test(display)) {
+    vm_release_locker_[display].Signal();
+  }
+  DLOGI("Signal vm release done!! for display %d", display);
 }
 
 void HWCSession::HandleSecureSession() {
@@ -3522,6 +3575,20 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
   return HWC2_ERROR_NONE;
 }
 
+int32_t HWCSession::GetClientTargetProperty(hwc2_display_t display,
+                                            HwcClientTargetProperty *outClientTargetProperty) {
+  if (!outClientTargetProperty) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  return CallDisplayFunction(display, &HWCDisplay::GetClientTargetProperty,
+                             outClientTargetProperty);
+}
+
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport) {
   if (!outSupport) {
     return HWC2_ERROR_BAD_PARAMETER;
@@ -3801,6 +3868,16 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   return ret;
 }
 
+int HWCSession::WaitForVmRelease(hwc2_display_t display) {
+  SCOPE_LOCK(vm_release_locker_[display]);
+  clients_waiting_for_vm_release_.set(display);
+  int ret = vm_release_locker_[display].WaitFinite(kVmReleaseTimeoutMs);
+  if (ret != 0) {
+    DLOGE("Timed out with error %d for display %" PRIu64, ret, display);
+  }
+  return ret;
+}
+
 android::status_t HWCSession::HandleTUITransition(int disp_id, int event) {
   switch(event) {
     case qService::IQService::TUI_TRANSITION_PREPARE:
@@ -3889,10 +3966,22 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     callbacks_.Refresh(target_display);
 
     DLOGI("Waiting for device assign");
-    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    int ret = WaitForVmRelease(target_display);
     if (ret != 0) {
       DLOGE("Device assign failed with error %d", ret);
       return -EINVAL;
+    }
+  }
+
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    if (hwc_display_[target_display]) {
+      if (hwc_display_[target_display]->PostHandleSecureEvent(kTUITransitionStart) != kErrorNone) {
+        return -EINVAL;
+      }
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
     }
   }
   return 0;
@@ -3935,6 +4024,19 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       return -EINVAL;
     }
   }
+
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    if (hwc_display_[target_display]) {
+      if (hwc_display_[target_display]->PostHandleSecureEvent(kTUITransitionEnd) != kErrorNone) {
+        return -EINVAL;
+      }
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
+    }
+  }
+
   return TUITransitionUnPrepare(disp_id);
 }
 
@@ -3978,7 +4080,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     callbacks_.Refresh(target_display);
     int ret = WaitForCommitDone(target_display, kClientTrustedUI);
     if (ret != 0) {
-      DLOGE("WaitForCommitDone failed with error %d", ret);
+      DLOGE("WaitForVmRelease failed with error %d", ret);
       return -EINVAL;
     }
   }

@@ -64,8 +64,6 @@ class HWEventHandler {
  public:
   virtual DisplayError VSync(int64_t timestamp) = 0;
   virtual DisplayError Blank(bool blank) = 0;
-  virtual void IdleTimeout() = 0;
-  virtual void ThermalEvent(int64_t thermal_level) = 0;
   virtual void CECMessage(char *message) = 0;
   virtual void IdlePowerCollapse() = 0;
   virtual void PingPongTimeout() = 0;
@@ -75,6 +73,7 @@ class HWEventHandler {
   virtual void HandleBacklightEvent(float brightness_level) = 0;
   virtual void MMRMEvent(uint32_t clk) = 0;
   virtual void HandlePowerEvent() = 0;
+  virtual void HandleVmReleaseEvent() = 0;
 
  protected:
   virtual ~HWEventHandler() { }
@@ -137,8 +136,7 @@ class HWInterface {
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) = 0;
   virtual DisplayError SetBLScale(uint32_t level) = 0;
   virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_bl) = 0;
-  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
-  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
+  virtual DisplayError SetDimmingConfig(void *payload, size_t size) = 0;
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;
