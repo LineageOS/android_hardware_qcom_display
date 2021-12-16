@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -478,6 +478,9 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
     if (revalidate_pending_) {
       validated_ = false;
       revalidate_pending_ = false;
+      if (force_reset_validate_) {
+        display_intf_->ClearLUTs();
+      }
     }
   } else {
     CacheAvrStatus();
@@ -517,8 +520,12 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   // In case of scaling UI layer for command mode, reset validate
   if (force_reset_validate_) {
-    validated_ = false;
-    display_intf_->ClearLUTs();
+    if (layer_stack_.block_on_fb) {
+      validated_ = false;
+      display_intf_->ClearLUTs();
+    } else {
+      revalidate_pending_ = true;
+    }
   }
   return status;
 }
