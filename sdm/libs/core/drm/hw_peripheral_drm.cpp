@@ -213,13 +213,13 @@ DisplayError HWPeripheralDRM::Commit(HWLayersInfo *hw_layers_info) {
   SetVMReqState();
 
   DisplayError error = HWDeviceDRM::Commit(hw_layers_info);
+  shared_ptr<Fence> cwb_fence = Fence::Create(INT(cwb_fence_fd), "cwb_fence");
   if (error != kErrorNone) {
     return error;
   }
 
   if (has_fence) {
-    hw_layers_info->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd),
-                                                                      "release_cwb");
+    hw_layers_info->output_buffer->release_fence = cwb_fence;
   }
 
   CacheDestScalarData();
