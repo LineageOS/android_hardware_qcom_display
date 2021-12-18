@@ -1,8 +1,6 @@
 /*
 * Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -28,36 +26,7 @@
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
 * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <utils/constants.h>
@@ -188,7 +157,15 @@ DisplayError DisplayBuiltIn::Init() {
       return error;
     }
 
-    if (SetupDemura() != kErrorNone) {
+    if ((error = HandleSPR()) != kErrorNone) {
+      DLOGE("Failed to get SPR status. Error = %d", error);
+      DisplayBase::Deinit();
+      HWInterface::Destroy(hw_intf_);
+      HWEventsInterface::Destroy(hw_events_intf_);
+      return error;
+    }
+
+    if ((error = SetupDemura()) != kErrorNone) {
       // Non-fatal but not expected, log error
       DLOGE("Demura failed to initialize on display %d-%d, Error = %d", display_id_,
             display_type_, error);
@@ -196,6 +173,10 @@ DisplayError DisplayBuiltIn::Init() {
       comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
       if (demura_) {
         SetDemuraIntfStatus(false);
+      }
+    } else if (demuratn_factory_) {
+      if ((error = SetupDemuraTn()) != kErrorNone) {
+        DLOGW("Failed to setup DemuraTn, Error = %d", error);
       }
     }
   } else {
@@ -261,6 +242,12 @@ DisplayError DisplayBuiltIn::Deinit() {
 
       if (demura_->Deinit() != 0) {
         DLOGE("Unable to DeInit Demura on Display %d-%d", display_id_, display_type_);
+      }
+    }
+    if (demuratn_) {
+      EnableDemuraTn(false);
+      if (demuratn_->Deinit() != 0) {
+        DLOGE("Unable to DeInit DemuraTn on Display %d", display_id_);
       }
     }
   }
@@ -504,6 +491,7 @@ DisplayError DisplayBuiltIn::SetupSPR() {
       return kErrorResources;
     }
 
+    spr_bypassed_ = spr_cfg.spr_bypassed;
     if (color_mgr_) {
       color_mgr_->ColorMgrSetSprIntf(spr_);
     }
@@ -594,13 +582,14 @@ DisplayError DisplayBuiltIn::SetupDemura() {
 #endif
     DLOGI("panel id %lx\n", input_cfg.panel_id);
     input_cfg.panel_id = panel_id;
-    demura_ = pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
-
-    if (!demura_) {
+    std::unique_ptr<DemuraIntf> demura =
+        pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
+    if (!demura) {
       DLOGE("Unable to create Demura on Display %d-%d", display_id_, display_type_);
       return kErrorMemory;
     }
 
+    demura_ = std::move(demura);
     if (demura_->Init() != 0) {
       DLOGE("Unable to initialize Demura on Display %d-%d", display_id_, display_type_);
       return kErrorUndefined;
@@ -733,6 +722,89 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
   }
 }
 
+DisplayError DisplayBuiltIn::SetupDemuraTn() {
+  int ret = 0;
+
+  if (!demura_) {
+    DLOGI("Demura is not enabled, cannot setup DemuraTn");
+    return kErrorNone;
+  }
+
+  demuratn_ = demuratn_factory_->CreateDemuraTnCoreUvmIntf(demura_, buffer_allocator_, this);
+  if (!demuratn_) {
+    demuratn_factory_ = nullptr;
+    DLOGE("Failed to create demuraTnCoreUvmIntf");
+    return kErrorUndefined;
+  }
+
+  ret = demuratn_->Init();
+  if (ret) {
+    DLOGE("Failed to init demuraTnCoreUvmIntf, ret %d", ret);
+    demuratn_factory_ = nullptr;
+    demuratn_.reset();
+    demuratn_ = nullptr;
+    return kErrorUndefined;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::EnableDemuraTn(bool enable) {
+  int ret = 0;
+  bool *en = nullptr;
+  GenericPayload payload;
+
+  if (!demuratn_) {
+    DLOGE("demuratn_ is nullptr");
+    return kErrorUndefined;
+  }
+
+  if (demuratn_enabled_ == enable)
+    return kErrorNone;
+
+  ret = payload.CreatePayload(en);
+  if (ret) {
+    DLOGE("Failed to create enable payload");
+    return kErrorUndefined;
+  }
+  *en = enable;
+
+  if (enable) {  // make sure init is ready before enabling
+    bool *init_ready = nullptr;
+    GenericPayload ready_pl;
+    ret = ready_pl.CreatePayload<bool>(init_ready);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
+    }
+
+    ret = demuratn_->GetParameter(kDemuraTnCoreUvmParamInitReady, &ready_pl);
+    if (ret) {
+      DLOGE("GetParameter for InitReady failed ret %d", ret);
+      return kErrorUndefined;
+    }
+    if (!(*init_ready)) {
+      return kErrorNone;
+    }
+
+    ret = demuratn_->SetParameter(kDemuraTnCoreUvmParamEnable, payload);
+    if (ret) {
+      DLOGE("SetParameter for enable failed ret %d", ret);
+      return kErrorUndefined;
+    }
+    demuratn_enabled_ = true;
+  } else {
+    ret = demuratn_->SetParameter(kDemuraTnCoreUvmParamEnable, payload);
+    if (ret) {
+      DLOGE("SetParameter for enable failed ret %d", ret);
+      return kErrorUndefined;
+    }
+    demuratn_enabled_ = false;
+  }
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;
@@ -793,6 +865,9 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
     dpps_pu_lock_.Broadcast();
   }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
+
+  if (demuratn_)
+    EnableDemuraTn(true);
 
   HandleQsyncPostCommit();
 
@@ -2367,12 +2442,35 @@ void DisplayBuiltIn::SendDisplayConfigs() {
 }
 
 int DisplayBuiltIn::SetDemuraIntfStatus(bool enable) {
+  int ret = 0;
+  bool *reconfig = nullptr;
+  GenericPayload reconfig_pl;
   if (!demura_) {
     DLOGE("demura_ is nullptr");
     return -EINVAL;
   }
 
-  int ret = 0;
+  if (enable) {
+    if ((ret = reconfig_pl.CreatePayload<bool>(reconfig))) {
+      DLOGE("Failed to create payload for reconfig, error = %d", ret);
+      return ret;
+    }
+
+    ret = demura_->GetParameter(kDemuraFeatureParamPendingReconfig, &reconfig_pl);
+    if (ret) {
+      DLOGE("Failed to get reconfig, error %d", ret);
+      return ret;
+    }
+    if (*reconfig) {
+      DLOGI("SetDemuraLayer for DemuraTn reconfig");
+      ret = SetupDemuraLayer();
+      if (ret) {
+        DLOGE("Failed to setup Demura layer, error %d", ret);
+        return ret;
+      }
+    }
+  }
+
   GenericPayload pl;
   bool* enable_ptr = nullptr;
   if ((ret = pl.CreatePayload<bool>(enable_ptr))) {
@@ -2386,6 +2484,14 @@ int DisplayBuiltIn::SetDemuraIntfStatus(bool enable) {
     }
   }
 
+  if (enable && reconfig && (*reconfig)) {
+    *reconfig = false;
+    ret = demura_->SetParameter(kDemuraFeatureParamPendingReconfig, reconfig_pl);
+    if (ret) {
+      DLOGE("Failed to set reconfig, error %d", ret);
+      return ret;
+    }
+  }
   DLOGI("Demura is now %s", enable ? "Enabled" : "Disabled");
   return ret;
 }

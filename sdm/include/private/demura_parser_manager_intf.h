@@ -40,7 +40,9 @@ namespace sdm {
 enum DemuraParserManagerParams {
   kDemuraParserManagerParamPanelIds,
   kDemuraParserManagerParamReleaseParsers,
-  kDemuraParserManagerParamMax,
+  kDemuraParserManagerParamMax = 0x80,
+  kDemuraParserManagerPrivParamStart,
+  kDemuraParserManagerPrivParamEnd = 0xff,
 };
 
 enum DemuraParserManagerOps {
