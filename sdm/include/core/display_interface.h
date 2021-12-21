@@ -214,6 +214,28 @@ enum DisplayDrawMethod {
                               //!< on panel.
 };
 
+/*! @brief This enum represents the display concurrency type.
+    @sa DisplayInterface::GetConcurrencyFPS
+ */
+enum DisplayConcurrencyType {
+    kConcurrencyNone,
+    kConcurrencyWfd,
+    kConcurrencyDp,
+    kConcurrencyCamera,
+    kConcurrencyCwb,
+    kConcurrencyMax,
+};
+
+/*! @brief This structure defines all input parameters for ResourceConstraints. */
+struct ResourceConstraintsIn {
+  DisplayConcurrencyType concurrency_type = DisplayConcurrencyType::kConcurrencyMax;
+};
+
+/*! @brief This structure defines all output parameters for ResourceConstraints. */
+struct ResourceConstraintsOut {
+  float fps = 0;
+};
+
 /*! @brief This structure defines configuration for display dpps ad4 region of interest. */
 struct DisplayDppsAd4RoiCfg {
   uint32_t h_start;     //!< start in hotizontal direction
@@ -401,6 +423,12 @@ class DisplayEventHandler {
 
   /*! @brief Event handler for sending status of Qsync */
   virtual DisplayError HandleQsyncState(const QsyncEventData &event_data) { return kErrorNone; }
+
+  /*! @brief Event handler for sending concurrency fps */
+  virtual DisplayError NotifyFpsMitigation(const float fps, DisplayConcurrencyType concurrency,
+                                           bool concurrency_begin) {
+    return kErrorNone;
+  }
 
  protected:
   virtual ~DisplayEventHandler() { }
