@@ -148,7 +148,7 @@
 #define ENHANCE_IDLE_TIME                    DISPLAY_PROP("enhance_idle_time")
 
 #define MMRM_FLOOR_CLK_VOTE                  DISPLAY_PROP("mmrm_floor_vote")
-
+#define DISABLE_MITIGATED_FPS                DISPLAY_PROP("disable_mitigated_fps")
 // DPPS dynamic fps
 #define ENABLE_DPPS_DYNAMIC_FPS              DISPLAY_PROP("enable_dpps_dynamic_fps")
 // Noise Layer

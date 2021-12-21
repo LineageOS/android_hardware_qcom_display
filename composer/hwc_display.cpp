@@ -3494,4 +3494,11 @@ void HWCDisplay::GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *va
   *num_configs = num_configs_;
 }
 
-} //namespace sdm
+DisplayError HWCDisplay::NotifyFpsMitigation(const float fps,
+                                             DisplayConcurrencyType concurrency,
+                                             bool concurrency_begin) {
+  event_handler_->NotifyConcurrencyFps(fps, concurrency, concurrency_begin);
+  return kErrorNone;
+}
+
+}  // namespace sdm

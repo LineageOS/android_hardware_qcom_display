@@ -719,6 +719,18 @@ bool CompManager::CheckResourceState(Handle display_ctx, bool *res_exhausted,
   return res_wait_needed;
 }
 
+DisplayError CompManager::GetConcurrencyFps(DisplayConcurrencyType type, float *fps) {
+  SCOPE_LOCK(locker_);
+  ResourceConstraintsIn res_constraints_in;
+  res_constraints_in.concurrency_type = type;
+  ResourceConstraintsOut res_constraints_out;
+
+  auto error = resource_intf_->Perform(ResourceInterface::kCmdGetResourceConstraints,
+                                       &res_constraints_in, &res_constraints_out);
+  *fps = res_constraints_out.fps;
+  return error;
+}
+
 DisplayError CompManager::SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =

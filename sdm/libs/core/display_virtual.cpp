@@ -71,6 +71,28 @@ DisplayError DisplayVirtual::Init() {
     DisplayBase::SetMaxMixerStages(max_mixer_stages);
   }
 
+  int value = 0;
+  Debug::Get()->GetProperty(DISABLE_MITIGATED_FPS, &value);
+  disable_mitigated_fps_ = (value == 1);
+  DLOGI("disable_mitigated_fps_: %d", disable_mitigated_fps_);
+
+  value = 0;
+  Debug::Get()->GetProperty(ENABLE_ASYNC_VDS_CREATION, &value);
+  async_vds_creation_ = (value == 1);
+  DLOGI("async_vds_creation: %d", async_vds_creation_);
+
+  return error;
+}
+
+DisplayError DisplayVirtual::Deinit() {
+  DisplayError error = DisplayBase::Deinit();
+  float fps = 0;
+  if (async_vds_creation_ && !disable_mitigated_fps_) {
+    comp_manager_->GetConcurrencyFps(DisplayConcurrencyType::kConcurrencyWfd, &fps);
+    if (fps != 0.0) {
+      event_handler_->NotifyFpsMitigation(fps, DisplayConcurrencyType::kConcurrencyWfd, false);
+    }
+  }
   return error;
 }
 
@@ -150,6 +172,15 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   if (error != kErrorNone) {
     return error;
   }
+
+  if (async_vds_creation_ && !disable_mitigated_fps_) {
+    float fps = 0;
+    comp_manager_->GetConcurrencyFps(DisplayConcurrencyType::kConcurrencyWfd, &fps);
+    if (fps != 0.0) {
+      event_handler_->NotifyFpsMitigation(fps, DisplayConcurrencyType::kConcurrencyWfd, true);
+    }
+  }
+
   default_clock_hz_ = cached_qos_data_.clock_hz;
 
   display_attributes_ = display_attributes;

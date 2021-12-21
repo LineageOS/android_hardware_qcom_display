@@ -65,9 +65,11 @@ int HWCDisplayVirtualGPU::Deinit() {
 
 HWCDisplayVirtualGPU::HWCDisplayVirtualGPU(CoreInterface *core_intf, HWCBufferAllocator
                                            *buffer_allocator, HWCCallbacks *callbacks,
+                                           HWCDisplayEventHandler *event_handler,
                                            hwc2_display_t id, int32_t sdm_id, uint32_t width,
                                            uint32_t height, float min_lum, float max_lum) :
-  HWCDisplayVirtual(core_intf, buffer_allocator, callbacks, id, sdm_id, width, height),
+  HWCDisplayVirtual(core_intf, buffer_allocator, callbacks, event_handler, id, sdm_id,
+                    width, height),
   color_convert_task_(*this) {
 }
 

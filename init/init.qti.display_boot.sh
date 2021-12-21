@@ -53,6 +53,7 @@ case "$target" in
         setprop vendor.display.thermal.version 1
         setprop vendor.display.enable_rc_support 1
         setprop vendor.display.target.version 3
+        setprop vendor.display.disable_mitigated_fps 1
         ;;
         530|531|540)
         setprop vendor.gralloc.use_dma_buf_heaps 1
@@ -65,6 +66,7 @@ case "$target" in
         setprop vendor.display.enable_rc_support 1
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_qsync_idle 1
+        setprop vendor.display.disable_mitigated_fps 1
         ;;
         506|547)
         # Set property for Diwali
