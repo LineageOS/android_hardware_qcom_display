@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -853,7 +853,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
     (connector_info_.panel_orientation == DRMRotation::ROT_180);
 
   GetHWDisplayPortAndMode();
-  GetHWPanelMaxBrightness();
+
   if (connector_info_.modes[current_mode_index_].cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     hw_panel_info_.mode = kModeCommand;
   }

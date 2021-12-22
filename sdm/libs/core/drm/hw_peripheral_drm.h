@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2022, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -56,6 +56,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
 
  protected:
   virtual DisplayError Init();
+  virtual DisplayError Deinit();
   virtual DisplayError Validate(HWLayersInfo *hw_layers_info);
   virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
   virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
@@ -76,7 +77,6 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
-  virtual void GetHWPanelMaxBrightness();
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError EnableSelfRefresh();
   virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config);
@@ -94,6 +94,8 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   void SetSelfRefreshState();
   void SetVMReqState();
   void ResetPropertyCache();
+  void GetHWPanelMaxBrightness();
+  void InitBrightnessFd();
 
   struct DestScalarCache {
     SDEScaler scalar_data = {};
@@ -110,6 +112,8 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   void PopulateBitClkRates();
   std::vector<uint64_t> bitclk_rates_;
   std::string brightness_base_path_ = "";
+  int brightness_fd_ = -1;
+  int max_brightness_fd_ = -1;
   SelfRefreshState self_refresh_state_ = kSelfRefreshNone;
   bool ltm_hist_en_ = false;
   std::map<PanelFeaturePropertyID, sde_drm::DRMPanelFeatureID> panel_feature_property_map_ {};
