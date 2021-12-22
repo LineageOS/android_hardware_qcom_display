@@ -1,4 +1,7 @@
-DISPLAY_MODULES_HARDWARE:= vendor.qti.hardware.display.composer-service
+DISPLAY_MODULES_HARDWARE:= vendor.qti.hardware.display.composer-service \
+                        android.hardware.graphics.mapper@4.0-impl-qti-display \
+                        vendor.qti.hardware.display.mapper@4.0.vendor \
+                        vendor.qti.hardware.display.allocator-service
 
 ifeq ($(TARGET_USES_QMAA),true)
     ifneq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
@@ -9,10 +12,7 @@ endif
 
 #Packages that should not be installed in QMAA are enabled here
 ifneq ($(TARGET_IS_HEADLESS),true)
-    DISPLAY_MODULES_HARDWARE += android.hardware.graphics.mapper@4.0-impl-qti-display \
-                            vendor.qti.hardware.display.mapper@4.0.vendor \
-                            vendor.qti.hardware.display.allocator-service \
-                            libsdmcore \
+    DISPLAY_MODULES_HARDWARE += libsdmcore \
                             libdrmutils \
                             libsdedrm\
                             libgpu_tonemapper \
