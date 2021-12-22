@@ -166,6 +166,7 @@ class HWCDisplay : public DisplayEventHandler {
   int GetVisibleDisplayRect(hwc_rect_t *rect);
   void BuildLayerStack(void);
   void BuildSolidFillStack(void);
+  void SetResetPanel(bool reset);
   HWCLayer *GetHWCLayer(hwc2_layer_t layer);
   void ResetValidation() { validated_.reset(); }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
@@ -324,6 +325,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool animating_ = false;
   bool fbt_valid_ = false;
   bool is_primary_ = false;
+  bool reset_panel_ = false;
   uint32_t min_enc_level_ = UINT32_MAX;
 };
 

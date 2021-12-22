@@ -712,7 +712,9 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       // Do not flush until a buffer is successfully submitted again.
       flush_on_error = false;
       state = kStateOff;
-      last_power_mode_ = HWC2::PowerMode::Off;
+      if (!reset_panel_) {
+        last_power_mode_ = HWC2::PowerMode::Off;
+      }
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
@@ -2071,6 +2073,10 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   return true;
+}
+
+void HWCDisplay::SetResetPanel(bool reset) {
+  reset_panel_ = reset;
 }
 
 }  // namespace sdm
