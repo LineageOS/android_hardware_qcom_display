@@ -73,6 +73,7 @@ static const uint32_t kBrightnessScaleMax = 100;
 static const uint32_t kSvBlScaleMax = 65535;
 Locker HWCSession::vm_release_locker_[HWCCallbacks::kNumDisplays];
 std::bitset<HWCCallbacks::kNumDisplays> HWCSession::clients_waiting_for_vm_release_;
+std::set<hwc2_display_t> HWCSession::active_displays_;
 
 
 // Map the known color modes to dataspace.
@@ -1272,6 +1273,12 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
                           active_builtin_disp_id < HWCCallbacks::kNumDisplays);
 
     }
+
+    if (mode == HWC2::PowerMode::Off || mode == HWC2::PowerMode::DozeSuspend) {
+      active_displays_.erase(display);
+    } else {
+      active_displays_.insert(display);
+    }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
@@ -1413,7 +1420,6 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
       *out_display_id = client_id;
       map_info.disp_type = kVirtual;
       map_info.sdm_id = display_id;
-      map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
       break;
     }
   }
@@ -2791,7 +2797,6 @@ int HWCSession::CreatePrimaryDisplay() {
           DLOGW("Failed to load HWCColorManager.");
         }
 
-        map_active_displays_.insert(std::make_pair(client_id, info.display_type));
       } else {
         DLOGE("Primary display creation has failed! status = %d", status);
         return status;
@@ -2887,7 +2892,6 @@ int HWCSession::HandleBuiltInDisplays() {
         map_info.sdm_id = info.display_id;
         CreateDummyDisplay(client_id);
 
-        map_active_displays_.insert(std::make_pair(client_id, info.display_type));
       }
 
       DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id,
@@ -3059,7 +3063,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
               info.display_id, UINT32(client_id));
 
-        map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
         CreateDummyDisplay(client_id);
       }
 
@@ -3204,7 +3207,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
       }
     }
 
-    map_active_displays_.erase(client_id);
+    active_displays_.erase(client_id);
     display_ready_.reset(UINT32(client_id));
     pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
@@ -3245,7 +3248,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
         hwc_display_dummy = nullptr;
       }
     }
-    map_active_displays_.erase(client_id);
+    active_displays_.erase(client_id);
 
     pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
@@ -3437,8 +3440,15 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
     if (display != active_builtin_disp_id) {
       Locker::ScopeLock lock_d(locker_[display]);
       if (pending_power_mode_[display] && hwc_display_[display]) {
+        HWC2::PowerMode pending_mode = hwc_display_[display]->GetPendingPowerMode();
+
+        if (pending_mode == HWC2::PowerMode::Off || pending_mode == HWC2::PowerMode::DozeSuspend) {
+          active_displays_.erase(display);
+        } else {
+          active_displays_.insert(display);
+        }
         HWC2::Error error =
-          hwc_display_[display]->SetPowerMode(hwc_display_[display]->GetPendingPowerMode(), false);
+          hwc_display_[display]->SetPowerMode(pending_mode, false);
         if (HWC2::Error::None == error) {
           pending_power_mode_[display] = false;
           hwc_display_[display]->ClearPendingPowerMode();
@@ -4254,7 +4264,7 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
   {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     hwc_display_[display]->ProcessActiveConfigChange();
-    hwc_display_[display]->IsMultiDisplay((map_active_displays_.size() > 1) ? true : false);
+    hwc_display_[display]->IsMultiDisplay((active_displays_.size() > 1) ? true : false);
     status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
   }
