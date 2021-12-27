@@ -292,7 +292,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   int hfc_buffer_fd_ = -1;
   uint32_t hfc_buffer_size_ = 0;
   DisplayIPCVmCallbackImpl *vm_cb_intf_ = nullptr;
-  bool enable_cwb_idle_fallback_ = false;
+  bool disable_cwb_idle_fallback_ = false;
   Layer cwb_layer_ = {};
 };
 

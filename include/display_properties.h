@@ -222,8 +222,8 @@
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")
-#define ENABLE_CWB_IDLE_FALLBACK             DISPLAY_PROP("enable_cwb_idle_fallback")
 #define DISABLE_LLCC_DURING_AOD              DISPLAY_PROP("disable_llcc_during_aod")
+#define DISABLE_CWB_IDLE_FALLBACK            DISPLAY_PROP("disable_cwb_idle_fallback")
 
 // Add all other.properties above
 // End of property
