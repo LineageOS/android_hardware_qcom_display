@@ -147,6 +147,7 @@ DisplayError HWVirtualDRM::Commit(HWLayersInfo *hw_layers_info) {
 
   // Retire fence marks WB done event.
   output_buffer->release_fence = hw_layers_info->retire_fence;
+  hw_layers_info->output_fb_id = fb_id;
 
   return(err);
 }

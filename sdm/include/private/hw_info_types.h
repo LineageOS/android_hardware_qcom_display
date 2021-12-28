@@ -811,6 +811,7 @@ struct HWLayersInfo {
   LayerBuffer *output_buffer = NULL;   //!< Pointer to the buffer where composed buffer would be
                                        //!< rendered for virtual displays.
                                        //!< NOTE: This field applies to a virtual display only.
+  uint32_t output_fb_id = 0;           //!< FB ID of the output buffer of virtual display
   CwbConfig *hw_cwb_config = NULL;     //!< Struct that contains CWB configuration passed to
                                        //!< driver by SDM.
   bool stitch_present = false;  // Indicates there is stitch layer or not
