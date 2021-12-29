@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -2750,7 +2750,12 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
   }
 
-  if (!custom_mixer_resolution_ && mixer_width == fb_width && mixer_height == fb_height) {
+  // Reconfigure mixer if display size is not equal to avoid quality loss in videoplayback
+  // usecase due to video upscaling to fit display after downscaling at LM
+  if (!custom_mixer_resolution_ && display_width == fb_width && display_height == fb_height
+      && mixer_width == fb_width && mixer_height == fb_height) {
+    DLOGV_IF(kTagDisplay, "Custom mixer resolution not enabled. Mixer size is same as"
+                          "framebuffer and display resolution. Reconfiguration not needed");
     return false;
   }
 
@@ -3973,16 +3978,9 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
   cwb_config_ = new CwbConfig;
   if (layer_stack->cwb_config == NULL) {
     cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
-    uint32_t buffer_width = 0, buffer_height = 0;
-    error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
-    if (error != kErrorNone) {
-      DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
-      return error;
-    }
-
     // Setting full frame ROI
-    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
-    DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(mixer_attributes_.width),
+                                           FLOAT(mixer_attributes_.height));
     cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
   }
 
