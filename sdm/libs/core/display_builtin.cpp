@@ -2541,13 +2541,10 @@ void DisplayBuiltIn::InitCWBBuffer() {
   }
 
   BufferInfo output_buffer_info;
-  CwbConfig cwb_config = {};
-  cwb_config.tap_point = CwbTapPoint::kLmTapPoint;
-  if (GetCwbBufferResolution(&cwb_config, &output_buffer_info.buffer_config.width,
-                             &output_buffer_info.buffer_config.height)) {
-    DLOGE("Buffer Resolution setting failed.");
-    return;
-  }
+  // Initialize CWB buffer with display resolution to get full size buffer
+  // as mixer or fb can init with custom values based on property
+  output_buffer_info.buffer_config.width = display_attributes_.x_pixels;
+  output_buffer_info.buffer_config.height = display_attributes_.y_pixels;
 
   output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
   output_buffer_info.buffer_config.buffer_count = 1;
@@ -2565,15 +2562,16 @@ void DisplayBuiltIn::InitCWBBuffer() {
   buffer.width = output_buffer_info.alloc_buffer_info.aligned_width;
   buffer.height = output_buffer_info.alloc_buffer_info.aligned_height;
   buffer.format = output_buffer_info.alloc_buffer_info.format;
-  buffer.unaligned_width = mixer_attributes_.width;
-  buffer.unaligned_height = mixer_attributes_.height;
+  buffer.unaligned_width = output_buffer_info.buffer_config.width;
+  buffer.unaligned_height = output_buffer_info.buffer_config.height;
 
   cwb_layer_.composition = kCompositionCWBTarget;
   cwb_layer_.input_buffer = buffer;
   cwb_layer_.input_buffer.buffer_id = reinterpret_cast<uint64_t>(output_buffer_info.private_data);
-
-  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  cwb_layer_.src_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
+                         FLOAT(cwb_layer_.input_buffer.unaligned_height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
+                         FLOAT(cwb_layer_.input_buffer.unaligned_height)};
 
   cwb_layer_.flags.is_cwb = 1;
 
@@ -2585,8 +2583,13 @@ void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
     return;
   }
 
-  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  uint32_t new_mixer_width = fb_config_.x_pixels;
+  uint32_t new_mixer_height = fb_config_.y_pixels;
+  NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height);
+  // Set cwb src_rect same as mixer resolution since LM tappoint
+  // and dest_rect equal to fb resolution as strategy scales HWLayer dest rect based on fb
+  cwb_layer_.src_rect = {0, 0, FLOAT(new_mixer_width), FLOAT(new_mixer_height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(fb_config_.x_pixels), FLOAT(fb_config_.y_pixels)};
   cwb_layer_.composition = kCompositionCWBTarget;
   layer_stack->layers.push_back(&cwb_layer_);
 }
