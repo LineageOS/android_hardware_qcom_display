@@ -568,6 +568,12 @@ enum struct InlineRotationVersion {
   kInlineRotationV2,
 };
 
+/* DDR Version */
+enum struct DDRVersion {
+  kDDRVersion4,
+  kDDRVersion5,
+};
+
 /* Type for panel feature resource reservation info */
 typedef std::tuple<std::string, int32_t, int8_t> FetchResource;
 typedef std::vector<FetchResource> FetchResourceList;
@@ -622,6 +628,7 @@ struct DRMCrtcInfo {
   bool skip_inline_rot_threshold = false;
   bool has_noise_layer = false;
   uint32_t dsc_block_count = 0;
+  DDRVersion ddr_version = DDRVersion::kDDRVersion5;
 };
 
 enum struct DRMPlaneType {
