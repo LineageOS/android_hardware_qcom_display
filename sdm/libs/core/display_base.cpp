@@ -1266,7 +1266,8 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
-  if (first_cycle_ && (draw_method_ != kDrawDefault) && (display_type_ != kVirtual)) {
+  if (first_cycle_ && (draw_method_ != kDrawDefault) && (display_type_ != kVirtual) &&
+      !hw_panel_info_.is_primary_panel) {
     DLOGI("Registering for power events");
     hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
   }
@@ -3733,6 +3734,10 @@ void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
 
   // Wait for CRTC power event on first cycle.
   if (first_cycle_) {
+    if (hw_panel_info_.is_primary_panel) {
+      DLOGI("Sync commit on primary");
+      return;
+    }
     std::unique_lock<std::mutex> lck(power_mutex_);
     while (!transition_done_) {
       cv_.wait(lck);
