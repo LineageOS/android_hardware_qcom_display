@@ -1,5 +1,5 @@
 #!/vendor/bin/sh
-# Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+# Copyright (c) 2020-2022, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -43,7 +43,7 @@ case "$target" in
     #SOC ID for Cape APQ is 531
     #SOC ID for Cape 4g is 540
     case "$soc_hwid" in
-        457)
+        457|552)
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_allow_idle_fallback 1
