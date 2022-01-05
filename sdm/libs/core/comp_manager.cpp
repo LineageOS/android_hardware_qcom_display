@@ -431,31 +431,6 @@ DisplayError CompManager::Commit(Handle display_ctx, DispLayerStack *disp_layer_
   return kErrorNone;
 }
 
-DisplayError CompManager::ReConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
-
-  DTRACE_SCOPED();
-  DisplayCompositionContext *display_comp_ctx =
-                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
-
-  DisplayError error = kErrorUndefined;
-  resource_intf_->Start(display_resource_ctx, disp_layer_stack->stack);
-  LayerFeedback feedback(disp_layer_stack->info.app_layer_count);
-  error = resource_intf_->Prepare(display_resource_ctx, disp_layer_stack, &feedback);
-
-  if (error != kErrorNone) {
-    DLOGE("Reconfigure failed for display = %d", display_comp_ctx->display_type);
-  }
-
-  resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
-  if (error != kErrorNone) {
-      error = resource_intf_->PostPrepare(display_resource_ctx, disp_layer_stack);
-  }
-
-  return error;
-}
-
 DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
 
@@ -742,6 +717,18 @@ bool CompManager::CheckResourceState(Handle display_ctx, bool *res_exhausted,
                           display_comp_ctx->display_resource_ctx, res_exhausted, &attr,
                           &res_wait_needed);
   return res_wait_needed;
+}
+
+DisplayError CompManager::GetConcurrencyFps(DisplayConcurrencyType type, float *fps) {
+  SCOPE_LOCK(locker_);
+  ResourceConstraintsIn res_constraints_in;
+  res_constraints_in.concurrency_type = type;
+  ResourceConstraintsOut res_constraints_out;
+
+  auto error = resource_intf_->Perform(ResourceInterface::kCmdGetResourceConstraints,
+                                       &res_constraints_in, &res_constraints_out);
+  *fps = res_constraints_out.fps;
+  return error;
 }
 
 DisplayError CompManager::SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method) {

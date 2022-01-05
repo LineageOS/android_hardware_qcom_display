@@ -61,7 +61,6 @@ class CompManager {
   DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
-  DisplayError ReConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   void Purge(Handle display_ctx);
   DisplayError SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms, uint32_t inactive_ms);
@@ -90,6 +89,7 @@ class CompManager {
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
   bool CheckResourceState(Handle display_ctx, bool *res_exhausted, HWDisplayAttributes attr);
+  DisplayError GetConcurrencyFps(DisplayConcurrencyType type, float *fps);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
   DisplayError FreeDemuraFetchResources(const uint32_t &display_id);

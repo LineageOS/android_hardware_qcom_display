@@ -46,10 +46,11 @@ void HWCDisplayVirtual::Destroy(HWCDisplay *hwc_display) {
 }
 
 HWCDisplayVirtual::HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                                     HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
-                                     uint32_t width, uint32_t height) :
-      HWCDisplay(core_intf, buffer_allocator, callbacks, nullptr, nullptr, kVirtual, id, sdm_id,
-                 DISPLAY_CLASS_VIRTUAL), width_(width), height_(height)  {
+                                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                                     hwc2_display_t id, int32_t sdm_id, uint32_t width,
+                                     uint32_t height) :
+      HWCDisplay(core_intf, buffer_allocator, callbacks, event_handler, nullptr, kVirtual, id,
+                 sdm_id, DISPLAY_CLASS_VIRTUAL), width_(width), height_(height)  {
 }
 
 int HWCDisplayVirtual::Init() {

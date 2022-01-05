@@ -40,6 +40,7 @@
 #include <unordered_map>
 #include <string>
 #include <memory>
+#include <core/display_interface.h>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -65,11 +66,13 @@ namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
+using HwcClientTargetProperty = composer_V2_4::IComposerClient::ClientTargetProperty;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfig;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback;
 using ::aidl::vendor::qti::hardware::display::config::CameraSmoothOp;
 using ::aidl::vendor::qti::hardware::display::config::Attributes;
 using ::aidl::vendor::qti::hardware::display::config::DisplayPortType;
+using ::aidl::vendor::qti::hardware::display::config::Concurrency;
 
 namespace aidl::vendor::qti::hardware::display::config {
   class DisplayConfigAIDL;
@@ -128,6 +131,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     kClientIdlepowerCollapse,
     kClientTeardownCWB,
     kClientTrustedUI,
+    kClientConcurrency,
     kClientMax
   };
 
@@ -263,6 +267,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
   int32_t SetDimmingEnable(hwc2_display_t display, int32_t int_enabled);
   int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
+  int32_t GetClientTargetProperty(hwc2_display_t display,
+                                  HwcClientTargetProperty *outClientTargetProperty);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
@@ -304,6 +310,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                              int64_t *client_handle);
   int UnregisterCallbackClient(const int64_t client_handle);
   int NotifyResolutionChange(int32_t disp_id, Attributes& attr);
+  int NotifyFpsMitigation(int32_t disp_id, Attributes attr, Concurrency con);
 
   virtual int RegisterClientContext(std::shared_ptr<DisplayConfig::ConfigCallback> callback,
                                     DisplayConfig::ConfigInterface **intf);
@@ -315,6 +322,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate);
   virtual void VmReleaseDone(hwc2_display_t display);
+  virtual void NotifyConcurrencyFps(const float fps, DisplayConcurrencyType concurrency,
+                                    bool concurrency_begin);
 
   int32_t SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled);
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
@@ -345,6 +354,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static int commit_error_[HWCCallbacks::kNumDisplays];
   static Locker vm_release_locker_[HWCCallbacks::kNumDisplays];
   static std::bitset<HWCCallbacks::kNumDisplays> clients_waiting_for_vm_release_;
+  static std::set<hwc2_display_t> active_displays_;
 
  private:
   class CWB {
@@ -355,6 +365,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                        const CwbConfig &cwb_config, const native_handle_t *buffer,
                        hwc2_display_t display_type);
+    bool IsCwbActiveOnDisplay(hwc2_display_t disp_type);
 
    private:
     struct QueueNode {
@@ -641,7 +652,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
   bool primary_pending_ = true;
   Locker primary_display_lock_;
-  std::map <hwc2_display_t, sdm::DisplayType> map_active_displays_;
 };
 }  // namespace sdm
 

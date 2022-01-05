@@ -841,13 +841,6 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.layers.push_back(sdm_client_target);
 
   layer_stack_.elapse_timestamp = elapse_timestamp_;
-  // fall back frame composition to GPU when client target is 10bit
-  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
-  // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
-    // Must fall back to client composition
-    MarkLayersForClientComposition();
-  }
 
   layer_stack_.client_incompatible =
       dump_frame_count_ && (dump_output_to_file_ || dump_input_layers_);
@@ -1250,12 +1243,6 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
-  int translated_dataspace = TranslateFromLegacyDataspace(dataspace);
-  if (client_target_->GetLayerDataspace() != translated_dataspace) {
-    DLOGW("New Dataspace = %d not matching Dataspace from color mode = %d",
-           translated_dataspace, client_target_->GetLayerDataspace());
-    return HWC2::Error::BadParameter;
-  }
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_handle_ = target;
   client_acquire_fence_ = acquire_fence;
@@ -1901,6 +1888,18 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     DLOGI("Changing active config to %d", UINT32(pending_first_commit_config_));
     pending_first_commit_config_ = false;
     SetActiveConfig(pending_first_commit_config_index_);
+  }
+
+  if (pending_fb_reconfig_) {
+    hwc2_config_t current_config = 0;
+    GetActiveConfig(&current_config);
+    DisplayConfigVariableInfo current_config_info = {};
+    GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
+    // Set fb config if new resolution differs
+    if (SetFrameBufferResolution(current_config_info.x_pixels, current_config_info.y_pixels) != 0) {
+      DLOGE("Failed to set FB reolution for %d-%d", sdm_id_, type_);
+    }
+    pending_fb_reconfig_ = false;
   }
 
   return status;
@@ -3008,9 +3007,7 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   // Set fb config if new resolution differs
   if (info.x_pixels != current_config_info.x_pixels ||
       info.y_pixels != current_config_info.y_pixels) {
-    if (SetFrameBufferConfig(info.x_pixels, info.y_pixels)) {
-      return HWC2::Error::BadParameter;
-    }
+    pending_fb_reconfig_ = true;
   }
 
   return HWC2::Error::None;
@@ -3277,6 +3274,12 @@ void HWCDisplay::ResetCwbState() {
 HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
                                           shared_ptr<Fence> acquire_fence,
                                           CwbConfig cwb_config, CWBClient client) {
+  if (current_power_mode_ == HWC2::PowerMode::Off ||
+      current_power_mode_ == HWC2::PowerMode::DozeSuspend) {
+    DLOGW("CWB requested on either Powered-Off or Doze-Suspended display.");
+    return HWC2::Error::BadDisplay;
+  }
+
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
   if (cwb_state_.cwb_disp_id != -1 && cwb_state_.cwb_disp_id != id_) {
     // cwb is already Active on a display other than on which it is requested.
@@ -3453,6 +3456,48 @@ DisplayError HWCDisplay::HandleQsyncState(const QsyncEventData &qsync_data) {
   event_handler_->PerformQsyncCallback(id_, qsync_data.enabled,
                                        qsync_data.refresh_rate,
                                        qsync_data.qsync_refresh_rate);
+  return kErrorNone;
+}
+
+HWC2::Error HWCDisplay::GetClientTargetProperty(ClientTargetProperty *out_client_target_property) {
+
+  Layer *client_layer = client_target_->GetSDMLayer();
+  if (!client_layer->request.flags.update_format) {
+    return HWC2::Error::None;
+  }
+  int32_t format = 0;
+  uint64_t flags = 0;
+  auto err = buffer_allocator_->SetBufferInfo(client_layer->request.format, &format, &flags);
+  if (err) {
+    DLOGE("Invalid format: %s requested", GetFormatString(client_layer->request.format));
+    return HWC2::Error::BadParameter;
+  }
+  Dataspace dataspace;
+  DisplayError error = ColorMetadataToDataspace(client_layer->request.color_metadata, &dataspace);
+  if (error != kErrorNone) {
+    DLOGE("Invalid Dataspace requested: Primaries = %d Transfer = %d ds = %d",
+          client_layer->request.color_metadata.colorPrimaries,
+          client_layer->request.color_metadata.transfer, dataspace);
+    return HWC2::Error::BadParameter;
+  }
+  out_client_target_property->dataspace = dataspace;
+  out_client_target_property->pixelFormat =
+      (android::hardware::graphics::common::V1_2::PixelFormat)format;
+
+  return HWC2::Error::None;
+}
+
+void HWCDisplay::GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
+                               int *active_config_index, uint32_t *num_configs) {
+  *variable_config_map = variable_config_map_;
+  *active_config_index = active_config_index_;
+  *num_configs = num_configs_;
+}
+
+DisplayError HWCDisplay::NotifyFpsMitigation(const float fps,
+                                             DisplayConcurrencyType concurrency,
+                                             bool concurrency_begin) {
+  event_handler_->NotifyConcurrencyFps(fps, concurrency, concurrency_begin);
   return kErrorNone;
 }
 

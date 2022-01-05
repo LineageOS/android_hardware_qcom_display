@@ -53,8 +53,8 @@ class HWCDisplayVirtual : public HWCDisplay {
                                       uint32_t *out_num_types, uint32_t *out_num_requests,
                                       bool *needs_commit);
   HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
-                    uint32_t width, uint32_t height);
+                    HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                    hwc2_display_t id, int32_t sdm_id, uint32_t width, uint32_t height);
 
  protected:
   uint32_t width_ = 0;

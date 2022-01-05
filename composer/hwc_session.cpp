@@ -73,6 +73,7 @@ static const uint32_t kBrightnessScaleMax = 100;
 static const uint32_t kSvBlScaleMax = 65535;
 Locker HWCSession::vm_release_locker_[HWCCallbacks::kNumDisplays];
 std::bitset<HWCCallbacks::kNumDisplays> HWCSession::clients_waiting_for_vm_release_;
+std::set<hwc2_display_t> HWCSession::active_displays_;
 
 
 // Map the known color modes to dataspace.
@@ -773,6 +774,65 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled
   callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
 }
 
+
+void HWCSession::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType type,
+                                      bool concurrency_begin) {
+  DisplayConfigVariableInfo var_info;
+  Attributes attributes;
+  hwc2_display_t target_display = GetActiveBuiltinDisplay();
+  hwc2_config_t current_config = 0;
+
+  if(target_display >= HWCCallbacks::kNumDisplays) {
+    return;
+  }
+
+  hwc_display_[target_display]->GetActiveConfig(&current_config);
+  int error = hwc_display_[target_display]->GetDisplayAttributesForConfig(INT(current_config),
+                                                                          &var_info);
+  if(error) {
+    return;
+  }
+
+  Concurrency concurrency;
+  attributes.vsyncPeriod = (1 / fps) * 1000000;
+  attributes.xRes = var_info.x_pixels;
+  attributes.yRes = var_info.y_pixels;
+  attributes.xDpi = var_info.x_dpi;
+  attributes.yDpi = var_info.y_dpi;
+  attributes.panelType = DisplayPortType::DEFAULT;
+  attributes.isYuv = var_info.is_yuv;
+  switch (type) {
+    case DisplayConcurrencyType::kConcurrencyWfd:
+      concurrency = Concurrency::WFD;
+    break;
+      case DisplayConcurrencyType::kConcurrencyDp:
+      concurrency = Concurrency::DP;
+    break;
+      case DisplayConcurrencyType::kConcurrencyCamera:
+      concurrency = Concurrency::CAMERA;
+    break;
+      case DisplayConcurrencyType::kConcurrencyCwb:
+      concurrency = Concurrency::CWB;
+    break;
+    case DisplayConcurrencyType::kConcurrencyNone:
+    case DisplayConcurrencyType::kConcurrencyMax:
+      return;
+  }
+
+  if(concurrency_begin) {
+    NotifyFpsMitigation(target_display, attributes, concurrency);
+    callbacks_.Refresh(target_display);
+    int ret = WaitForCommitDone(target_display, kClientConcurrency);
+    if (ret != 0) {
+      DLOGE("WaitForCommitDone failed with error %d for %d", ret, kClientConcurrency);
+    }
+    return;
+  }
+
+  std::thread(&HWCSession::NotifyFpsMitigation, this,
+              target_display, attributes, concurrency).detach();
+}
+
 void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = idle_callback_.lock();
   if (!callback) {
@@ -1192,8 +1252,14 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_NONE;
   }
 
+  // 1. For power transition cases other than Off->On or On->Off, async power mode
+  // will not be used. Hence, set override_mode to false for them.
+  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+  // in main thread path.
   if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
-     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
     override_mode = false;
   }
 
@@ -1207,10 +1273,18 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
                           active_builtin_disp_id < HWCCallbacks::kNumDisplays);
 
     }
+
+    if (mode == HWC2::PowerMode::Off || mode == HWC2::PowerMode::DozeSuspend) {
+      active_displays_.erase(display);
+    } else {
+      active_displays_.insert(display);
+    }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
       return INT32(error);
+    } else if (mode == HWC2::PowerMode::Off && cwb_.IsCwbActiveOnDisplay(display)) {
+      cwb_.PresentDisplayDone(display);
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
@@ -1329,7 +1403,7 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
 
       int32_t display_id = GetVirtualDisplayId();
       status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                               client_id, display_id, width, height,
+                                               this, client_id, display_id, width, height,
                                                format, set_min_lum_, set_max_lum_, &hwc_display);
       // TODO(user): validate width and height support
       if (status) {
@@ -1346,7 +1420,6 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
       *out_display_id = client_id;
       map_info.disp_type = kVirtual;
       map_info.sdm_id = display_id;
-      map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
       break;
     }
   }
@@ -2724,7 +2797,6 @@ int HWCSession::CreatePrimaryDisplay() {
           DLOGW("Failed to load HWCColorManager.");
         }
 
-        map_active_displays_.insert(std::make_pair(client_id, info.display_type));
       } else {
         DLOGE("Primary display creation has failed! status = %d", status);
         return status;
@@ -2820,7 +2892,6 @@ int HWCSession::HandleBuiltInDisplays() {
         map_info.sdm_id = info.display_id;
         CreateDummyDisplay(client_id);
 
-        map_active_displays_.insert(std::make_pair(client_id, info.display_type));
       }
 
       DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id,
@@ -2992,7 +3063,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
               info.display_id, UINT32(client_id));
 
-        map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
         CreateDummyDisplay(client_id);
       }
 
@@ -3137,7 +3207,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
       }
     }
 
-    map_active_displays_.erase(client_id);
+    active_displays_.erase(client_id);
     display_ready_.reset(UINT32(client_id));
     pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
@@ -3178,7 +3248,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
         hwc_display_dummy = nullptr;
       }
     }
-    map_active_displays_.erase(client_id);
+    active_displays_.erase(client_id);
 
     pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
@@ -3207,6 +3277,8 @@ void HWCSession::PerformDisplayPowerReset() {
                                                    true /* teardown */);
       if (status != HWC2::Error::None) {
         DLOGE("Power off for display = %d failed with error = %d", INT32(display), status);
+      } else if (cwb_.IsCwbActiveOnDisplay(display)) {
+        cwb_.PresentDisplayDone(display);
       }
     }
   }
@@ -3368,8 +3440,15 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
     if (display != active_builtin_disp_id) {
       Locker::ScopeLock lock_d(locker_[display]);
       if (pending_power_mode_[display] && hwc_display_[display]) {
+        HWC2::PowerMode pending_mode = hwc_display_[display]->GetPendingPowerMode();
+
+        if (pending_mode == HWC2::PowerMode::Off || pending_mode == HWC2::PowerMode::DozeSuspend) {
+          active_displays_.erase(display);
+        } else {
+          active_displays_.insert(display);
+        }
         HWC2::Error error =
-          hwc_display_[display]->SetPowerMode(hwc_display_[display]->GetPendingPowerMode(), false);
+          hwc_display_[display]->SetPowerMode(pending_mode, false);
         if (HWC2::Error::None == error) {
           pending_power_mode_[display] = false;
           hwc_display_[display]->ClearPendingPowerMode();
@@ -3563,6 +3642,20 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
   }
 
   return HWC2_ERROR_NONE;
+}
+
+int32_t HWCSession::GetClientTargetProperty(hwc2_display_t display,
+                                            HwcClientTargetProperty *outClientTargetProperty) {
+  if (!outClientTargetProperty) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  return CallDisplayFunction(display, &HWCDisplay::GetClientTargetProperty,
+                             outClientTargetProperty);
 }
 
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport) {
@@ -4171,7 +4264,7 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
   {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     hwc_display_[display]->ProcessActiveConfigChange();
-    hwc_display_[display]->IsMultiDisplay((map_active_displays_.size() > 1) ? true : false);
+    hwc_display_[display]->IsMultiDisplay((active_displays_.size() > 1) ? true : false);
     status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
   }
