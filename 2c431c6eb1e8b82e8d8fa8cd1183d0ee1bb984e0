@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c4cbcc31_54d00041",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 2681
+      },
+      "writtenOn": "2022-01-05T19:43:47Z",
+      "side": 1,
+      "message": "Fixes build error, CP\u0027ed from sdm845 display",
+      "revId": "2c431c6eb1e8b82e8d8fa8cd1183d0ee1bb984e0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
