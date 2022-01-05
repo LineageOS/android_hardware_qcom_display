@@ -499,6 +499,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_BGR_888;
       break;
     case kFormatBGRA8888:
+    case kFormatARGB8888:
       *target = static_cast<int>(PixelFormat::BGRA_8888);
       break;
     case kFormatYCrCb420PlanarStride16:
