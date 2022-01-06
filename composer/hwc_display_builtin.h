@@ -166,13 +166,14 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void InitStitchTarget();
   bool AllocateStitchBuffer();
   void PostCommitStitchLayers();
-  void SetCpuPerfHintLargeCompCycle();
+  bool NeedsLargeCompPerfHint();
   void ValidateUiScaling();
   void EnablePartialUpdate();
   uint32_t GetUpdatingAppLayersCount();
   int ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
                                  const CwbTapPoint &cwb_tappoint);
   void LoadMixedModePerfHintThreshold();
+  void HandleLargeCompositionHint(bool release);
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -211,6 +212,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   shared_ptr<Fence> retire_fence_ = nullptr;
   std::unordered_map<int32_t, int32_t> mixed_mode_threshold_;
   int alternate_config_ = -1;
+
+  // Long term large composition hint
+  int hwc_tid_ = 0;
+  uint32_t num_basic_frames_ = 0;
 };
 
 }  // namespace sdm
