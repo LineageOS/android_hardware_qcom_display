@@ -13,6 +13,7 @@ endif
 #Packages that should not be installed in QMAA are enabled here
 ifneq ($(TARGET_IS_HEADLESS),true)
     DISPLAY_MODULES_HARDWARE += libsdmcore \
+                            libsdmdal \
                             libdrmutils \
                             libsdedrm\
                             libgpu_tonemapper \

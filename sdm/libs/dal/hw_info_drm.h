@@ -34,11 +34,10 @@
 #include <core/sdm_types.h>
 #include <drm_interface.h>
 #include <private/hw_info_types.h>
+#include <private/hw_info_interface.h>
 #include <bitset>
 #include <vector>
 #include <map>
-
-#include "hw_info_interface.h"
 
 namespace sdm {
 

@@ -24,10 +24,10 @@
 
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <private/hw_interface.h>
+#include <private/hw_info_interface.h>
 #include <algorithm>
 #include "display_virtual.h"
-#include "hw_interface.h"
-#include "hw_info_interface.h"
 
 #define __CLASS__ "DisplayVirtual"
 

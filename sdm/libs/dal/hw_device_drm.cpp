@@ -54,6 +54,7 @@
 #include <utils/rect.h>
 #include <utils/utils.h>
 #include <utils/fence.h>
+#include <private/hw_info_interface.h>
 
 #include <sstream>
 #include <ctime>
@@ -65,7 +66,6 @@
 #include <limits>
 
 #include "hw_device_drm.h"
-#include "hw_info_interface.h"
 
 #define __CLASS__ "HWDeviceDRM"
 
@@ -2010,59 +2010,50 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
+DisplayError HWDeviceDRM::SetPPFeature(PPFeatureInfo *feature) {
   int ret = 0;
   DRMCrtcInfo crtc_info = {};
-  PPFeatureInfo *feature = NULL;
 
-  if (!hw_color_mgr_)
+  if (!hw_color_mgr_) {
     return kErrorNotSupported;
-
-  while (true) {
-    std::vector<DRMPPFeatureID> drm_id = {};
-    DRMPPFeatureInfo kernel_params = {};
-    bool crtc_feature = true;
-
-    ret = feature_list->RetrieveNextFeature(&feature);
-    if (ret || !feature)
-      break;
-
-    hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
-    if (drm_id.empty()) {
-      continue;
-    } else if (drm_id.at(0) == DRMPPFeatureID::kFeatureDither) {
-      drm_mgr_intf_->GetCrtcInfo(token_.crtc_id, &crtc_info);
-      if (crtc_info.has_spr)
-        drm_id.at(0) = DRMPPFeatureID::kFeatureSprDither;
-    }
-
-    kernel_params.id = drm_id.at(0);
-    drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
-    if (kernel_params.version == std::numeric_limits<uint32_t>::max())
-      crtc_feature = false;
-
-    DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
-    for (DRMPPFeatureID id : drm_id) {
-      if (id >= kPPFeaturesMax) {
-        DLOGE("Invalid feature id %d", id);
-        continue;
-      }
-
-      kernel_params.id = id;
-      ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
-      if (!ret && crtc_feature)
-        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC,
-                                  token_.crtc_id, &kernel_params);
-      else if (!ret && !crtc_feature)
-        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC,
-                                  token_.conn_id, &kernel_params);
-
-      hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
-    }
   }
 
-  // Once all features were consumed, then destroy all feature instance from feature_list,
-  feature_list->Reset();
+  std::vector<DRMPPFeatureID> drm_id = {};
+  DRMPPFeatureInfo kernel_params = {};
+  bool crtc_feature = true;
+
+  hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
+  if (drm_id.empty()) {
+    return kErrorNone;
+  } else if (drm_id.at(0) == DRMPPFeatureID::kFeatureDither) {
+    drm_mgr_intf_->GetCrtcInfo(token_.crtc_id, &crtc_info);
+    if (crtc_info.has_spr)
+      drm_id.at(0) = DRMPPFeatureID::kFeatureSprDither;
+  }
+
+  kernel_params.id = drm_id.at(0);
+  drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
+  if (kernel_params.version == std::numeric_limits<uint32_t>::max())
+    crtc_feature = false;
+
+  DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
+  for (DRMPPFeatureID id : drm_id) {
+    if (id >= kPPFeaturesMax) {
+      DLOGE("Invalid feature id %d", id);
+      continue;
+    }
+
+    kernel_params.id = id;
+    ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
+    if (!ret && crtc_feature)
+      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC,
+                                token_.crtc_id, &kernel_params);
+    else if (!ret && !crtc_feature)
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC,
+                                token_.conn_id, &kernel_params);
+
+    hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
+  }
 
   return kErrorNone;
 }

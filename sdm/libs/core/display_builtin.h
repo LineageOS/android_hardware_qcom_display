@@ -34,12 +34,12 @@
 #include <private/spr_intf.h>
 #include <private/panel_feature_property_intf.h>
 #include <private/panel_feature_factory_intf.h>
+#include <private/hw_events_interface.h>
 #include <string>
 #include <vector>
 
 #include "display_base.h"
 #include "drm_interface.h"
-#include "hw_events_interface.h"
 
 namespace sdm {
 

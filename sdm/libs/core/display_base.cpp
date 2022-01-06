@@ -30,6 +30,7 @@
 #include <utils/rect.h>
 #include <utils/utils.h>
 #include <drm_interface.h>
+#include <private/hw_info_interface.h>
 
 #include <iomanip>
 #include <map>
@@ -39,7 +40,6 @@
 #include <algorithm>
 
 #include "display_base.h"
-#include "hw_info_interface.h"
 
 #define __CLASS__ "DisplayBase"
 

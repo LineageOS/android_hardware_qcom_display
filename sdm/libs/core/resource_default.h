@@ -29,10 +29,10 @@
 #include <private/resource_interface.h>
 #include <private/layer_feedback.h>
 #include <utils/locker.h>
+#include <private/hw_interface.h>
 #include <vector>
 #include <map>
 
-#include "hw_interface.h"
 
 namespace sdm {
 

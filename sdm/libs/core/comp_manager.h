@@ -27,6 +27,7 @@
 
 #include <core/display_interface.h>
 #include <private/extension_interface.h>
+#include <private/hw_interface.h>
 #include <utils/locker.h>
 #include <bitset>
 #include <set>
@@ -36,7 +37,6 @@
 
 #include "strategy.h"
 #include "resource_default.h"
-#include "hw_interface.h"
 
 namespace sdm {
 

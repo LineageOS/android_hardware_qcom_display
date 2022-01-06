@@ -37,13 +37,13 @@
 #include <private/snapdragon_color_intf.h>
 #include <utils/sys.h>
 #include <utils/debug.h>
+#include <private/hw_interface.h>
 #include <array>
 #include <vector>
 #include <map>
 #include <string>
 #include <mutex>
 
-#include "hw_interface.h"
 
 namespace sdm {
 

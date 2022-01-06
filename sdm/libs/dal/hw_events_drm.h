@@ -33,6 +33,8 @@
 #include <drm_interface.h>
 #include <sys/poll.h>
 #include <sys/inotify.h>
+#include <private/hw_events_interface.h>
+#include <private/hw_interface.h>
 #include <map>
 #include <mutex>
 #include <string>
@@ -40,8 +42,6 @@
 #include <vector>
 #include <climits>
 
-#include "hw_events_interface.h"
-#include "hw_interface.h"
 #include "hw_device_drm.h"
 
 namespace sdm {

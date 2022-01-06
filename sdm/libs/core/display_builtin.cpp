@@ -29,6 +29,8 @@
 #include <utils/formats.h>
 #include <core/buffer_allocator.h>
 #include <sys/mman.h>
+#include <private/hw_interface.h>
+#include <private/hw_info_interface.h>
 #include <iomanip>
 #include <algorithm>
 #include <functional>
@@ -39,8 +41,6 @@
 #include "display_builtin.h"
 #include "drm_interface.h"
 #include "drm_master.h"
-#include "hw_info_interface.h"
-#include "hw_interface.h"
 
 #define __CLASS__ "DisplayBuiltIn"
 
