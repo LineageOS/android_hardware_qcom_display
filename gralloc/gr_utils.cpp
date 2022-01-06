@@ -43,6 +43,10 @@
 #include "gr_camera_info.h"
 #include "gr_utils.h"
 
+#ifndef GRALLOC_USAGE_PRIVATE_VIDEO_HW
+#define GRALLOC_USAGE_PRIVATE_VIDEO_HW 1ULL << 52
+#endif
+
 #define ASTC_BLOCK_SIZE 16
 
 #define ONLY_GPU_CPU_USAGE_MASK (BufferUsage::GPU_TEXTURE | BufferUsage::GPU_RENDER_TARGET | \
