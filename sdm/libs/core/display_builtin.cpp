@@ -188,8 +188,8 @@ DisplayError DisplayBuiltIn::Init() {
         "Enabled", display_id_, display_type_);
 
   value = 0;
-  DebugHandler::Get()->GetProperty(ENABLE_CWB_IDLE_FALLBACK, &value);
-  enable_cwb_idle_fallback_ = (value == 1);
+  DebugHandler::Get()->GetProperty(DISABLE_CWB_IDLE_FALLBACK, &value);
+  disable_cwb_idle_fallback_ = (value == 1);
 
   NoiseInit();
   InitCWBBuffer();
@@ -2429,7 +2429,7 @@ void DisplayBuiltIn::InitCWBBuffer() {
     return;
   }
 
-  if (!enable_cwb_idle_fallback_) {
+  if (disable_cwb_idle_fallback_) {
     return;
   }
 
@@ -2475,7 +2475,7 @@ void DisplayBuiltIn::InitCWBBuffer() {
 }
 
 void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
-  if (!enable_cwb_idle_fallback_) {
+  if (disable_cwb_idle_fallback_) {
     return;
   }
 
