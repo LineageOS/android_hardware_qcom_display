@@ -2134,8 +2134,7 @@ PrimariesTransfer DisplayBuiltIn::GetBlendSpaceFromStcColorMode(
   }
 
   // Set sRGB as default blend space.
-  if (stc_color_modes_.list.empty() || color_mode.intent == snapdragoncolor::kNative ||
-      (color_mode.gamut == ColorPrimaries_Max && color_mode.gamma == Transfer_Max)) {
+  if (stc_color_modes_.list.empty()) {
     return blend_space;
   }
 

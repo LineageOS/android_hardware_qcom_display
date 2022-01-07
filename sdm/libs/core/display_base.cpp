@@ -67,8 +67,9 @@ static ColorPrimaries GetColorPrimariesFromAttribute(const std::string &gamut) {
   } else if (gamut.find(kSrgb) != std::string::npos) {
     return ColorPrimaries_BT709_5;
   } else if (gamut.find(kNative) != std::string::npos) {
-    DLOGW("Native Gamut found, returning default: sRGB");
-    return ColorPrimaries_BT709_5;
+    DLOGW("Native Gamut found");
+    // Native gamut will have unknown primary, setting ColorPrimaries_Max
+    return ColorPrimaries_Max;
   }
 
   return ColorPrimaries_BT709_5;
@@ -3285,6 +3286,9 @@ void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
         supported_pt->push_back(pt);
         pt.transfer = Transfer_HLG;
         supported_pt->push_back(pt);
+      } else if (pt.primaries == ColorPrimaries_Max) {
+        pt.transfer = Transfer_Max;
+        supported_pt->push_back(pt);
       }
     }
   }
@@ -3422,6 +3426,9 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_sRGB;
+  } else if (color_gamut == kNative) {
+    pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
+    pt.transfer = Transfer_Max;
   }
 
   return pt;

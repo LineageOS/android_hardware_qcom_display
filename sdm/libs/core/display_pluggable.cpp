@@ -291,8 +291,13 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
 
     // native mode
-    color_modes_cs_.push_back(pt);
+    pt.primaries = ColorPrimaries_Max;
+    pt.transfer = Transfer_Max;
     var.clear();
+    var.push_back(std::make_pair(kColorGamutAttribute, kNative));
+    var.push_back(std::make_pair(kGammaTransferAttribute, kNative));
+    var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
+    color_modes_cs_.push_back(pt);
     color_mode_attr_map_.insert(std::make_pair("hal_native", var));
   }
 
@@ -349,7 +354,10 @@ void DisplayPluggable::InitializeColorModesFromColorspace() {
 static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_gamut,
                                                      const std::string &transfer) {
   PrimariesTransfer blend_space_ = {};
-  if (color_gamut == kBt2020) {
+  if (color_gamut == kNative) {  // Native mode is identified by Max
+    blend_space_.primaries = ColorPrimaries_Max;
+    blend_space_.transfer = Transfer_Max;
+  } else if (color_gamut == kBt2020) {
     blend_space_.primaries = ColorPrimaries_BT2020;
     if (transfer == kHlg) {
       blend_space_.transfer = Transfer_HLG;

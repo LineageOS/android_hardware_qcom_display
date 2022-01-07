@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -106,6 +108,9 @@ void HWCColorModeStc::PopulateColorModes() {
   for (uint32_t i = 0; i < stc_mode_list_.list.size(); i++) {
     snapdragoncolor::ColorMode stc_mode = stc_mode_list_.list[i];
     if (stc_mode.intent == snapdragoncolor::kNative) {
+      // Setting Max for native mode gamut and gamma
+      stc_mode.gamut = ColorPrimaries_Max;
+      stc_mode.gamma = Transfer_Max;
       color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC][kSdrType] = stc_mode;
       DLOGI("Color mode NATIVE supported");
     } else {
