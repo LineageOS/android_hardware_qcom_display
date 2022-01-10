@@ -42,6 +42,7 @@ case "$target" in
     case "$soc_hwid" in
       519)
         setprop vendor.display.enable_fb_scaling 0
+        setprop vendor.display.target.version 4
       ;;
     esac
     ;;
