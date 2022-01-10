@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2018, 2020-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, 2020-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -247,7 +247,17 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         DLOGE("Tapppoint %d NOT supported.", frame_capture_data->input_params.flags);
         return -EFAULT;
     }
-    ret = hwc_display->GetCwbBufferResolution(cwb_tappoint, &buffer_info.buffer_config.width,
+
+    CwbConfig cwb_config = {};
+    cwb_config.tap_point = cwb_tappoint;
+    cwb_config.cwb_roi.left = FLOAT(frame_capture_data->input_params.rect.x);
+    cwb_config.cwb_roi.top = FLOAT(frame_capture_data->input_params.rect.y);
+    cwb_config.cwb_roi.right =
+        cwb_config.cwb_roi.left + FLOAT(frame_capture_data->input_params.rect.width);
+    cwb_config.cwb_roi.bottom =
+        cwb_config.cwb_roi.top + FLOAT(frame_capture_data->input_params.rect.height);
+
+    ret = hwc_display->GetCwbBufferResolution(&cwb_config, &buffer_info.buffer_config.width,
                                               &buffer_info.buffer_config.height);
     if (ret != 0) {
       DLOGE("Buffer Resolution setting failed. ret: %d", ret);
@@ -286,15 +296,6 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         frame_capture_data->buffer_stride = buffer_info.alloc_buffer_info.stride;
         frame_capture_data->buffer_size = buffer_info.alloc_buffer_info.size;
       }
-
-      CwbConfig cwb_config = {};
-      cwb_config.tap_point = cwb_tappoint;
-      cwb_config.cwb_roi.left = FLOAT(frame_capture_data->input_params.rect.x);
-      cwb_config.cwb_roi.top = FLOAT(frame_capture_data->input_params.rect.y);
-      cwb_config.cwb_roi.right =
-          cwb_config.cwb_roi.left + FLOAT(frame_capture_data->input_params.rect.width);
-      cwb_config.cwb_roi.bottom =
-          cwb_config.cwb_roi.top + FLOAT(frame_capture_data->input_params.rect.height);
 
       ret = hwc_display->FrameCaptureAsync(buffer_info, cwb_config);
       if (ret < 0) {

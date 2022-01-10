@@ -195,7 +195,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, const CwbConfig &cwb_config);
+                                         int32_t format, CwbConfig &cwb_config);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
     return kErrorNotSupported;
@@ -218,7 +218,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void Dump(std::ostringstream *os);
 
   // CWB related methods
-  virtual int GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+  virtual int GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                      uint32_t *y_pixels);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
                                         shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,

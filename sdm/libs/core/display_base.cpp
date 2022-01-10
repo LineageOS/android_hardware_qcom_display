@@ -357,11 +357,12 @@ DisplayError DisplayBase::InitRC() {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                                  uint32_t *y_pixels) {
   DisplayError error = kErrorNotSupported;
   DisplayConfigVariableInfo display_config;
 
+  CwbTapPoint cwb_tappoint = cwb_config->tap_point;
   if (cwb_tappoint == CwbTapPoint::kDsppTapPoint || cwb_tappoint == CwbTapPoint::kDemuraTapPoint) {
     // To dump post-processed (DSPP) output for CWB, use Panel resolution.
     uint32_t active_index = 0;
@@ -369,8 +370,16 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
     if (error == kErrorNone) {
       error = GetRealConfig(active_index, &display_config);
       if (error == kErrorNone) {
-        *x_pixels = display_config.x_pixels;
-        *y_pixels = display_config.y_pixels;
+        cwb_config->cwb_full_rect.right = display_config.x_pixels;
+        cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
+        LayerRect cwb_roi = cwb_config->cwb_roi;
+        if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+            *x_pixels = cwb_roi.right - cwb_roi.left;
+            *y_pixels = cwb_roi.bottom - cwb_roi.top;
+        } else {
+          *x_pixels = display_config.x_pixels;
+          *y_pixels = display_config.y_pixels;
+        }
       }
     }
   } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
@@ -378,8 +387,16 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint3
     // a CWB active frame, then LM resolution is reconfigured to FB resolution in PrePrepare phase.
     error = GetFrameBufferConfig(&display_config);
     if (error == kErrorNone) {
-      *x_pixels = display_config.x_pixels;
-      *y_pixels = display_config.y_pixels;
+      cwb_config->cwb_full_rect.right = display_config.x_pixels;
+      cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
+      LayerRect cwb_roi = cwb_config->cwb_roi;
+      if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+          *x_pixels = cwb_roi.right - cwb_roi.left;
+          *y_pixels = cwb_roi.bottom - cwb_roi.top;
+        } else {
+          *x_pixels = display_config.x_pixels;
+          *y_pixels = display_config.y_pixels;
+        }
     }
   }
   return error;
@@ -406,14 +423,11 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
                                    : CwbTapPoint::kLmTapPoint;
 
       uint32_t buffer_width = 0, buffer_height = 0;
-      error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+      error = GetCwbBufferResolution(cwb_config_, &buffer_width, &buffer_height);
       if (error != kErrorNone) {
         DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
         return error;
       }
-
-      // Setting full frame ROI
-      cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
       DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
       cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
     } else {  // Cwb client has set the cwb config in LayerStack.cwb_config .
@@ -2404,7 +2418,7 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
       DLOGE("Output buffer has invalid color format.");
       return kErrorParameters;
     }
-    ApplyCwbRoiRestrictions(roi, full_frame, cwb_alignment_factor);
+    ApplyCwbRoiRestrictions(roi, full_frame, cwb_alignment_factor, format);
   }
 
   // For cmd mode : Incase CWB Client sets cwb_config.pu_as_cwb_roi as true, then PU ROI would be
