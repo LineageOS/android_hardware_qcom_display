@@ -591,6 +591,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PerformIdleStatusCallback(hwc2_display_t display);
   DispType GetDisplayConfigDisplayType(int qdutils_disp_type);
   HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
+  HWC2::Error DisableQsync(hwc2_display_t display);
   void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
                           HWC2::Error status);
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
@@ -600,6 +601,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
+  QSyncMode  hwc_display_qsync_[HWCCallbacks::kNumDisplays] = {QSyncMode::kQSyncModeNone};
+  uint32_t idle_time_active_ms_ = 0;
+  uint32_t idle_time_inactive_ms_ = 0;
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
   HWCVirtualDisplayFactory virtual_display_factory_;
