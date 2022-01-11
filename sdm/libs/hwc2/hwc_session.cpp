@@ -45,6 +45,7 @@
 #include "hwc_display_virtual.h"
 #include "hwc_display_external_test.h"
 #include "qd_utils.h"
+#include <processgroup/processgroup.h>
 
 #define __CLASS__ "HWCSession"
 
@@ -508,6 +509,14 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   bool notify_hotplug = false;
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
+
+  thread_local bool setTaskProfileDone = false;
+  if (setTaskProfileDone == false) {
+        if (!SetTaskProfiles(gettid(), {"SFMainPolicy"})) {
+          DLOGW("Failed to add `%d` into SFMainPolicy", gettid());
+      }
+      setTaskProfileDone = true;
+  }
 
   if (display >= HWC_NUM_DISPLAY_TYPES) {
     return HWC2_ERROR_BAD_DISPLAY;
