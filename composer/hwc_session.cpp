@@ -3746,6 +3746,7 @@ android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) 
       DLOGE("Qsync mode not supported %d", mode);
       return -EINVAL;
   }
+  hwc_display_qsync_[HWC_DISPLAY_PRIMARY] = qsync_mode;
   return CallDisplayFunction(HWC_DISPLAY_PRIMARY, &HWCDisplay::SetQSyncMode, qsync_mode);
 }
 
@@ -4066,6 +4067,18 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     return -ENODEV;
   }
 
+  // disable idle time out for video mode
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    hwc_display_[target_display]->SetIdleTimeoutMs(0, 0);
+  }
+
+  // disable qsync
+  error = DisableQsync(target_display);
+  if (error != HWC2::Error::None) {
+    return -ENODEV;
+  }
+
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
@@ -4120,6 +4133,8 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
 
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    hwc_display_[target_display]->SetIdleTimeoutMs(idle_time_active_ms_, idle_time_inactive_ms_);
+    hwc_display_[target_display]->SetQSyncMode(hwc_display_qsync_[target_display]);
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd,
                                                           &needs_refresh) != kErrorNone) {
@@ -4285,6 +4300,18 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
     DLOGE("concurrent WB teardown failed with error %d", error);
     return HWC2::Error::NoResources;
   }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCSession::DisableQsync(hwc2_display_t display) {
+  if (hwc_display_[display]->SetQSyncMode(kQSyncModeNone) == HWC2::Error::None) {
+    int error = WaitForCommitDone(display, kClientTrustedUI);
+    if (error != 0) {
+      DLOGE("Disable Qsync failed with error = %d", error);
+      return HWC2::Error::NoResources;
+    }
+  }
+
   return HWC2::Error::None;
 }
 

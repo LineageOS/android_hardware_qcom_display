@@ -867,6 +867,7 @@ void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) 
   ClientLock lock(disp_mutex_);
   comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
   validated_ = false;
+  handle_idle_timeout_ = false;
 }
 
 DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
@@ -1757,7 +1758,8 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
     return kErrorNotSupported;
   }
 
-  if (qsync_mode_ == qsync_mode) {
+  // force clear qsync mode if set by idle timeout.
+  if (qsync_mode_ !=  kQSyncModeNone && qsync_mode_ == qsync_mode) {
     DLOGW("Qsync mode already set as requested mode: qsync_mode_=%d", qsync_mode_);
     return kErrorNone;
   }
