@@ -32,20 +32,42 @@
 
 #include <core/sdm_types.h>
 #include <utils/sys.h>
+#include <utils/Timers.h>
 
 namespace sdm {
+
+enum PerfHintStatus {
+  kInactive = 0,
+  kActive,
+  kRenew,
+};
+
+struct LongTermHintInfo {
+  int handleId = 0;
+  int tid = 0;
+  nsecs_t startTime = 0;
+  PerfHintStatus status = kInactive;
+};
 
 class HWCDebugHandler;
 
 class CPUHint {
  public:
   DisplayError Init(HWCDebugHandler *debug_handler);
-  void ReqHintsOffload(int hint, int duration);
+  int ReqHintsOffload(int hint, int tid);
+  int ReqHintRelease();
 
  private:
+  const int kLargeComposition = 0x00001097;
+
   bool enabled_ = false;
   DynLib vendor_ext_lib_;
-  int (*fn_perf_event_offload_)(int hint, const char *pkg, int numArgs, int *) = NULL;
+  int (*fn_perf_hint_acq_rel_offload_)(int handle, int hint, const char *pkg, int duration,
+                                       int type, int numArgs, int list[]) = NULL;
+  int (*fn_perf_lock_rel_offload_)(int handle) = NULL;
+  std::mutex tid_lock_;
+
+  LongTermHintInfo large_comp_cycle_ {};
 };
 
 }  // namespace sdm

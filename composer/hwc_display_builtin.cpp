@@ -1307,24 +1307,23 @@ int HWCDisplayBuiltIn::PostInit() {
   return 0;
 }
 
-void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
+bool HWCDisplayBuiltIn::NeedsLargeCompPerfHint() {
   if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
     DLOGV_IF(kTagResources, "cpu_hint_:%d not initialized or property:%d not set",
              !cpu_hint_, !perf_hint_large_comp_cycle_);
-    return;
+
+    return false;
   }
 
   if (active_refresh_rate_ < 120) {
-    return;
+    return false;
   }
 
   // Send hints when the device is in multi-display or when a skip layer is present.
   if (layer_stack_.flags.skip_present || is_multi_display_) {
     DLOGV_IF(kTagResources, "Found skip_layer:%d or is_multidisplay:%d. Set perf hint for large "
              "comp cycle", layer_stack_.flags.skip_present, is_multi_display_);
-    int hwc_tid = gettid();
-    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
-    return;
+    return true;
   }
 
   int gpu_layer_count = 0;
@@ -1337,27 +1336,26 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
 
   // Return immediately if full MDP comp is in use
   if (!gpu_layer_count) {
-    return;
+    return false;
   }
 
-  auto it = mixed_mode_threshold_.find(active_refresh_rate_);
+  auto it = mixed_mode_threshold_.find(active_refresh_rate_);;
   if (it != mixed_mode_threshold_.end()) {
     if (gpu_layer_count < it->second) {
       DLOGV_IF(kTagResources, "Number of GPU layers :%d does not meet mixed mode perf hints "
                "threshold:%d for %d fps", gpu_layer_count, it->second, active_refresh_rate_);
-      return;
+      return false;
     }
   } else {
     DLOGV_IF(kTagResources, "Mixed mode perf hints is not supported for %d fps",
              active_refresh_rate_);
-    return;
+    return false;
   }
 
   // Send hints when the number of GPU layers reaches the threshold for the active refresh rate.
   DLOGV_IF(kTagResources, "Reached max GPU layers for %dfps. Set perf hint for large comp cycle",
            active_refresh_rate_);
-  int hwc_tid = gettid();
-  cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
+  return true;
 }
 
 HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
@@ -1455,7 +1453,8 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
 
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
-  SetCpuPerfHintLargeCompCycle();
+  bool needs_hint = NeedsLargeCompPerfHint();
+  HandleLargeCompositionHint(!needs_hint);
   return status;
 }
 
@@ -1532,6 +1531,29 @@ HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
   }
 
   return HWC2::Error::None;
+}
+
+void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
+  int tid = gettid();
+
+  if (release) {
+    num_basic_frames_++;
+
+    if (num_basic_frames_ >= active_refresh_rate_) {
+      cpu_hint_->ReqHintRelease();
+    }
+    return;
+  }
+
+  if (hwc_tid_ != tid) {
+    DLOGV_IF(kTagResources, "HWC's tid:%d is updated to :%d", hwc_tid_, tid);
+    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, tid);
+    hwc_tid_ = tid;
+  } else {
+    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, 0);
+  }
+
+  num_basic_frames_ = 0;
 }
 
 }  // namespace sdm
