@@ -328,9 +328,17 @@ DisplayError DisplayBuiltIn::setColorSamplingState(SamplingState state) {
   if (samplingState == SamplingState::On) {
     histogramCtrl.value = sde_drm::HistModes::kHistEnabled;
     histogramIRQ.value = sde_drm::HistModes::kHistEnabled;
+    if (hw_panel_info_.mode == kModeCommand) {
+      uint32_t pending;
+      ControlPartialUpdate(false /* enable */, &pending);
+    }
   } else {
     histogramCtrl.value = sde_drm::HistModes::kHistDisabled;
     histogramIRQ.value = sde_drm::HistModes::kHistDisabled;
+    if (hw_panel_info_.mode == kModeCommand) {
+      uint32_t pending;
+      ControlPartialUpdate(true /* enable */, &pending);
+    }
   }
 
   // effectively drmModeAtomicAddProperty for the SDE_DSPP_HIST_CTRL_V1
@@ -790,7 +798,6 @@ void DisplayBuiltIn::IdleTimeout() {
       lock_guard<recursive_mutex> obj(recursive_mutex_);
       comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
     }
-    hw_intf_->EnableSelfRefresh();
   }
 }
 
