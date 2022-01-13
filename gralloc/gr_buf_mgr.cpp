@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020-2021, 2022 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2010 The Android Open Source Project
