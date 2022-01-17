@@ -1595,6 +1595,10 @@ HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
 }
 
 void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
+  if (!cpu_hint_) {
+    return;
+  }
+
   int tid = gettid();
 
   if (release) {
