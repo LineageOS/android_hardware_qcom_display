@@ -1115,7 +1115,7 @@ void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
     }
     backlight_params->brightness = brightness;
     backlight_params->is_primary = IsPrimaryDisplayLocked();
-    if ((ret = ipc_intf_->SetParameter(kIpcParamSetBacklight, in))) {
+    if ((ret = ipc_intf_->SetParameter(kIpcParamBacklight, in))) {
       DLOGW("Failed to set backlight, error = %d", ret);
     }
     lock_guard<recursive_mutex> obj(brightness_lock_);
@@ -2198,7 +2198,7 @@ void DisplayBuiltIn::SendDisplayConfigs() {
     disp_configs->fps = display_attributes_.fps;
     disp_configs->smart_panel = display_attributes_.smart_panel;
     disp_configs->is_primary = IsPrimaryDisplayLocked();
-    if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
+    if ((ret = ipc_intf_->SetParameter(kIpcParamDisplayConfigs, in))) {
       DLOGW("Failed to send display config, error = %d", ret);
     }
   }

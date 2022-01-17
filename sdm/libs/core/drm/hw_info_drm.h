@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, 2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #include <bitset>
 #include <vector>
 #include <map>
+#include <string>
 
 #include "hw_info_interface.h"
 
@@ -53,6 +54,7 @@ class HWInfoDRM : public HWInfoInterface {
   virtual DisplayError GetRequiredDemuraFetchResourceCount(
                        std::map<uint32_t, uint8_t> *required_demura_fetch_cnt);
   virtual DisplayError GetDemuraPanelIds(std::vector<uint64_t> *panel_ids);
+  virtual DisplayError GetPanelBootParamString(std::string *panel_boot_param_string);
 
  private:
   void Deinit();
