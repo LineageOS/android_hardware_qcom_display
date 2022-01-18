@@ -798,7 +798,6 @@ void DisplayBuiltIn::IdleTimeout() {
       lock_guard<recursive_mutex> obj(recursive_mutex_);
       comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
     }
-    hw_intf_->EnableSelfRefresh();
   }
 }
 
