@@ -817,6 +817,9 @@ void HWCSession::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType ty
   Attributes attributes;
   hwc2_display_t target_display = GetActiveBuiltinDisplay();
   hwc2_config_t current_config = 0;
+  if (!is_client_up_) {
+    return;
+  }
 
   if(target_display >= HWCCallbacks::kNumDisplays) {
     return;
@@ -1060,10 +1063,10 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
   }
 
   // On SF stop, disable the idle time.
-  if (!pointer && is_idle_time_up_ && hwc_display_[HWC_DISPLAY_PRIMARY]) { // De-registering…
+  if (!pointer && is_client_up_ && hwc_display_[HWC_DISPLAY_PRIMARY]) { // De-registering…
     DLOGI("disable idle time");
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
-    is_idle_time_up_ = false;
+    is_client_up_ = false;
   }
 }
 
