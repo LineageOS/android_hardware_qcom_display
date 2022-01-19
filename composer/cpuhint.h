@@ -36,6 +36,13 @@
 
 namespace sdm {
 
+enum PerfHintThreadType {
+  kInvalid = 0,
+  kSurfaceFlinger,
+  kRenderEngine,
+  kHWC,
+};
+
 enum PerfHintStatus {
   kInactive = 0,
   kActive,
@@ -56,14 +63,18 @@ class CPUHint {
   DisplayError Init(HWCDebugHandler *debug_handler);
   int ReqHintsOffload(int hint, int tid);
   int ReqHintRelease();
+  int ReqHint(PerfHintThreadType type, int tid);
 
  private:
   const int kLargeComposition = 0x00001097;
+  const int kHintPassPid = 0x0000109C;  // Inform mpctl about the TID
+  const int kPassPidSuccess = -2;  // Check if mpctl received the TID
 
   bool enabled_ = false;
   DynLib vendor_ext_lib_;
   int (*fn_perf_hint_acq_rel_offload_)(int handle, int hint, const char *pkg, int duration,
                                        int type, int numArgs, int list[]) = NULL;
+  int (*fn_perf_hint_)(int hint, const char *pkg, int duration, int type) = NULL;
   int (*fn_perf_lock_rel_offload_)(int handle) = NULL;
   std::mutex tid_lock_;
 
