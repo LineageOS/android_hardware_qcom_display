@@ -62,6 +62,8 @@
                                 BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | \
                                 GRALLOC_USAGE_PRIVATE_CDSP | GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
 
+#define DEBUG 0
+
 using aidl::android::hardware::graphics::common::Dataspace;
 using aidl::android::hardware::graphics::common::PlaneLayout;
 using aidl::android::hardware::graphics::common::PlaneLayoutComponent;
@@ -3285,7 +3287,7 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
       }
       break;
     default:
-      ALOGE("Unknown metadata type %d", type);
+      ALOGD_IF(DEBUG, "Unsupported metadata type %d", type);
       ret = Error::BAD_VALUE;
       break;
   }
