@@ -170,6 +170,7 @@
 #define DISABLE_ROUNDED_CORNER_THREAD        DISPLAY_PROP("disable_rounded_corner_thread")
 // SPR
 #define ENABLE_SPR                           DISPLAY_PROP("enable_spr")
+#define ENABLE_SPR_BYPASS                    DISPLAY_PROP("enable_spr_bypass")
 #define ENABLE_MEMORY_MAPPING                DISPLAY_PROP("enable_memory_mapping")
 
 // Panel Feature Demura Properties
