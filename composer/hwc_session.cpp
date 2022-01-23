@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2022, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -3292,7 +3292,8 @@ void HWCSession::PerformDisplayPowerReset() {
         DLOGE("%d mode for display = %d failed with error = %d", mode, INT32(display), status);
       }
       ColorMode color_mode = hwc_display_[display]->GetCurrentColorMode();
-      status = hwc_display_[display]->SetColorMode(color_mode);
+      RenderIntent render_intent = hwc_display_[display]->GetCurrentRenderIntent();
+      status = hwc_display_[display]->SetColorModeWithRenderIntent(color_mode, render_intent);
       if (status != HWC2::Error::None) {
         DLOGE("SetColorMode failed for display = %d error = %d", INT32(display), status);
       }
@@ -3327,8 +3328,9 @@ void HWCSession::VmReleaseDone(hwc2_display_t display) {
   SCOPE_LOCK(vm_release_locker_[display]);
   if (clients_waiting_for_vm_release_.test(display)) {
     vm_release_locker_[display].Signal();
+    DLOGI("Signal vm release done!! for display %d", display);
+    clients_waiting_for_vm_release_.reset(display);
   }
-  DLOGI("Signal vm release done!! for display %d", display);
 }
 
 void HWCSession::HandleSecureSession() {
@@ -3940,7 +3942,14 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
 int HWCSession::WaitForVmRelease(hwc2_display_t display) {
   SCOPE_LOCK(vm_release_locker_[display]);
   clients_waiting_for_vm_release_.set(display);
-  int ret = vm_release_locker_[display].WaitFinite(kVmReleaseTimeoutMs);
+  int re_try = kVmReleaseRetry;
+  int ret = 0;
+  do {
+    ret = vm_release_locker_[display].WaitFinite(kVmReleaseTimeoutMs);
+    if (!ret) {
+      break;
+    }
+  } while(re_try--);
   if (ret != 0) {
     DLOGE("Timed out with error %d for display %" PRIu64, ret, display);
   }

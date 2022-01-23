@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -188,8 +188,8 @@ DisplayError DisplayBuiltIn::Init() {
         "Enabled", display_id_, display_type_);
 
   value = 0;
-  DebugHandler::Get()->GetProperty(ENABLE_CWB_IDLE_FALLBACK, &value);
-  enable_cwb_idle_fallback_ = (value == 1);
+  DebugHandler::Get()->GetProperty(DISABLE_CWB_IDLE_FALLBACK, &value);
+  disable_cwb_idle_fallback_ = (value == 1);
 
   NoiseInit();
   InitCWBBuffer();
@@ -1115,7 +1115,7 @@ void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
     }
     backlight_params->brightness = brightness;
     backlight_params->is_primary = IsPrimaryDisplayLocked();
-    if ((ret = ipc_intf_->SetParameter(kIpcParamSetBacklight, in))) {
+    if ((ret = ipc_intf_->SetParameter(kIpcParamBacklight, in))) {
       DLOGW("Failed to set backlight, error = %d", ret);
     }
     lock_guard<recursive_mutex> obj(brightness_lock_);
@@ -2198,7 +2198,7 @@ void DisplayBuiltIn::SendDisplayConfigs() {
     disp_configs->fps = display_attributes_.fps;
     disp_configs->smart_panel = display_attributes_.smart_panel;
     disp_configs->is_primary = IsPrimaryDisplayLocked();
-    if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
+    if ((ret = ipc_intf_->SetParameter(kIpcParamDisplayConfigs, in))) {
       DLOGW("Failed to send display config, error = %d", ret);
     }
   }
@@ -2429,18 +2429,15 @@ void DisplayBuiltIn::InitCWBBuffer() {
     return;
   }
 
-  if (!enable_cwb_idle_fallback_) {
+  if (disable_cwb_idle_fallback_) {
     return;
   }
 
   BufferInfo output_buffer_info;
-  CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;
-  if (GetCwbBufferResolution(tap_point, &output_buffer_info.buffer_config.width,
-                             &output_buffer_info.buffer_config.height)) {
-    DLOGE("Buffer Resolution setting failed.");
-    return;
-  }
-
+  // Initialize CWB buffer with display resolution to get full size buffer
+  // as mixer or fb can init with custom values based on property
+  output_buffer_info.buffer_config.width = display_attributes_.x_pixels;
+  output_buffer_info.buffer_config.height = display_attributes_.y_pixels;
   output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
   output_buffer_info.buffer_config.buffer_count = 1;
   if (buffer_allocator_->AllocateBuffer(&output_buffer_info) != 0) {
@@ -2457,15 +2454,16 @@ void DisplayBuiltIn::InitCWBBuffer() {
   buffer.width = output_buffer_info.alloc_buffer_info.aligned_width;
   buffer.height = output_buffer_info.alloc_buffer_info.aligned_height;
   buffer.format = output_buffer_info.alloc_buffer_info.format;
-  buffer.unaligned_width = mixer_attributes_.width;
-  buffer.unaligned_height = mixer_attributes_.height;
+  buffer.unaligned_width = output_buffer_info.buffer_config.width;
+  buffer.unaligned_height = output_buffer_info.buffer_config.height;
 
   cwb_layer_.composition = kCompositionCWBTarget;
   cwb_layer_.input_buffer = buffer;
   cwb_layer_.input_buffer.buffer_id = reinterpret_cast<uint64_t>(output_buffer_info.private_data);
-
-  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  cwb_layer_.src_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
+                         FLOAT(cwb_layer_.input_buffer.unaligned_height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
+                         FLOAT(cwb_layer_.input_buffer.unaligned_height)};
 
   cwb_layer_.flags.is_cwb = 1;
 
@@ -2477,12 +2475,17 @@ void DisplayBuiltIn::InitCWBBuffer() {
 }
 
 void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
-  if (!enable_cwb_idle_fallback_) {
+  if (disable_cwb_idle_fallback_) {
     return;
   }
 
-  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  uint32_t new_mixer_width = fb_config_.x_pixels;
+  uint32_t new_mixer_height = fb_config_.y_pixels;
+  NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height);
+  // Set cwb src_rect same as mixer resolution since LM tappoint
+  // and dest_rect equal to fb resolution as strategy scales HWLayer dest rect based on fb
+  cwb_layer_.src_rect = {0, 0, FLOAT(new_mixer_width), FLOAT(new_mixer_height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(fb_config_.x_pixels), FLOAT(fb_config_.y_pixels)};
   cwb_layer_.composition = kCompositionCWBTarget;
   layer_stack->layers.push_back(&cwb_layer_);
 }

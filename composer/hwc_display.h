@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2022, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -129,6 +129,7 @@ class HWCColorMode {
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();
   virtual ColorMode GetCurrentColorMode() { return current_color_mode_; }
+  virtual RenderIntent GetCurrentRenderIntent() { return current_render_intent_; }
   virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   void ReapplyMode() { apply_mode_ = true; };
@@ -194,7 +195,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, const CwbConfig &cwb_config);
+                                         int32_t format, CwbConfig &cwb_config);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
     return kErrorNotSupported;
@@ -217,7 +218,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void Dump(std::ostringstream *os);
 
   // CWB related methods
-  virtual int GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+  virtual int GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                      uint32_t *y_pixels);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
                                         shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,
@@ -294,6 +295,9 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
+  RenderIntent GetCurrentRenderIntent() {
+    return (color_mode_ ? color_mode_->GetCurrentRenderIntent() : RenderIntent::COLORIMETRIC);
   }
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);

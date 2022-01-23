@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -174,7 +174,7 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
 }
 
 HWC2::Error HWCDisplayVirtual::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                                  int32_t format, const CwbConfig &cwb_config) {
+                                                  int32_t format, CwbConfig &cwb_config) {
   HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format);
   dump_output_layer_ = ((bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP)) != 0);
 

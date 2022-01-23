@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, 2020 - 2021 The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2020 - 2022 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 #include <utils/sys.h>
 #include <utils/utils.h>
 #include <utils/debug.h>
+#include <utils/formats.h>
 
 #include <algorithm>
 
@@ -99,7 +100,11 @@ void AdjustSize(const int min_size, const int bound_start, const int bound_end, 
 }
 
 void ApplyCwbRoiRestrictions(LayerRect &roi, const LayerRect &cwb_full_frame,
-                             const int cwb_alignment_factor) {
+                             const int cwb_alignment_factor,
+                             LayerBufferFormat format) {
+  if (!IsUBWCFormat(format)) {
+    return;
+  }
   // Make ROI's (width * height) as 256B aligned
   uint32_t roi_width = UINT32(roi.right - roi.left);
   uint32_t roi_height = UINT32(roi.bottom - roi.top);
