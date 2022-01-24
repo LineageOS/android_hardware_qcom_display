@@ -3389,14 +3389,18 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
     case HWRecoveryEvent::kCapture:
 #ifndef TRUSTED_VM
       if (!disable_hw_recovery_dump_ && !hw_recovery_logs_captured_) {
-        hw_intf_->DumpDebugData();
-        hw_recovery_logs_captured_ = true;
-        DLOGI("Captured debugfs data for display = %d", display_type_);
+        auto error = hw_intf_->DumpDebugData();
+        if (error == kErrorNone) {
+          hw_recovery_logs_captured_ = true;
+          DLOGI("Captured devcoredump data for display = %d", display_type_);
+        } else {
+          DLOGW("Failed to capture devcoredump data for display = %d", display_type_);
+        }
       } else if (!disable_hw_recovery_dump_) {
-        DLOGI("Multiple capture events without intermediate success event, skipping debugfs"
+        DLOGI("Multiple capture events without intermediate success event, skipping devcoredump "
               "capture for display = %d", display_type_);
       } else {
-        DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
+        DLOGI("Devcoredump data dumping is disabled for display = %d", display_type_);
       }
       hw_recovery_count_++;
       if (hw_recovery_count_ >= hw_recovery_threshold_) {

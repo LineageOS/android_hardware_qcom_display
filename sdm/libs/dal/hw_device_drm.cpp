@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ *  Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted (subject to the limitations in the
+ *  disclaimer below) provided that the following conditions are met:
+ *
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *
+ *      * Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer in the documentation and/or other materials provided
+ *        with the distribution.
+ *
+ *      * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *        contributors may be used to endorse or promote products derived
+ *        from this software without specific prior written permission.
+ *
+ *  NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ *  GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ *  HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ *   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ *  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ *  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
@@ -55,6 +91,7 @@
 #include <utils/utils.h>
 #include <utils/fence.h>
 #include <private/hw_info_interface.h>
+#include <dirent.h>
 
 #include <sstream>
 #include <ctime>
@@ -2303,103 +2340,64 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
 }
 
 DisplayError HWDeviceDRM::DumpDebugData() {
-  string dir_path = "/data/vendor/display/hw_recovery/";
+  string out_dir_path = "/data/vendor/display/hw_recovery/";
+  string devcd_dir_path = "/sys/class/devcoredump/";
   string device_str = device_name_;
+  string devcd_path;
+  string driver_name;
 
   // Attempt to make hw_recovery dir, it may exist
-  if (mkdir(dir_path.c_str(), 0777) != 0 && errno != EEXIST) {
-    DLOGW("Failed to create %s directory errno = %d, desc = %s", dir_path.c_str(), errno,
+  if (mkdir(out_dir_path.c_str(), 0777) != 0 && errno != EEXIST) {
+    DLOGW("Failed to create %s directory errno = %d, desc = %s", out_dir_path.c_str(), errno,
           strerror(errno));
     return kErrorPermission;
   }
   // If it does exist, ensure permissions are fine
-  if (errno == EEXIST && chmod(dir_path.c_str(), 0777) != 0) {
-    DLOGW("Failed to change permissions on %s directory", dir_path.c_str());
+  if (errno == EEXIST && chmod(out_dir_path.c_str(), 0777) != 0) {
+    DLOGW("Failed to change permissions on %s directory", out_dir_path.c_str());
     return kErrorPermission;
   }
 
-  string filename = dir_path+device_str+"_HWR_"+to_string(debug_dump_count_);
-  ofstream dst(filename);
+  string filename = out_dir_path + device_str + "_HWR_" + to_string(debug_dump_count_);
+  ofstream dst;
   debug_dump_count_++;
+  fstream src;
+  char buffer[3*1024 + 1];
+  auto dir = opendir(devcd_dir_path.c_str());
 
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/dump");
-    if (src.fail()) {
-      DLOGW("Unable to open dump debugfs node");
-     } else {
-      dst << "---- Event Logs ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
+  // Find the devcd node corresponding to display driver
+  while (auto i = readdir(dir)) {
+    if (string(i->d_name).find("devcd") != string::npos) {
+      devcd_path = devcd_dir_path + i->d_name + "/failing_device/uevent";
+      src.open(devcd_path, fstream::in);
       if (src.fail()) {
-        DLOGW("Unable to read dump debugfs node");
+        continue;
+      } else {
+        src >> driver_name;
+        src.close();
+        if (driver_name == "DRIVER=msm_drm") {
+          closedir(dir);
+          devcd_path = devcd_dir_path + i->d_name + "/data";
+          src.rdbuf()->pubsetbuf(buffer, sizeof(buffer));
+          src.open(devcd_path, fstream::in);
+          dst.open(filename);
+          dst << "---- Event Logs ----" << std::endl;
+          dst << src.rdbuf() << std::endl;
+          if (src.fail()) {
+            DLOGW("Unable to read devcoredump node");
+            return kErrorUndefined;
+          }
+          src.close();
+          dst.close();
+          DLOGI("Wrote hw_recovery file %s", filename.c_str());
+
+          return kErrorNone;
+        }
       }
-      src.close();
     }
   }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_reg debugfs node");
-    } else {
-      dst << "---- All Registers ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_reg debugfs node");
-      }
-      src.close();
-    }
-  }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_dbgbus debugfs node");
-    } else {
-      dst << "---- Debug Bus ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_dbgbus debugfs node");
-      }
-      src.close();
-    }
-  }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_vbif_dbgbus debugfs node");
-    } else {
-      dst << "---- VBIF Debug Bus ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_vbif_dbgbus debugfs node");
-      }
-      src.close();
-    }
-  }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_dsi_dbgbus");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_dsi_dbgbus debugfs node");
-    } else {
-      dst << "---- DSI Debug Bus ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_dsi_dbgbus debugfs node");
-      }
-    src.close();
-    }
-  }
-
-  dst.close();
-  DLOGI("Wrote hw_recovery file %s", filename.c_str());
-
+  closedir(dir);
+  DLOGW("Unable to find devcoredump data node");
   return kErrorNone;
 }
 
