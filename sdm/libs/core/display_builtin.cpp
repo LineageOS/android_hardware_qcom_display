@@ -233,6 +233,10 @@ DisplayError DisplayBuiltIn::Init() {
   DebugHandler::Get()->GetProperty(DISABLE_CWB_IDLE_FALLBACK, &value);
   disable_cwb_idle_fallback_ = (value == 1);
 
+#ifdef TRUSTED_VM
+  disable_cwb_idle_fallback_ = 1;
+#endif
+
   NoiseInit();
   InitCWBBuffer();
 
