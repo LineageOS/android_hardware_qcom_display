@@ -80,7 +80,7 @@ PRODUCT_COPY_FILES += $(DISPLAY_HAL_DIR)/config/qdcm_calib_data_bengal_default.x
 #Smomo config xml file
 PRODUCT_COPY_FILES += $(DISPLAY_HAL_DIR)/config/smomo_setting.xml:$(TARGET_COPY_OUT_VENDOR)/etc/smomo_setting.xml
 
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     persist.demo.hdmirotationlock=false \
     persist.sys.sf.color_saturation=1.0 \
     persist.sys.sf.color_mode=9 \
@@ -105,16 +105,16 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.disable_offline_rotator=1
 else
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.disable_rotator_ubwc=1 \
     vendor.display.disable_layer_stitch=0
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),holi)
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.secure_preview_buffer_format=420_sp \
     vendor.gralloc.secure_preview_buffer_format=420_sp \
     vendor.gralloc.secure_preview_only=1
@@ -125,8 +125,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     PRODUCT_COPY_FILES += $(DISPLAY_HAL_DIR)/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672e_fhd_plus_120Hz_Video_panel.xml
     PRODUCT_COPY_FILES += $(DISPLAY_HAL_DIR)/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672e_fhd_plus_144Hz_video_panel.xml
     PRODUCT_COPY_FILES += $(DISPLAY_HAL_DIR)/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672e_60_Hz_fhd_plus_video_mode_panel_without_DSC.xml
-    PRODUCT_PROPERTY_OVERRIDES += vendor.display.enable_rounded_corner=1
-    PRODUCT_PROPERTY_OVERRIDES += vendor.display.disable_rounded_corner_thread=0
+    PRODUCT_VENDOR_PROPERTIES += vendor.display.enable_rounded_corner=1
+    PRODUCT_VENDOR_PROPERTIES += vendor.display.disable_rounded_corner_thread=0
 else
     #QDCM calibration xml file for r66451 amoled panel in lahaina and shima
     PRODUCT_COPY_FILES += $(DISPLAY_HAL_DIR)/config/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
@@ -138,7 +138,7 @@ else
 endif
 
 ifneq ($(PLATFORM_VERSION), 10)
-    PRODUCT_PROPERTY_OVERRIDES +=  vendor.display.enable_async_powermode=0
+    PRODUCT_VENDOR_PROPERTIES +=  vendor.display.enable_async_powermode=0
 endif
 
 #Set WCG properties
@@ -155,13 +155,13 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dim
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.disable_hw_recovery_dump=0
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.hw_recovery_threshold=5
 else
 # Recovery is enabled, logging is disabled
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.disable_hw_recovery_dump=1
 endif
 
@@ -195,7 +195,7 @@ else
     PRODUCT_PACKAGES += libsdedrm
     PRODUCT_PACKAGES += libgpu_tonemapper
     #Properties that should not be set in QMAA are enabled here.
-    PRODUCT_PROPERTY_OVERRIDES += \
+    PRODUCT_VENDOR_PROPERTIES += \
         vendor.display.enable_early_wakeup=1
     PRODUCT_SOONG_NAMESPACES += $(DISPLAY_HAL_DIR)
 endif
