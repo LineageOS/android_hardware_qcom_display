@@ -325,6 +325,53 @@ void CoreImpl::InitializeSDMUtils() {
   sdm_utils_factory_intf_->CreateSDMPropUtils(hw_resource_);
 }
 
+void CoreImpl::OverRideDemuraPanelIds(std::vector<uint64_t> *panel_ids) {
+  uint64_t panel_id_prim = 0, panel_id_sec = 0;
+  int panel_id_w = 0;
+  uint32_t count;
+
+  if (!panel_ids)
+    return;
+
+  panel_id_w = 0;
+  // primary panel id
+  Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_LOW, &panel_id_w);
+  panel_id_prim = static_cast<uint32_t>(panel_id_w);
+  Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
+  panel_id_prim |=  ((static_cast<uint64_t>(panel_id_w)) << 32);
+
+  panel_id_w = 0;
+  // secondary panel id
+  Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_LOW, &panel_id_w);
+  panel_id_sec = static_cast<uint32_t>(panel_id_w);
+  Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
+  panel_id_sec |=  ((static_cast<uint64_t>(panel_id_w)) << 32);
+
+  count = panel_ids->size();
+
+  if (count >= 2 && (!panel_id_prim || !panel_id_sec)) {
+    DLOGI("skip panel override count 2 panel_id_prim %lx panel_id_sec %lx\n",
+      panel_id_prim, panel_id_sec);
+    return;
+  }
+
+  if (count == 1 && !panel_id_prim && !panel_id_sec) {
+    DLOGI("skip panel override count 1 panel_id_prim %lx panel_id_sec %lx\n",
+      panel_id_prim, panel_id_sec);
+    return;
+  }
+
+  panel_ids->clear();
+  if (panel_id_prim) {
+    DLOGI("override primary panel id %lx\n", panel_id_prim);
+    panel_ids->push_back(panel_id_prim);
+  }
+  if (panel_id_sec) {
+    DLOGI("override secondary panel id %lx\n", panel_id_sec);
+    panel_ids->push_back(panel_id_sec);
+  }
+}
+
 DisplayError CoreImpl::ReserveDemuraResources() {
   DisplayError err = kErrorNone;
   int enable = 0;
@@ -447,6 +494,8 @@ DisplayError CoreImpl::ReserveDemuraResources() {
   for (auto &id : *panel_ids) {
     DLOGI("Detected panel_id = %" PRIu64 " (0x%" PRIx64 ")", id, id);
   }
+  OverRideDemuraPanelIds(panel_ids);
+
 
   if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamPanelIds, in))) {
     DLOGE("Failed to set the panel ids to the parser manager");
