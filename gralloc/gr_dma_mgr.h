@@ -66,6 +66,7 @@ class DmaManager : public AllocInterface {
   int dma_dev_fd_ = FD_INIT;
   BufferAllocator buffer_allocator_;
   static DmaManager *dma_manager_;
+  bool enable_logs_;
 };
 
 }  // namespace gralloc

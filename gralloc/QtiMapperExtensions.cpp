@@ -30,8 +30,8 @@
  */
 
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#define DEBUG 0
 #include "QtiMapperExtensions.h"
+#include <cutils/properties.h>
 #include <cutils/trace.h>
 #include <sync/sync.h>
 #include "gr_utils.h"
@@ -48,6 +48,7 @@ using gralloc::BufferInfo;
 
 QtiMapperExtensions::QtiMapperExtensions() {
   buf_mgr_ = BufferManager::GetInstance();
+  enable_logs_ = property_get_bool(ENABLE_LOGS_PROP, 0);
 }
 
 Return<void> QtiMapperExtensions::getMapSecureBufferFlag(void *buffer,
@@ -359,8 +360,8 @@ Return<void> QtiMapperExtensions::getSurfaceMetadata(void *buffer, getSurfaceMet
 Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage, int32_t flags,
                                                   int32_t width, int32_t height,
                                                   getFormatLayout_cb hidl_cb) {
-  ALOGD_IF(DEBUG, "%s: Input parameters - wxh: %dx%d usage: 0x%" PRIu64 " format: %d", __FUNCTION__,
-           width, height, usage, format);
+  ALOGD_IF(enable_logs_, "%s: Input parameters - wxh: %dx%d usage: 0x%" PRIu64 " format: %d",
+           __FUNCTION__, width, height, usage, format);
   auto err = Error::NONE;
   hidl_vec<PlaneLayout> plane_info;
   unsigned int alignedw = 0, alignedh = 0;
@@ -375,8 +376,8 @@ Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage
     return Void();
   }
   gralloc::PlaneLayoutInfo plane_layout[8] = {};
-  ALOGD_IF(DEBUG, "%s: Aligned width and height - wxh: %ux%u custom_format = %d", __FUNCTION__,
-           alignedw, alignedh, custom_format);
+  ALOGD_IF(enable_logs_, "%s: Aligned width and height - wxh: %ux%u custom_format = %d",
+           __FUNCTION__, alignedw, alignedh, custom_format);
   if (gralloc::IsYuvFormat(custom_format)) {
     gralloc::GetYUVPlaneInfo(info, custom_format, alignedw, alignedh, flags, &plane_count,
                              plane_layout);
@@ -389,7 +390,7 @@ Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage
     hidl_cb(err, size, plane_info);
     return Void();
   }
-  ALOGD_IF(DEBUG, "%s: Number of plane - %d, custom_format - %d", __FUNCTION__, plane_count,
+  ALOGD_IF(enable_logs_, "%s: Number of plane - %d, custom_format - %d", __FUNCTION__, plane_count,
            custom_format);
   plane_info.resize(plane_count);
   for (int i = 0; i < plane_count; i++) {
@@ -402,11 +403,12 @@ Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage
     plane_info[i].stride_bytes = plane_layout[i].stride_bytes;
     plane_info[i].scanlines = plane_layout[i].scanlines;
     plane_info[i].size = plane_layout[i].size;
-    ALOGD_IF(DEBUG, "%s: plane info: component - %d", __FUNCTION__, plane_info[i].component);
-    ALOGD_IF(DEBUG, "h_subsampling - %u, v_subsampling - %u, offset - %u, pixel_increment - %d",
+    ALOGD_IF(enable_logs_, "%s: plane info: component - %d", __FUNCTION__, plane_info[i].component);
+    ALOGD_IF(enable_logs_,
+             "h_subsampling - %u, v_subsampling - %u, offset - %u, pixel_increment - %d",
              plane_info[i].h_subsampling, plane_info[i].v_subsampling, plane_info[i].offset,
              plane_info[i].pixel_increment);
-    ALOGD_IF(DEBUG, "stride_pixel - %d, stride_bytes - %d, scanlines - %d, size - %u",
+    ALOGD_IF(enable_logs_, "stride_pixel - %d, stride_bytes - %d, scanlines - %d, size - %u",
              plane_info[i].stride, plane_info[i].stride_bytes, plane_info[i].scanlines,
              plane_info[i].size);
   }

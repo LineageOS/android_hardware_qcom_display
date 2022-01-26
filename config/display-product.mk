@@ -73,6 +73,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
+    vendor.gralloc.enable_logs=0 \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.disable_excl_rect_partial_fb=1 \

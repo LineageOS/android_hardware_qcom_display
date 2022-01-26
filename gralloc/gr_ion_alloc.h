@@ -74,6 +74,7 @@ class IonAlloc {
   void CloseIonDevice();
 
   int ion_dev_fd_;
+  bool enable_logs_ = false;
 };
 
 }  // namespace gralloc
