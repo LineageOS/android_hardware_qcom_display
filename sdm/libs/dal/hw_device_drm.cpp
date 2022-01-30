@@ -3198,4 +3198,12 @@ DisplayError HWDeviceDRM::SetPPConfig(void *payload, size_t size) {
 
   return kErrorNone;
 }
+
+DisplayError HWDeviceDRM::CancelDeferredPowerMode() {
+  DLOGI("Pending state reset %d on CRTC: %u", pending_power_state_, token_.crtc_id);
+  pending_power_state_ = kPowerStateNone;
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
