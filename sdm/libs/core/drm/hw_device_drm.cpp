@@ -3118,4 +3118,12 @@ DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
   return kErrorNone;
 }
+
+DisplayError HWDeviceDRM::CancelDeferredPowerMode() {
+  DLOGI("Pending state reset %d on CRTC: %u", pending_power_state_, token_.crtc_id);
+  pending_power_state_ = kPowerStateNone;
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
