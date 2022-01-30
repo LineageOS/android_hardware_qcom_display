@@ -187,6 +187,8 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) {
     return kErrorNotSupported;
   }
+  virtual DisplayError CancelDeferredPowerMode();
+
   enum {
     kHWEventVSync,
     kHWEventBlank,
