@@ -1607,22 +1607,24 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
     return result;
   }
 
-  // Check if UBWC buffer has been rendered in linear format.
-  int linear_format = 0;
-  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_LINEAR_FORMAT, &linear_format) ==
-      Error::NONE) {
-    format = INT(linear_format);
-  }
+  if (hnd != nullptr) {
+    // Check if UBWC buffer has been rendered in linear format.
+    int linear_format = 0;
+    if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_LINEAR_FORMAT, &linear_format) ==
+        Error::NONE) {
+      format = INT(linear_format);
+    }
 
-  // Check metadata if the geometry has been updated.
-  CropRectangle_t crop;
-  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
-                       &crop) == Error::NONE) {
-    BufferInfo info(crop.right, crop.bottom, format, usage);
-    err = GetAlignedWidthAndHeight(info, reinterpret_cast<unsigned int *>(&width),
-                                   reinterpret_cast<unsigned int *>(&height));
-    if (err) {
-      return err;
+    // Check metadata if the geometry has been updated.
+    CropRectangle_t crop;
+    if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
+                         &crop) == Error::NONE) {
+      BufferInfo info(crop.right, crop.bottom, format, usage);
+      err = GetAlignedWidthAndHeight(info, reinterpret_cast<unsigned int *>(&width),
+                                     reinterpret_cast<unsigned int *>(&height));
+      if (err) {
+        return err;
+      }
     }
   }
 
@@ -2817,7 +2819,7 @@ Error GetPlaneLayout(private_handle_t *handle,
   gralloc::PlaneLayoutInfo plane_layout[8] = {};
   if (gralloc::IsYuvFormat(handle->format)) {
     gralloc::GetYUVPlaneInfo(info, handle->format, handle->width, handle->height, handle->flags,
-                             &plane_count, plane_layout);
+                             &plane_count, plane_layout, handle);
   } else if (gralloc::IsUncompressedRGBFormat(handle->format) ||
              gralloc::IsCompressedRGBFormat(handle->format)) {
     gralloc::GetRGBPlaneInfo(info, handle->format, handle->width, handle->height, handle->flags,
@@ -2849,6 +2851,12 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
     return Error::UNSUPPORTED;
   }
 
+  // Make sure we send 0 only if the operation queried is present
+  auto ret = Error::BAD_VALUE;
+  if (buffer == nullptr) {
+    return ret;
+  }
+
   private_handle_t *handle = static_cast<private_handle_t *>(buffer);
   MetaData_t *data = reinterpret_cast<MetaData_t *>(handle->base_metadata);
 
@@ -2856,9 +2864,6 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
   if (err != 0) {
     return Error::UNSUPPORTED;
   }
-
-  // Make sure we send 0 only if the operation queried is present
-  auto ret = Error::BAD_VALUE;
 
   if (data == nullptr) {
     return ret;
