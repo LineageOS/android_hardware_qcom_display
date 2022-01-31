@@ -469,6 +469,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool fast_path_composition_ = false;
   bool client_connected_ = true;
   bool pending_config_ = false;
+  bool smart_panel_config_ = false;
+  bool enable_poms_during_doze_ = false;
   uint32_t vsyncs_to_apply_rate_change_ = 1;
   hwc2_config_t pending_refresh_rate_config_ = UINT_MAX;
   int64_t pending_refresh_rate_refresh_time_ = INT64_MAX;

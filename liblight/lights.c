@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2017-2018 The  Linux Foundation. All rights reserved.
+ * Copyright (C) 2014, 2017-2018, 2021 The  Linux Foundation. All rights reserved.
  * Not a contribution
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -164,8 +164,10 @@ set_light_backlight(struct light_device_t* dev,
     if (!err) {
         if (!access(LCD_FILE, F_OK)) {
             err = write_int(LCD_FILE, brightness);
-        } else {
+        } else if (!access(LCD_FILE2, F_OK)) {
             err = write_int(LCD_FILE2, brightness);
+        } else {
+            ALOGE("No LCD file found!");
         }
     }
 

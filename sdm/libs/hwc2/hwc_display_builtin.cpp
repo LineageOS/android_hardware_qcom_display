@@ -157,6 +157,13 @@ int HWCDisplayBuiltIn::Init() {
     use_metadata_refresh_rate_ = false;
   }
 
+  int value = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
+  enable_poms_during_doze_ = (value == 1);
+  if (enable_poms_during_doze_) {
+    DLOGI("Enable POMS during Doze mode %" PRIu64 , id_);
+  }
+
   int status = HWCDisplay::Init();
   if (status) {
     return status;
@@ -166,18 +173,11 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
                                       &default_mode_status_);
 
-  int value = 0;
+  value = 0;
   HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &value);
   enable_optimize_refresh_ = (value == 1);
   if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
-  }
-
-  value = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
-  enable_poms_during_doze_ = (value == 1);
-  if (enable_poms_during_doze_) {
-    DLOGI("Enable POMS during Doze mode %" PRIu64 , id_);
   }
 
   int vsyncs = 0;
@@ -1064,13 +1064,7 @@ bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
     return IsSmartPanelConfig(config);
   }
 
-  for (auto &config : variable_config_map_) {
-    if (config.second.smart_panel) {
-      return true;
-    }
-  }
-
-  return false;
+  return smart_panel_config_;
 }
 
 }  // namespace sdm
