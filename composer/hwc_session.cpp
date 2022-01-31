@@ -1281,18 +1281,9 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
-
-  SCOPE_LOCK(locker_[display]);
-  if (!hwc_display_[display]) {
-    DLOGW("Display %d is not created yet.", INT32(display));
-    return HWC2_ERROR_BAD_DISPLAY;
+  if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+    *out_support = 1;
   }
-
-  if (hwc_display_[display]->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
-    return HWC2_ERROR_NONE;
-  }
-
-  *out_support = hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }

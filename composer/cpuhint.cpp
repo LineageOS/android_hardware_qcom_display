@@ -31,6 +31,7 @@
 
 #include <cutils/properties.h>
 #include <dlfcn.h>
+#include <thread>
 #include <utils/debug.h>
 
 #include "cpuhint.h"
@@ -51,13 +52,15 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
     if (!vendor_ext_lib_.Sym("perf_hint_acq_rel_offload",
                              reinterpret_cast<void **>(&fn_perf_hint_acq_rel_offload_)) ||
         !vendor_ext_lib_.Sym("perf_lock_rel_offload",
-                             reinterpret_cast<void **>(&fn_perf_lock_rel_offload_))) {
+                             reinterpret_cast<void **>(&fn_perf_lock_rel_offload_)) ||
+        !vendor_ext_lib_.Sym("perf_hint",
+                             reinterpret_cast<void **>(&fn_perf_hint_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
     }
     DLOGI("Successfully Loaded Vendor Extension Library symbols");
     enabled_ = (fn_perf_hint_acq_rel_offload_ != NULL &&
-                fn_perf_lock_rel_offload_ != NULL);
+                fn_perf_lock_rel_offload_ != NULL && fn_perf_hint_ != NULL);
   } else {
     DLOGW("Failed to open %s : %s", path, vendor_ext_lib_.Error());
   }
@@ -126,4 +129,24 @@ int CPUHint::ReqHintRelease() {
   }
   return 0;
 }
+
+int CPUHint::ReqHint(PerfHintThreadType type, int tid) {
+  std::lock_guard<std::mutex> lock(tid_lock_);
+
+  std::thread worker(
+    [this](uint32_t tid, PerfHintThreadType type) {
+      int ret = fn_perf_hint_(kHintPassPid, nullptr, tid, type);
+      if (ret == kPassPidSuccess) {
+        DLOGV_IF(kTagCpuHint, "Successfully sent HWC's tid:%d", tid);
+        return 0;
+      } else {
+        DLOGW("Failed to send HWC's tid:%d", tid);
+        return -1;
+      }
+    }, tid, type);
+
+  worker.detach();
+  return 0;
+}
+
 }  // namespace sdm
