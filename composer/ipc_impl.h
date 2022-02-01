@@ -33,10 +33,6 @@
 #define __IPC_IMPL_H__
 
 #include <core/ipc_interface.h>
-#include "qrtr_client_interface.h"
-#include "vm_interface.h"
-#include "utils/sys.h"
-
 #include <vendor/qti/hardware/display/demura/2.0/IDemuraFileFinder.h>
 
 #include <thread>

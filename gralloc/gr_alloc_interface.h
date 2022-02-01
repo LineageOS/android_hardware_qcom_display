@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
-
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -32,6 +34,8 @@
 
 #include <string>
 #include <vector>
+
+#include "QtiGrallocMetadata.h"
 
 namespace gralloc {
 
@@ -124,7 +128,7 @@ class AllocInterface {
 
     @return Returns 0 on success otherwise errno
   */
-  virtual int SecureMemPerms(AllocData *data);
+  virtual int SecureMemPerms(AllocData *data) = 0;
 
   /*! @brief Method to get heap info
 
@@ -139,7 +143,9 @@ class AllocInterface {
   */
   virtual void GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *heap_name,
                            std::vector<std::string> *vm_names, unsigned int *alloc_type,
-                           unsigned int *flags, unsigned int *alloc_size);
+                           unsigned int *flags, unsigned int *alloc_size) = 0;
+
+  virtual int SetBufferPermission(int fd, BufferPermission *buffer_perm, int64_t *mem_hdl) = 0;
 
  protected:
   virtual ~AllocInterface() {}

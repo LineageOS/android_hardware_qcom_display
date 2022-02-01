@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
-
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -34,10 +36,19 @@
 #include <vmmem.h>
 #include <string>
 #include <vector>
+#include <bitset>
 
 #include "gr_alloc_interface.h"
+#include "membuf_wrapper.h"
 
 #define FD_INIT -1
+#define MEMBUF_CLIENT_LIB_NAME "libmemutils.so"
+
+#define CREATE_MEMBUF_INTERFACE_NAME "CreateMemBufInterface"
+#define DESTROY_MEMBUF_INTERFACE_NAME "DestroyMemBufInterface"
+
+typedef int (*CreateMemBufInterface)(MemBuf **mem_buf_hnd);
+typedef int (*DestroyMemBufInterface)();
 
 namespace gralloc {
 
@@ -55,18 +66,26 @@ class DmaManager : public AllocInterface {
   virtual void GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *heap_name,
                            std::vector<std::string> *vm_names, unsigned int *alloc_type,
                            unsigned int *flags, unsigned int *alloc_size);
+  virtual int SetBufferPermission(int fd, BufferPermission *buf_perm, int64_t *mem_hdl);
 
   static DmaManager *GetInstance();
 
  private:
   DmaManager() {}
   int UnmapBuffer(void *base, unsigned int size, unsigned int offset);
+  void GetVMPermission(BufferPermission perm, std::bitset<kVmPermissionMax> *vm_perm);
+  void InitMemUtils();
+  void DeinitMemUtils();
   void Deinit();
 
   int dma_dev_fd_ = FD_INIT;
   BufferAllocator buffer_allocator_;
   static DmaManager *dma_manager_;
   bool enable_logs_;
+  MemBuf *mem_buf_ = nullptr;
+  void *mem_utils_lib_ = {};
+  CreateMemBufInterface CreateMemBuf_ = nullptr;
+  DestroyMemBufInterface DestroyMemBuf_ = nullptr;
 };
 
 }  // namespace gralloc

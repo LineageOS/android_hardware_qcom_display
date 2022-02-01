@@ -34,6 +34,7 @@
 #include <utility>
 #include <vector>
 #include <fstream>
+
 #include "gr_adreno_info.h"
 #include "gr_buf_descriptor.h"
 #include "gr_utils.h"
@@ -1280,7 +1281,25 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       }
     }
 #endif
-
+#ifdef QTI_BUFFER_PERMISSION
+    case QTI_BUFFER_PERMISSION:
+      if (metadata_ptr != nullptr) {
+        qtigralloc::encodeBufferPermission(reinterpret_cast<BufferPermission *>(metadata_ptr), out);
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
+#endif
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+      if (metadata_ptr != nullptr) {
+        android::gralloc4::encodeInt64(qtigralloc::MetadataType_MemHandle,
+                                       *reinterpret_cast<int64_t *>(metadata_ptr), out);
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
+#endif
     default:
       error = Error::UNSUPPORTED;
   }
@@ -1355,8 +1374,11 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
 #endif
 #ifdef QTI_COLORSPACE
     case QTI_COLORSPACE:
-      return Error::UNSUPPORTED;
 #endif
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+#endif
+      return Error::UNSUPPORTED;
     case (int64_t)StandardMetadataType::DATASPACE:
       Dataspace dataspace;
       android::gralloc4::decodeDataspace(in, &dataspace);
@@ -1506,6 +1528,13 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     case QTI_VIDEO_TS_INFO:
       qtigralloc::decodeVideoTimestampInfo(in, &metadata->videoTsInfo);
       break;
+#endif
+#ifdef QTI_BUFFER_PERMISSION
+    case QTI_BUFFER_PERMISSION: {
+      qtigralloc::decodeBufferPermission(in, &metadata->bufferPerm[0]);
+      allocator_->SetBufferPermission(handle->fd, &metadata->bufferPerm[0], &metadata->memHandle);
+    }
+    break;
 #endif
     default:
 #ifdef METADATA_V2

@@ -2282,6 +2282,7 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
     case QTI_VIDEO_HISTOGRAM_STATS:
     case QTI_VIDEO_TS_INFO:
     case QTI_S3D_FORMAT:
+    case QTI_BUFFER_PERMISSION:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)];
     case QTI_COLORSPACE:
       // QTI_COLORSPACE is derived from QTI_COLOR_METADATA
@@ -2311,6 +2312,9 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
     case QTI_BUFFER_TYPE:
     case (int64_t)StandardMetadataType::DATASPACE:
     case (int64_t)StandardMetadataType::PLANE_LAYOUTS:
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+#endif
       return true;
     default:
       ALOGE("paramType %d not supported", paramType);
@@ -3233,6 +3237,28 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         GetPlaneLayout(handle, plane_layouts);
       }
       break;
+#ifdef QTI_BUFFER_PERMISSION
+    case QTI_BUFFER_PERMISSION:
+      if (copy) {
+        BufferPermission *buf_perm = reinterpret_cast<BufferPermission *>(in);
+        int numelems = sizeof(data->bufferPerm) / sizeof(BufferPermission);
+        for (int i = 0; i < numelems; i++) {
+          buf_perm[i] = data->bufferPerm[i];
+        }
+      } else {
+        *out = &data->bufferPerm[0];
+      }
+      break;
+#endif
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+      if (copy) {
+        *(reinterpret_cast<int64_t *>(in)) = data->memHandle;
+      } else {
+        *out = &data->memHandle;
+      }
+      break;
+#endif
     default:
       ALOGD_IF(DEBUG, "Unsupported metadata type %d", type);
       ret = Error::BAD_VALUE;
@@ -3263,6 +3289,7 @@ void setGralloc4Array(MetaData_t *metadata, int64_t paramType, bool isSet) {
     case QTI_VIDEO_HISTOGRAM_STATS:
     case QTI_VIDEO_TS_INFO:
     case QTI_S3D_FORMAT:
+    case QTI_BUFFER_PERMISSION:
       metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)] = isSet;
       break;
     // Following metadata types are not changed after allocation - treat as set by default
@@ -3281,6 +3308,7 @@ void setGralloc4Array(MetaData_t *metadata, int64_t paramType, bool isSet) {
     case QTI_PRIVATE_FLAGS:
     case QTI_ALIGNED_WIDTH_IN_PIXELS:
     case QTI_ALIGNED_HEIGHT_IN_PIXELS:
+    case QTI_MEM_HANDLE:
       break;
     default:
       ALOGE("paramType %d not supported in Gralloc4", paramType);
@@ -3411,6 +3439,17 @@ Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param) {
     }
     case QTI_VIDEO_TS_INFO:
       data->videoTsInfo = *(reinterpret_cast<VideoTimestampInfo *>(param));
+      break;
+    case QTI_BUFFER_PERMISSION: {
+      BufferPermission*buf_perm = reinterpret_cast<BufferPermission *>(param);
+      int numelems = sizeof(data->bufferPerm) / sizeof(BufferPermission);
+      for (int i = 0; i < numelems; i++) {
+        data->bufferPerm[i] = buf_perm[i];
+      }
+      break;
+    }
+    case QTI_MEM_HANDLE:
+      data->memHandle = *(reinterpret_cast<int64_t *>(param));
       break;
     default:
       ALOGE("Unknown paramType %d", paramType);

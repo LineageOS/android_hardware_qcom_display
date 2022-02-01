@@ -93,6 +93,7 @@ int HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   }
   const BufferConfig &buffer_config = buffer_info->buffer_config;
   AllocatedBufferInfo *alloc_buffer_info = &buffer_info->alloc_buffer_info;
+  BufferPermission buf_perm[BUFFER_CLIENT_MAX];
   int format;
   uint64_t alloc_flags = 0;
   int error = SetBufferInfo(buffer_config.format, &format, &alloc_flags);
@@ -100,30 +101,58 @@ int HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     return -EINVAL;
   }
 
-  if (buffer_config.secure) {
-    alloc_flags |= BufferUsage::PROTECTED;
-  }
+  if (buffer_config.access_control.empty()) {
+    if (buffer_config.secure) {
+       alloc_flags |= BufferUsage::PROTECTED;
+    }
 
-  if (buffer_config.secure_camera) {
-    alloc_flags |= BufferUsage::CAMERA_OUTPUT;
-  }
+    if (buffer_config.secure_camera) {
+      alloc_flags |= BufferUsage::CAMERA_OUTPUT;
+    }
 
-  if (!buffer_config.cache) {
-    // Allocate uncached buffers
-    alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
-  }
+    if (!buffer_config.cache) {
+      // Allocate uncached buffers
+      alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
+    }
 
-  if (buffer_config.trusted_ui) {
-    // Allocate cached buffers for trusted UI
-    alloc_flags |= GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY;
-    alloc_flags &= ~GRALLOC_USAGE_PRIVATE_UNCACHED;
-  }
+    if (buffer_config.trusted_ui) {
+      // Allocate cached buffers for trusted UI
+      alloc_flags |= GRALLOC_USAGE_PRIVATE_TRUSTED_VM;
+      alloc_flags &= ~GRALLOC_USAGE_PRIVATE_UNCACHED;
+    }
 
-  if (buffer_config.gfx_client) {
-    alloc_flags |= BufferUsage::GPU_TEXTURE;
-  }
+    if (buffer_config.gfx_client) {
+      alloc_flags |= BufferUsage::GPU_TEXTURE;
+    }
 
-  alloc_flags |= BufferUsage::COMPOSER_OVERLAY;
+    alloc_flags |= BufferUsage::COMPOSER_OVERLAY;
+  } else {
+    for (uint32_t i = 0; i < BUFFER_CLIENT_MAX; i++) {
+      buf_perm[i].permission = 0;
+    }
+    auto it = buffer_config.access_control.find(kBufferClientUnTrustedVM);
+    if (it != buffer_config.access_control.end()) {
+      if (!buffer_config.cache) {
+        // Allocate uncached buffers
+        alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
+      }
+      SetBufferAccessControlInfo(it->second, &buf_perm[kBufferClientUnTrustedVM]);
+    } else {
+       alloc_flags |= BufferUsage::PROTECTED;
+    }
+
+    it = buffer_config.access_control.find(kBufferClientTrustedVM);
+    if (it != buffer_config.access_control.end()) {
+      alloc_flags |= GRALLOC_USAGE_PRIVATE_TRUSTED_VM;
+      SetBufferAccessControlInfo(it->second, &buf_perm[kBufferClientTrustedVM]);
+    }
+
+    it = buffer_config.access_control.find(kBufferClientDPU);
+    if (it != buffer_config.access_control.end()) {
+      alloc_flags |= BufferUsage::COMPOSER_OVERLAY;
+      SetBufferAccessControlInfo(it->second, &buf_perm[kBufferClientDPU]);
+    }
+  }
 
   const native_handle_t *buf = nullptr;
 
@@ -171,38 +200,57 @@ int HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     return kErrorMemory;
   }
 
+  uint32_t tmp_width;
   native_handle_t *hnd = nullptr;
   hnd = (native_handle_t *)buf;  // NOLINT
 
+  if (!buffer_config.access_control.empty()) {
+    auto ret = qtigralloc::set(hnd, QTI_BUFFER_PERMISSION, buf_perm);
+    if (ret != Error::NONE) {
+      DLOGE("qtigralloc::set failed for QTI_BUFFER_PERMISSION %d", ret);
+      err = -EINVAL;
+      goto cleanup;
+    }
+    auto error = gralloc::GetMetaDataValue(hnd, QTI_MEM_HANDLE, &alloc_buffer_info->mem_handle);
+    if (error != gralloc::Error::NONE) {
+      err = -EINVAL;;
+      goto cleanup;
+    }
+  }
+
   err = GetFd(hnd, alloc_buffer_info->fd);
   if (err != kErrorNone)
-    return kErrorUndefined;
+    goto cleanup;
 
-  uint32_t tmp_width;
   err = GetWidth(hnd, tmp_width);
   if (err != kErrorNone)
-    return kErrorUndefined;
+    goto cleanup;
   alloc_buffer_info->stride = tmp_width;
   alloc_buffer_info->aligned_width = tmp_width;
 
   err = GetHeight(hnd, alloc_buffer_info->aligned_height);
   if (err != kErrorNone)
-    return kErrorUndefined;
+    goto cleanup;
 
   err = GetAllocationSize(hnd, alloc_buffer_info->size);
   if (err != kErrorNone)
-    return kErrorUndefined;
+    goto cleanup;
 
   err = GetBufferId(hnd, alloc_buffer_info->id);
   if (err != kErrorNone)
-    return kErrorUndefined;
+    goto cleanup;
 
   err = GetSDMFormat(hnd, alloc_buffer_info->format);
   if (err != kErrorNone)
-    return kErrorUndefined;
+    goto cleanup;
 
   buffer_info->private_data = reinterpret_cast<void *>(hnd);
   return 0;
+cleanup:
+  if (hnd) {
+    mapper_->freeBuffer(hnd);
+  }
+  return err;
 }
 
 int HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
@@ -747,6 +795,13 @@ int HWCBufferAllocator::UnmapBuffer(const native_handle_t *handle, int *release_
                     }
                   });
   return err;
+}
+
+void HWCBufferAllocator::SetBufferAccessControlInfo(std::bitset<kBufferPermMax> permission,
+                                                    BufferPermission *buf_perm) {
+  buf_perm->read = permission.test(kBufferPermRead);
+  buf_perm->write = permission.test(kBufferPermWrite);
+  buf_perm->execute = permission.test(kBufferPermExecute);
 }
 
 }  // namespace sdm

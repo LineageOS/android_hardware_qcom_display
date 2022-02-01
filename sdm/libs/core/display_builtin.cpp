@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -2534,7 +2536,7 @@ void DisplayIPCVmCallbackImpl::ExportHFCBuffer() {
   export_buf_in_params->buffers.emplace(kIpcBufferTypeDemuraHFC, hfc_buf);
 
   DLOGI("Allocated hfc buffer fd %d size %d panel id :%x", hfc_buf.fd, hfc_buf.size,
-    hfc_buf);
+        hfc_buf.panel_id);
 
   GenericPayload out;
   IPCExportBufOutParams *export_buf_out_params = nullptr;

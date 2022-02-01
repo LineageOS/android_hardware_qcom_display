@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -199,6 +201,24 @@ Error encodeYUVPlaneInfoMetadata(qti_ycbcr *in, hidl_vec<uint8_t> *out) {
   return Error::NONE;
 }
 
+Error decodeBufferPermission(hidl_vec<uint8_t> &in, BufferPermission *out) {
+  if (!in.size() || !out) {
+    return Error::BAD_VALUE;
+  }
+  BufferPermission *p = reinterpret_cast<BufferPermission *>(in.data());
+  memcpy(out, in.data(), (BUFFER_CLIENT_MAX * sizeof(BufferPermission)));
+  return Error::NONE;
+}
+
+Error encodeBufferPermission(BufferPermission *in, hidl_vec<uint8_t> *out) {
+  if (!out) {
+    return Error::BAD_VALUE;
+  }
+  out->resize(BUFFER_CLIENT_MAX * sizeof(BufferPermission));
+  memcpy(out->data(), in, (BUFFER_CLIENT_MAX * sizeof(BufferPermission)));
+  return Error::NONE;
+}
+
 MetadataType getMetadataType(uint32_t in) {
   switch (in) {
     case QTI_VT_TIMESTAMP:
@@ -251,6 +271,14 @@ MetadataType getMetadataType(uint32_t in) {
       return MetadataType_ColorSpace;
     case QTI_YUV_PLANE_INFO:
       return MetadataType_YuvPlaneInfo;
+#ifdef QTI_BUFFER_PERMISSION
+    case QTI_BUFFER_PERMISSION:
+      return MetadataType_BufferPermission;
+#endif
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+      return MetadataType_MemHandle;
+#endif
     default:
       return MetadataType_Invalid;
   }
@@ -375,6 +403,18 @@ Error get(void *buffer, uint32_t type, void *param) {
     case QTI_YUV_PLANE_INFO:
       err = decodeYUVPlaneInfoMetadata(bytestream, reinterpret_cast<qti_ycbcr *>(param));
       break;
+#ifdef QTI_BUFFER_PERMISSION
+    case QTI_BUFFER_PERMISSION:
+      err = decodeBufferPermission(bytestream, reinterpret_cast<BufferPermission*>(param));
+      break;
+#endif
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+      err = static_cast<Error>(
+          android::gralloc4::decodeInt64(qtigralloc::MetadataType_MemHandle, bytestream,
+                                         reinterpret_cast<int64_t *>(param)));
+      break;
+#endif
     default:
       param = nullptr;
       return Error::UNSUPPORTED;
@@ -445,6 +485,9 @@ Error set(void *buffer, uint32_t type, void *param) {
       break;
     case QTI_VIDEO_TS_INFO:
       err = encodeVideoTimestampInfo(*reinterpret_cast<VideoTimestampInfo *>(param), &bytestream);
+      break;
+    case QTI_BUFFER_PERMISSION:
+      err = encodeBufferPermission(reinterpret_cast<BufferPermission*>(param), &bytestream);
       break;
     default:
       param = nullptr;

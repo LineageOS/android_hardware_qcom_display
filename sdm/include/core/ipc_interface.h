@@ -90,6 +90,7 @@ struct IPCBufferInfo {
   uint32_t payload_sz;
   uint64_t panel_id;
   char file_name[128];
+  int64_t mem_handle;
 };
 
 struct IPCPanelBootParams {

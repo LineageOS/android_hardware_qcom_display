@@ -36,9 +36,6 @@
 
 #include "ipc_impl.h"
 
-#include "ipc_impl.h"
-#include <utils/sys.h>
-
 #define __CLASS__ "IPCImpl"
 
 namespace sdm {
@@ -91,7 +88,7 @@ int IPCImpl::Init() {
                             reinterpret_cast<void **>(&GetMemBuf)) ||
         !mem_buf_client_lib_.Sym(DESTROY_MEMBUF_INTERFACE_NAME,
                             reinterpret_cast<void **>(&PutMembuf))) {
-      DLOGW("Unable to load symbols, error = %s", qrtr_client_lib_.Error());
+      DLOGW("Unable to load symbols, error = %s", mem_buf_client_lib_.Error());
     }
     if (!GetMemBuf || !PutMembuf) {
       DLOGE("Membuf Symbols not resolved");
@@ -273,21 +270,22 @@ int IPCImpl::ProcessExportBuffers(const GenericPayload &in, GenericPayload *out)
       auto &buf_type = buffer.first;
       auto export_buf = buffer.second;
       int temp_fd = -1;
-      int64_t mem_handle = -1;
 
-      ret = mem_buf_->Export(export_buf.fd, &temp_fd, &mem_handle);
-      if (ret != 0) {
-        DLOGE("Export failed with %d for buf type %d", ret, buf_type);
-        for (auto &temp_fd : exported_fds) {
-          if (temp_fd.second > 0) {
-            Sys::close_(temp_fd.second);
+      if (export_buf.mem_handle == -1) {
+        ret = mem_buf_->Export(export_buf.fd, &temp_fd, &export_buf.mem_handle);
+        if (ret != 0) {
+          DLOGE("Export failed with %d for buf type %d", ret, buf_type);
+          for (auto &temp_fd : exported_fds) {
+            if (temp_fd.second > 0) {
+              Sys::close_(temp_fd.second);
+            }
           }
+          return ret;
         }
-        return ret;
       }
 
       if (buf_type == kIpcBufferTypeDemuraCalib) {
-        demura_mem_info.calib_mem_hdl = mem_handle;
+        demura_mem_info.calib_mem_hdl = export_buf.mem_handle;
         demura_mem_info.calib_mem_size = export_buf.size;
         demura_mem_info.calib_payload_size = export_buf.payload_sz;
         demura_mem_info.panel_id = export_buf.panel_id;
@@ -295,7 +293,7 @@ int IPCImpl::ProcessExportBuffers(const GenericPayload &in, GenericPayload *out)
         std::snprintf(demura_mem_info.file_name, sizeof demura_mem_info.file_name,
                       "%s", export_buf.file_name);
       } else if (buf_type == kIpcBufferTypeDemuraHFC) {
-        demura_mem_info.hfc_mem_hdl = mem_handle;
+        demura_mem_info.hfc_mem_hdl = export_buf.mem_handle;
         demura_mem_info.hfc_mem_size = export_buf.size;
         demura_mem_info.panel_id = export_buf.panel_id;
         demura_mem_info.calib_mem_hdl = -1;

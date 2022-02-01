@@ -33,6 +33,7 @@
 
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <QtiGrallocMetadata.h>
 
 #include <android/hardware/graphics/common/1.2/types.h>
 #include <android/hardware/graphics/allocator/4.0/IAllocator.h>
@@ -86,6 +87,7 @@ class HWCBufferAllocator : public BufferAllocator {
 
  private:
   int GetGrallocInstance();
+  void SetBufferAccessControlInfo(std::bitset<kBufferPermMax> perm, BufferPermission *buf_perm);
   android::sp<IMapper> mapper_;
   android::sp<IAllocator> allocator_;
   android::sp<IQtiMapperExtensions_v1_2> mapper_ext_;

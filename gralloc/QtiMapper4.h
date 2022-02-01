@@ -274,6 +274,12 @@ class QtiMapper : public IQtiMapper {
 #ifdef QTI_VIDEO_TS_INFO
       {qtigralloc::MetadataType_VideoTimestampInfo, "Video timestamp info", true, true},
 #endif
+#ifdef QTI_BUFFER_PERMISSION
+      {qtigralloc::MetadataType_BufferPermission, "BufferPermission", true, true},
+#endif
+#ifdef QTI_MEM_HANDLE
+      {qtigralloc::MetadataType_MemHandle, "MemHandle", true, false},
+#endif
   };
 };
 

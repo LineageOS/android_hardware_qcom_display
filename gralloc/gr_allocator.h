@@ -52,6 +52,7 @@ class Allocator {
   bool CheckForBufferSharing(uint32_t num_descriptors,
                              const std::vector<std::shared_ptr<BufferDescriptor>> &descriptors,
                              ssize_t *max_index);
+  int SetBufferPermission(int fd, BufferPermission *buffer_perm, int64_t *mem_hdl);
  private:
   bool use_system_heap_for_sensors_ = true;
 };
