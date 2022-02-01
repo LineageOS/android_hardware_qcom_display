@@ -790,6 +790,25 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
   return kErrorNone;
 }
 
+DisplayError HWCDisplayBuiltIn::TeardownCwbForVirtualDisplay() {
+  DisplayError error = kErrorNotSupported;
+  if (Fence::Wait(output_buffer_.release_fence) != kErrorNone) {
+    DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    return kErrorResources;
+  }
+  if (display_intf_) {
+    error = display_intf_->TeardownConcurrentWriteback();
+  }
+
+  readback_buffer_queued_ = false;
+  cwb_config_ = {};
+  readback_configured_ = false;
+  output_buffer_ = {};
+  cwb_client_ = kCWBClientNone;
+
+  return error;
+}
+
 HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
                                                    uint32_t v_start, uint32_t v_end,
                                                    uint32_t factor_in, uint32_t factor_out) {

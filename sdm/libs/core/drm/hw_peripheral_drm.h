@@ -84,6 +84,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual void GetHWPanelMaxBrightness();
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError EnableSelfRefresh();
+  virtual  DisplayError TeardownConcurrentWriteback(void);
 
  private:
   void InitDestScaler();
@@ -92,7 +93,6 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   DisplayError SetupConcurrentWritebackModes();
   bool SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
                                 int64_t *release_fence_fd);
-  DisplayError TeardownConcurrentWriteback(void);
   void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
   void CreatePanelFeaturePropertyMap();
