@@ -73,12 +73,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace sdm {
 
-enum SelfRefreshState {
-  kSelfRefreshNone,
-  kSelfRefreshEnable,
-  kSelfRefreshDisable,
-};
-
 class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
  public:
   explicit HWPeripheralDRM(int32_t display_id, BufferAllocator *buffer_allocator,
@@ -115,7 +109,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual DisplayError GetPanelBrightness(int *level);
   virtual void GetHWPanelMaxBrightness();
   virtual DisplayError SetBLScale(uint32_t level);
-  virtual DisplayError EnableSelfRefresh();
+  virtual DisplayError EnableSelfRefresh(SelfRefreshState self_refresh_state);
   virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config);
   virtual DisplayError UpdateTransferTime(uint32_t transfer_time);
 

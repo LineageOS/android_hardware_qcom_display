@@ -198,7 +198,9 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
-  virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
+  virtual DisplayError EnableSelfRefresh(SelfRefreshState self_refresh_state) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status);
   virtual void FlushConcurrentWriteback();
   virtual DisplayError UpdateTransferTime(uint32_t transfer_time);

@@ -177,7 +177,8 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::CONNECTOR_CACHE_STATE:
     case DRMOps::CONNECTOR_EARLY_FENCE_LINE:
     case DRMOps::CONNECTOR_DNSC_BLR:
-    case DRMOps::CONNECTOR_WB_USAGE_TYPE: {
+    case DRMOps::CONNECTOR_WB_USAGE_TYPE:
+    case DRMOps::CONNECTOR_SET_CACHE_STATE: {
       drm_mgr_->GetConnectorMgr()->Perform(opcode, obj_id, drm_atomic_req_, args);
     } break;
     case DRMOps::DPPS_CACHE_FEATURE: {

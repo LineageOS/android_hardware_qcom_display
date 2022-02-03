@@ -705,8 +705,8 @@ void DisplayBase::EnableLlccDuringAodMode(LayerStack *layer_stack) {
       (hw_panel_info_.mode == kModeVideo)) {
     // Set CACHE_STATE property as part of Doze/Doze-suspend commit or subsequent commits
     // with video mode panel.
-    disp_layer_stack_.info.enable_self_refresh = true;
-    hw_intf_->EnableSelfRefresh();
+    disp_layer_stack_.info.self_refresh_state = kSelfRefreshReadAlloc;
+    hw_intf_->EnableSelfRefresh(disp_layer_stack_.info.self_refresh_state);
 
     uint32_t size_ff = 0;
     std::vector<Layer *> &layers = layer_stack->layers;
@@ -826,9 +826,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     }
   }
 
-  if (disp_layer_stack_.info.enable_self_refresh) {
-    hw_intf_->EnableSelfRefresh();
-  }
+  hw_intf_->EnableSelfRefresh(disp_layer_stack_.info.self_refresh_state);
+  disp_layer_stack_.info.self_refresh_state = kSelfRefreshNone;
 
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
 

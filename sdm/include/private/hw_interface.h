@@ -176,7 +176,7 @@ class HWInterface {
   virtual DisplayError SetDimmingConfig(void *payload, size_t size) = 0;
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
-  virtual DisplayError EnableSelfRefresh() = 0;
+  virtual DisplayError EnableSelfRefresh(SelfRefreshState self_refresh_state) = 0;
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) = 0;
   virtual void FlushConcurrentWriteback() = 0;
