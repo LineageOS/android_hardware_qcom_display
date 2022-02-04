@@ -88,6 +88,7 @@
 
 #define __CLASS__ "HWCDisplay"
 
+using aidl::android::hardware::graphics::common::StandardMetadataType;
 namespace sdm {
 
 bool HWCDisplay::mmrm_restricted_ = false;
@@ -747,17 +748,18 @@ void HWCDisplay::BuildLayerStack() {
 
     bool is_secure = false;
     bool is_video = false;
-    const private_handle_t *handle =
-        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
-
-    if (handle) {
-      if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+    void *hdl = reinterpret_cast<native_handle_t *>(layer->input_buffer.buffer_id);
+    if (hdl) {
+      int buffer_type;
+      gralloc::GetMetaDataValue(hdl, QTI_BUFFER_TYPE, &buffer_type);
+      if (buffer_type == BUFFER_TYPE_VIDEO) {
         layer_stack_.flags.video_present = true;
         is_video = true;
       }
       // TZ Protected Buffer - L1
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
-      int32_t handle_flags = handle->flags;
+      int32_t handle_flags;
+      gralloc::GetMetaDataValue(hdl, QTI_PRIVATE_FLAGS, &handle_flags);
       if (handle_flags & qtigralloc::PRIV_FLAGS_SECURE_BUFFER) {
         layer_stack_.flags.secure_present = true;
         is_secure = true;
@@ -3341,32 +3343,71 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
     return HWC2::Error::Unsupported;
   }
 
-  const private_handle_t *handle =
-      reinterpret_cast<const private_handle_t *>(buffer);
+  void *hdl = const_cast<native_handle_t *>(buffer);
 
-  if (!handle) {
+  if (!buffer) {
     DLOGE("Bad parameter: handle is null");
     return HWC2::Error::BadParameter;
   }
 
-  if (handle->fd < 0) {
+  int fd;
+  gralloc::GetMetaDataValue(hdl, (int64_t)qtigralloc::MetadataType_FD.value, &fd);
+  if (fd < 0) {
     DLOGE("Bad parameter: fd is null");
     return HWC2::Error::BadParameter;
   }
 
   // Configure the output buffer as Readback buffer
-  output_buffer_.width = UINT32(handle->width);
-  output_buffer_.height = UINT32(handle->height);
-  output_buffer_.unaligned_width = UINT32(handle->unaligned_width);
-  output_buffer_.unaligned_height = UINT32(handle->unaligned_height);
-  output_buffer_.format = HWCLayer::GetSDMFormat(handle->format, handle->flags);
-  output_buffer_.planes[0].fd = handle->fd;
-  output_buffer_.planes[0].stride = UINT32(handle->width);
+  auto err = gralloc::GetMetaDataValue(
+      hdl, (int64_t)qtigralloc::MetadataType_AlignedWidthInPixels.value, &output_buffer_.width);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve aligned width");
+  }
+  err = gralloc::GetMetaDataValue(
+      hdl, (int64_t)qtigralloc::MetadataType_AlignedHeightInPixels.value, &output_buffer_.height);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve aligned height");
+  }
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::WIDTH,
+                                  &output_buffer_.unaligned_width);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve unaligned width");
+  }
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::HEIGHT,
+                                  &output_buffer_.unaligned_height);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve unaligned height");
+  }
+  int format, flag;
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::PIXEL_FORMAT_REQUESTED,
+                                  &format);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve format");
+  }
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)QTI_PRIVATE_FLAGS, &flag);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve flag");
+  }
+  output_buffer_.format = HWCLayer::GetSDMFormat(format, flag);
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)QTI_FD, &output_buffer_.planes[0].fd);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve file descriptor");
+  }
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)QTI_ALIGNED_WIDTH_IN_PIXELS,
+                                  &output_buffer_.planes[0].stride);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve stride");
+  }
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::BUFFER_ID,
+                                  &output_buffer_.handle_id);
+  if (err != gralloc::Error::NONE) {
+    DLOGE("Failed to retrieve buffer id");
+  }
+
   output_buffer_.acquire_fence = acquire_fence;
-  output_buffer_.handle_id = handle->id;
 
   if (output_buffer_.format == kFormatInvalid) {
-    DLOGW("Format %d is not supported by SDM", handle->format);
+    DLOGW("Format %d is not supported by SDM", format);
     return HWC2::Error::BadParameter;
   } else if (!display_intf_->IsWriteBackSupportedFormat(output_buffer_.format)) {
     DLOGW("WB doesn't support color format : %s .", GetFormatString(output_buffer_.format));

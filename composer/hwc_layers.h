@@ -50,7 +50,7 @@ using android::hardware::graphics::common::V1_2::PixelFormat;
 
 namespace sdm {
 
-DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_metadata);
+DisplayError SetCSC(const native_handle_t *pvt_handle, ColorMetaData *color_metadata);
 bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary);
 bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer);
 bool GetRange(const int32_t &dataspace, ColorRange *color_range);
@@ -160,9 +160,9 @@ class HWCLayer {
   void SetRect(const hwc_frect_t &source, LayerRect *target);
   uint32_t GetUint32Color(const hwc_color_t &source);
   void GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec);
-  DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
+  DisplayError SetMetaData(const native_handle_t *pvt_handle, Layer *layer);
   uint32_t RoundToStandardFPS(float fps);
-  void ValidateAndSetCSC(const private_handle_t *handle);
+  void ValidateAndSetCSC(const native_handle_t *handle);
   void SetDirtyRegions(hwc_region_t surface_damage);
 };
 
