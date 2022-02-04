@@ -1388,6 +1388,8 @@ int HWCSession::DisplayConfigImpl::CreateVirtualDisplay(uint32_t width, uint32_t
     return HWC2_ERROR_UNSUPPORTED;
   }
 
+  hwc_session_->async_vds_creation_requested_ = true;
+
   if (!width || !height) {
     return HWC2_ERROR_BAD_PARAMETER;
   }

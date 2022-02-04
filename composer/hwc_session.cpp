@@ -817,7 +817,8 @@ void HWCSession::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType ty
   Attributes attributes;
   hwc2_display_t target_display = GetActiveBuiltinDisplay();
   hwc2_config_t current_config = 0;
-  if (!is_client_up_) {
+
+  if (!is_client_up_ || !async_vds_creation_requested_) {
     return;
   }
 
@@ -1067,6 +1068,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
     DLOGI("disable idle time");
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
     is_client_up_ = false;
+    async_vds_creation_requested_ = false;
   }
 }
 
