@@ -187,7 +187,8 @@ bool IsCompressedRGBFormat(int format) {
   return false;
 }
 
-bool IsCameraCustomFormat(int format) {
+bool IsCameraCustomFormat([[maybe_unused]] int format) {
+#ifndef TARGET_LEGACY_CAMERA
   switch (format) {
     case HAL_PIXEL_FORMAT_NV21_ZSL:
       if (CameraInfo::GetInstance() &&
@@ -211,6 +212,7 @@ bool IsCameraCustomFormat(int format) {
     default:
       break;
   }
+#endif
 
   return false;
 }

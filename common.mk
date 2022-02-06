@@ -43,6 +43,10 @@ ifeq ($(LLVM_SA), true)
     common_flags += --compile-and-analyze --analyzer-perf --analyzer-Werror
 endif
 
+ifneq (,$(filter sdm845, $(TARGET_BOARD_PLATFORM)))
+    common_flags += -DTARGET_LEGACY_CAMERA
+endif
+
 #Common libraries external to display HAL
 common_libs := liblog libutils libcutils libhardware
 common_deps  :=
