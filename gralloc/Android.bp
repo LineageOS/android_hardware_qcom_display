@@ -34,6 +34,9 @@ cc_library_shared {
     }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_venus_camera_preview"), {
         "true": ["-DUSE_YCRCB_CAMERA_PREVIEW_VENUS"],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_uses_legacy_camera"), {
+        "true": ["-DTARGET_LEGACY_CAMERA"],
+        default: [],
     }),
     srcs: [
         "gr_utils.cpp",
