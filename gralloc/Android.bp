@@ -25,7 +25,10 @@ cc_library_shared {
         "-Wno-sign-conversion",
         "-Wno-unused-parameter",
         "-Wno-unused-variable",
-    ] + select(soong_config_variable("qtidisplay", "target_no_raw10_custom_format"), {
+    ] + select(soong_config_variable("qtidisplay", "target_no_camera_custom_format"), {
+        "true": ["-DNO_CAMERA_CUSTOM_FORMAT"],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_no_raw10_custom_format"), {
         "true": ["-DNO_RAW10_CUSTOM_FORMAT"],
         default: [],
     }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_camera_preview"), {
