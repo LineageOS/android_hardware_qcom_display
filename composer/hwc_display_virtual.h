@@ -91,6 +91,9 @@ class HWCDisplayVirtual : public HWCDisplay {
   HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                     hwc2_display_t id, int32_t sdm_id, uint32_t width, uint32_t height);
+  virtual DisplayError NotifyFpsMitigation(const float fps, DisplayConcurrencyType concurrency,
+                                           bool concurrency_begin);
+  void NotifyConcurrencyFps(const float fps, DisplayConcurrencyType concurrency, bool concurrency_begin);
 
  protected:
   uint32_t width_ = 0;
@@ -100,6 +103,8 @@ class HWCDisplayVirtual : public HWCDisplay {
 
  private:
   bool dump_output_layer_ = false;
+  bool commit_done_ = true;
+  std::thread notify_concurrency_fps_;
 };
 
 }  // namespace sdm

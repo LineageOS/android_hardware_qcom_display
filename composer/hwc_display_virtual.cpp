@@ -95,11 +95,12 @@ int HWCDisplayVirtual::Init() {
 }
 
 int HWCDisplayVirtual::Deinit() {
+  notify_concurrency_fps_.join();
   return HWCDisplay::Deinit();
 }
 
 bool HWCDisplayVirtual::NeedsGPUBypass() {
-  return display_paused_ || active_secure_sessions_.any() || layer_set_.empty();
+  return display_paused_ || active_secure_sessions_.any() || layer_set_.empty() || !commit_done_;
 }
 
 HWC2::Error HWCDisplayVirtual::Present(shared_ptr<Fence> *out_retire_fence) {
@@ -230,6 +231,22 @@ HWC2::Error HWCDisplayVirtual::GetDisplayType(int32_t *out_type) {
 
 HWC2::Error HWCDisplayVirtual::SetColorMode(ColorMode mode) {
   return HWC2::Error::None;
+}
+
+void HWCDisplayVirtual::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType concurrency,
+                                             bool concurrency_begin) {
+  event_handler_->NotifyConcurrencyFps(fps, concurrency, concurrency_begin);
+  commit_done_ = true;
+}
+
+DisplayError HWCDisplayVirtual::NotifyFpsMitigation(const float fps,
+                                                    DisplayConcurrencyType concurrency,
+                                                    bool concurrency_begin) {
+  commit_done_ = false;
+  notify_concurrency_fps_ = std::thread(&HWCDisplayVirtual::NotifyConcurrencyFps, this, fps,
+                                        concurrency, concurrency_begin);
+  notify_concurrency_fps_.detach();
+  return kErrorNone;
 }
 
 }  // namespace sdm
