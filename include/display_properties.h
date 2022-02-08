@@ -226,6 +226,7 @@
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
 #define WINDOW_RECT_PROP_SECONDARY           DISPLAY_PROP("window_rect_secondary")
+#define ENABLE_WINDOW_RECT_MASK              DISPLAY_PROP("enable_window_rect_mask")
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")

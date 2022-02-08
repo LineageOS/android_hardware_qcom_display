@@ -466,6 +466,9 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   void UpdateFrameBuffer();
   void CleanupOnError();
   bool IsValidateNeeded();
+  DisplayError InitBorderLayers();
+  std::vector<LayerRect> GetBorderRects();
+  void GenerateBorderLayers(const std::vector<LayerRect> &border_rects);
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   unsigned int rc_cached_mixer_width_ = 0;
@@ -488,6 +491,10 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   Layer noise_layer_ = {};
   DisplayError ConfigureCwbForIdleFallback(LayerStack *layer_stack);
   bool cwb_fence_wait_ = false;
+  std::vector<Layer> border_layers_;
+  bool windowed_display_ = false;
+  LayerRect window_rect_ = {};
+  bool enable_win_rect_mask_ = false;
 };
 
 }  // namespace sdm
