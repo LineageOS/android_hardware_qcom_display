@@ -433,9 +433,6 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
   if (display_paused_ ) {
     return status;
   } else {
-    DisplayConfigFixedInfo fixed_info = {};
-    display_intf_->GetConfig(&fixed_info);
-
     if (status != HWC2::Error::None) {
       DLOGE("Stitch failed: %d", status);
       return status;
