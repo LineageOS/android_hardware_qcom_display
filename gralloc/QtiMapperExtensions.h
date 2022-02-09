@@ -32,7 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/mapperextensions/1.1/IQtiMapperExtensions.h>
+#include <vendor/qti/hardware/display/mapperextensions/1.2/IQtiMapperExtensions.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -55,10 +55,11 @@ using ::android::hardware::graphics::common::V1_2::PixelFormat;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using gralloc::BufferManager;
-using ::vendor::qti::hardware::display::mapperextensions::V1_1::IQtiMapperExtensions;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::PlaneLayout;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::YCbCrLayout;
+using ::vendor::qti::hardware::display::mapperextensions::V1_2::IQtiMapperExtensions;
+using IMapperExtensions_1_0_Error = ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
 
 class QtiMapperExtensions : public IQtiMapperExtensions {
  public:
@@ -91,6 +92,12 @@ class QtiMapperExtensions : public IQtiMapperExtensions {
   Return<void> getFormatLayout(int32_t format, uint64_t usage, int32_t flags, int32_t width,
                                int32_t height, getFormatLayout_cb hidl_cb) override;
   Return<Error> getSurfaceMetadata_V1(void *buffer, void *metadata) override;
+  Return<Error> copyMetaData(void *src, void *dst) override;
+  Return<Error> setMetadataBlob(const hidl_vec<uint8_t> &src, void *dst) override;
+  Return<void> getMetadataBlob(void *src, getMetadataBlob_cb _hidl_cb) override;
+
+ private:
+  BufferManager *buf_mgr_ = nullptr;
 };
 
 }  // namespace implementation
