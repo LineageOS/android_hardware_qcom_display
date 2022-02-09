@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
@@ -30,9 +31,7 @@
 #ifndef __GR_ADRENO_INFO_H__
 #define __GR_ADRENO_INFO_H__
 
-#ifndef QMAA
 #include <display/media/mmm_color_fmt.h>
-#endif
 
 #include "gr_utils.h"
 

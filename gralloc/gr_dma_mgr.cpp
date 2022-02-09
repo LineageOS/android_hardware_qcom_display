@@ -1,7 +1,6 @@
 /*
- * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- *
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,9 +40,6 @@
 #include <cutils/properties.h>
 #include <errno.h>
 #include <utils/Trace.h>
-#ifndef QMAA
-#include <linux/msm_ion.h>
-#endif
 #include <string>
 #include <utility>
 #include <vector>
@@ -209,7 +205,6 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
                              unsigned int * /* dmaflags */, unsigned int *alloc_size) {
   std::string heap_name = "qcom,system";
   unsigned int type = 0;
-#ifndef QMAA
   if (usage & GRALLOC_USAGE_PROTECTED) {
     if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
       heap_name = "qcom,display";
@@ -256,8 +251,6 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
       heap_name = "qcom,adsp";
     }
   }
-
-#endif
 
   *alloc_type = type;
   *dma_heap_name = heap_name;
