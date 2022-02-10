@@ -305,6 +305,13 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
     case kFormatYCrCb420PlanarStride16:
       *drm_format = DRM_FORMAT_YVU420;
       break;
+    case kFormatRGBA16161616F:
+      *drm_format = DRM_FORMAT_ABGR16161616F;
+      break;
+    case kFormatRGBA16161616FUbwc:
+      *drm_format = DRM_FORMAT_ABGR16161616F;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
     default:
       DLOGW("Unsupported format %s", GetFormatString(format));
   }
@@ -1452,6 +1459,18 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
 
+          sde_drm::DRMFp16CscType fp16_csc_type = sde_drm::DRMFp16CscType::kFP16CscTypeMax;
+          int fp16_igc_en = 0;
+          int fp16_unmult_en = 0;
+          drm_msm_fp16_gc fp16_gc_config = {.flags = 0, .mode = FP16_GC_MODE_INVALID};
+
+          SelectFp16Config(layer.input_buffer, &fp16_igc_en, &fp16_unmult_en, &fp16_csc_type,
+                           &fp16_gc_config, layer.blending);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_CSC_CONFIG, pipe_id, fp16_csc_type);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_IGC_CONFIG, pipe_id, fp16_igc_en);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_GC_CONFIG, pipe_id, &fp16_gc_config);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_UNMULT_CONFIG, pipe_id, fp16_unmult_en);
+
           // Account for PMA block activation directly at translation time to preserve layer
           // blending definition and avoid issues when a layer structure is reused.
           DRMBlendType blending = DRMBlendType::UNDEFINED;
@@ -1460,7 +1479,13 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
             layer_blend = kBlendingCoverage;
             DLOGI_IF(kTagDriverConfig, "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
           }
-          SetBlending(layer_blend, &blending);
+
+          // If blending type is premultiplied alpha and the FP16 unmult is enabled,
+          // prevent performing alpha unmultiply twice
+          if (!fp16_unmult_en) {
+            SetBlending(layer_blend, &blending);
+          }
+
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
 
           DRMRect src = {};
@@ -1998,6 +2023,43 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
       break;
     default:
       break;
+  }
+}
+
+void HWDeviceDRM::SelectFp16Config(const LayerBuffer &input_buffer, int *igc_en, int *unmult_en,
+                                   sde_drm::DRMFp16CscType *csc_type, drm_msm_fp16_gc *gc,
+                                   LayerBlending blend) {
+  if (csc_type == NULL || gc == NULL || igc_en == NULL || unmult_en == NULL) {
+    // FP16 block will be disabled by default for invalid params
+    DLOGE("Invalid params");
+    return;
+  }
+
+  *csc_type = sde_drm::DRMFp16CscType::kFP16CscTypeMax;
+  *unmult_en = 0;
+  *igc_en = 0;
+  gc->flags = 0;
+  gc->mode = FP16_GC_MODE_INVALID;
+
+  if (!Is16BitFormat(input_buffer.format)) {
+    return;
+  }
+
+  // FP16 block should only be configured for the expected use cases.
+  // All other cases will be disabled by default.
+  if ((input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT709_5) &&
+      (input_buffer.color_metadata.range == Range_Extended)) {
+    *csc_type = sde_drm::DRMFp16CscType::kFP16CscSrgb2Bt2020;
+    gc->mode = FP16_GC_MODE_PQ;
+    if (input_buffer.color_metadata.transfer == Transfer_sRGB) {
+      *igc_en = 1;
+    } else if (input_buffer.color_metadata.transfer == Transfer_Linear) {
+      *igc_en = 0;
+    }
+
+    if (blend == kBlendingPremultiplied) {
+      *unmult_en = 1;
+    }
   }
 }
 

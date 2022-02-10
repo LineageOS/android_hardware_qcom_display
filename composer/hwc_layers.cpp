@@ -144,7 +144,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
       break;
     case HAL_DATASPACE_RANGE_EXTENDED:
       *color_range = Range_Extended;
-      return false;
+      break;
     default:
       DLOGW_IF(kTagClient, "Unsupported Range Request = %d", range);
       return false;
@@ -863,6 +863,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
         format = kFormatYCbCr420P010Ubwc;
         break;
+      case HAL_PIXEL_FORMAT_RGBA_FP16:
+        format = kFormatRGBA16161616FUbwc;
+        break;
       default:
         DLOGW("Unsupported format type for UBWC: %d", source);
         return kFormatInvalid;
@@ -966,7 +969,7 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       format = kFormatYCbCr420P010Venus;
       break;
     case static_cast<int>(PixelFormat::RGBA_FP16):
-      format = kFormatInvalid;
+      format = kFormatRGBA16161616F;
       break;
     default:
       DLOGW("Unsupported format type = %d", source);

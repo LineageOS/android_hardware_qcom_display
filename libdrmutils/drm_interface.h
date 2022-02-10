@@ -212,6 +212,30 @@ enum struct DRMOps {
    */
   PLANE_SET_POST_PROC,
   /*
+   * Op: Sets FP16 CSC config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - csc type
+   */
+  PLANE_SET_FP16_CSC_CONFIG,
+  /*
+   * Op: Sets FP16 CSC config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - enable
+   */
+  PLANE_SET_FP16_IGC_CONFIG,
+  /*
+   * Op: Sets FP16 UNMULT config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - enable
+   */
+  PLANE_SET_FP16_UNMULT_CONFIG,
+  /*
+   * Op: Sets FP16 GC config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      drm_msm_fp16_gc* - GC config
+   */
+  PLANE_SET_FP16_GC_CONFIG,
+  /*
    * Op: Resets property cache of all planes that are assigned to given CRTC
    * Arg: uint32_t - CRTC ID
    */
@@ -1123,6 +1147,19 @@ enum struct DRMWBUsageType {
   WB_USAGE_WFD,
   WB_USAGE_CWB,
   WB_USAGE_OFFLINE_WB,
+};
+
+enum DRMFp16CscType {
+  kFP16CscSrgb2Dcip3 = 0,
+  kFP16CscSrgb2Bt2020,
+  kFP16CscTypeMax,
+};
+
+struct DRMFp16Config {
+  uint32_t igc_en;
+  uint32_t unmult_en;
+  uint32_t csc_idx;
+  drm_msm_fp16_gc gc;
 };
 
 /* DRM Atomic Request Property Set.

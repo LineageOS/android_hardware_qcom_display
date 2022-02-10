@@ -882,6 +882,11 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
     case DRM_FORMAT_NV16:
       fmts.push_back(kFormatYCbCr422H2V1SemiPlanar);
       break;
+    case DRM_FORMAT_ABGR16161616F:
+      fmts.push_back(drm_format_modifier == DRM_FORMAT_MOD_QCOM_COMPRESSED
+                         ? kFormatRGBA16161616FUbwc
+                         : kFormatRGBA16161616F);
+      break;
     default:
       break;
   }

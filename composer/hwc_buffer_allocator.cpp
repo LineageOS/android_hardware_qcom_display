@@ -602,6 +602,13 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
     case kFormatBlob:
       *target = static_cast<int>(PixelFormat::BLOB);
       break;
+    case kFormatRGBA16161616F:
+      *target = HAL_PIXEL_FORMAT_RGBA_FP16;
+      break;
+    case kFormatRGBA16161616FUbwc:
+      *target = HAL_PIXEL_FORMAT_RGBA_FP16;
+      *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+      break;
     default:
       DLOGW("Unsupported format = 0x%x", format);
       return -EINVAL;
