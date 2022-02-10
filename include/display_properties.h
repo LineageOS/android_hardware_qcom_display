@@ -196,6 +196,8 @@
 #define ENABLE_VERBOSE_LOG                   DISPLAY_PROP("enable_verbose_log")
 // HDR10 GPU Target
 #define ENABLE_HDR10_GPU_TARGET              DISPLAY_PROP("enable_hdr10_gpu_target")
+// Client target bit depth
+#define CLIENT_TARGET_BIT_DEPTH              DISPLAY_PROP("client_target_bit_depth")
 
 // Enable IWE
 #define ENABLE_INLINE_WRITEBACK              DISPLAY_PROP("enable_inline_writeback")
