@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -167,7 +167,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int Deinit();
 
   // Framebuffer configurations
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
+  virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
@@ -232,6 +232,10 @@ class HWCDisplay : public DisplayEventHandler {
     return false;
   }
 
+  virtual bool VsyncEnablePending() {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -242,6 +246,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
   virtual int SetState(bool connected) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError SetStandByMode(bool enable) {
     return kErrorNotSupported;
   }
   virtual DisplayError Flush() {
@@ -286,6 +293,8 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                      int32_t dataspace, hwc_region_t damage);
+  virtual HWC2::Error GetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
@@ -411,12 +420,18 @@ class HWCDisplay : public DisplayEventHandler {
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
 
   virtual HWC2::Error GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period);
+  virtual HWC2::Error SetDisplayVsyncPeriod(VsyncPeriodNanos vsync_period) {
+    return HWC2::Error::None;
+  }
+
+
   virtual HWC2::Error SetActiveConfigWithConstraints(
       hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
       VsyncPeriodChangeTimeline *out_timeline);
 
   HWC2::Error SetDisplayElapseTime(uint64_t time);
   virtual bool HasReadBackBufferSupport() { return false; }
+  virtual bool IsDisplayIdle() { return false; };
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -536,6 +551,11 @@ class HWCDisplay : public DisplayEventHandler {
   bool windowed_display_ = false;
   uint32_t active_refresh_rate_ = 0;
   bool animating_ = false;
+  buffer_handle_t client_target_handle_ = 0;
+  shared_ptr<Fence> client_acquire_fence_ = nullptr;
+  int32_t client_dataspace_ = 0;
+  hwc_region_t client_damage_region_ = {};
+  bool display_idle_ = false;
 
  private:
   void DumpInputBuffers(void);

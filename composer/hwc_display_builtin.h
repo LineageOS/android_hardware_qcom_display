@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,6 +40,7 @@
 #include "cpuhint.h"
 #include "hwc_display.h"
 #include "hwc_layers.h"
+#include "display_null.h"
 
 #include "gl_layer_stitch.h"
 
@@ -94,7 +95,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual int Perform(uint32_t operation, ...);
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_session,
                                   bool *power_on_pending, bool is_active_secure_display);
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
+  virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
@@ -112,6 +113,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
+  virtual DisplayError SetStandByMode(bool enable);
   virtual HWC2::Error UpdateDisplayId(hwc2_display_t id);
   virtual HWC2::Error SetPendingRefresh();
   virtual HWC2::Error SetPanelBrightness(float brightness);
@@ -145,6 +147,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void Dump(std::ostringstream *os) override;
   virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
   virtual bool HasReadBackBufferSupport();
+  virtual bool IsDisplayIdle();
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -171,6 +174,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool AllocateStitchBuffer();
   void CacheAvrStatus();
   void PostCommitStitchLayers();
+  void SetCpuPerfHintLargeCompCycle();
   int GetBwCode(const DisplayConfigVariableInfo &attr);
   void SetBwLimitHint(bool enable);
   void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
@@ -184,7 +188,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   constexpr static int kBwLow = 2;
   constexpr static int kBwMedium = 3;
   constexpr static int kBwHigh = 4;
-
+  const int kPerfHintLargeCompCycle = 0x00001097;
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
   CWBClient cwb_client_ = kCWBClientNone;
@@ -222,6 +226,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   std::mutex sampling_mutex;
   bool api_sampling_vote = false;
   bool vndservice_sampling_vote = false;
+  int perf_hint_window_ = 0;
+  int perf_hint_large_comp_cycle_ = 0;
   int curr_refresh_rate_ = 0;
   bool is_smart_panel_ = false;
   const char *kDisplayBwName = "display_bw";
@@ -229,6 +235,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool disable_dyn_fps_ = false;
   bool enhance_idle_time_ = false;
   bool force_reset_validate_ = false;
+
+  // NULL display
+  DisplayNull display_null_;
+  DisplayInterface *stored_display_intf_ = NULL;
 };
 
 }  // namespace sdm

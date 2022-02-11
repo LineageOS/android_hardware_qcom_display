@@ -1878,7 +1878,7 @@ bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadataBlobs(uint16
   for (const auto& m : metadata) {
     keys.push_back(static_cast<int32_t>(m.key));
     sizes_of_metablob_.push_back(m.blob.size());
-    for (uint8_t i = 0; i < m.blob.size(); i++) {
+    for (size_t i = 0; i < m.blob.size(); i++) {
       blob_of_data_.push_back(m.blob[i]);
     }
   }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -162,6 +162,9 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
       break;
     case kFormatRGB888:
       *drm_format = DRM_FORMAT_BGR888;
+      break;
+    case kFormatBGR888:
+      *drm_format = DRM_FORMAT_RGB888;
       break;
     case kFormatRGB565:
       *drm_format = DRM_FORMAT_BGR565;
@@ -1341,6 +1344,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
   }
 
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
+  drm_atomic_intf_->Perform(DRMOps::COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
 
   if (reset_output_fence_offset_ && !validate) {
     // Change back the fence_offset

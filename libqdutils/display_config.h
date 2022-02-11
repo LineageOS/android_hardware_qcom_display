@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2016, 2018 - 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, 2018 - 2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -169,6 +169,9 @@ int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates);
 
 // Sets the specified min and max luminance values.
 int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum);
+
+// Sets display standy mode
+extern "C" int setStandByMode(int mode);
 
 }; //namespace
 

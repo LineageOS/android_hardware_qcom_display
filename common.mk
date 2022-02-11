@@ -13,6 +13,10 @@ ifeq ($(TARGET_USES_COLOR_METADATA), true)
     common_flags += -DUSE_COLOR_METADATA
 endif
 
+ifeq ($(TARGET_USES_5.4_KERNEL),true)
+    common_flags += -DKERNEL_5_4
+endif
+
 ifeq ($(TARGET_USES_QCOM_BSP),true)
     common_flags += -DQTI_BSP
 endif
@@ -52,4 +56,8 @@ ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 # failing which, they are picked from bionic.
     common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+ifeq ($(TARGET_USES_5.4_KERNEL), true)
+    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/display
+    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/vidc
+endif
 endif

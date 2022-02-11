@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -121,8 +121,15 @@
 #define DISABLE_ROTATOR_PRE_DOWNSCALER_PROP  DISPLAY_PROP("disable_pre_downscaler")
 #define DISABLE_INLINE_ROTATOR_UI_PROP       DISPLAY_PROP("disable_inline_rotator_ui")
 #define ENABLE_POMS_DURING_DOZE              DISPLAY_PROP("enable_poms_during_doze")
+// RC
+#define ENABLE_ROUNDED_CORNER                DISPLAY_PROP("enable_rounded_corner")
+#define DISABLE_ROUNDED_CORNER_THREAD        DISPLAY_PROP("disable_rounded_corner_thread")
 #define DISABLE_DYNAMIC_FPS                  DISPLAY_PROP("disable_dynamic_fps")
 #define ENHANCE_IDLE_TIME                    DISPLAY_PROP("enhance_idle_time")
+#define ENABLE_QSYNC_IDLE                    DISPLAY_PROP("enable_qsync_idle")
+
+// PERF hint properties
+#define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
 
 // Add all vendor.display properties above
 
