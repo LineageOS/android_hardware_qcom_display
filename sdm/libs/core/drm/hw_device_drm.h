@@ -198,6 +198,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
     return kErrorNotSupported;
   }
+  virtual DisplayError CancelDeferredPowerMode();
 
   enum {
     kHWEventVSync,
