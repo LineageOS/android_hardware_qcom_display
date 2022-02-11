@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -478,6 +478,9 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
     if (revalidate_pending_) {
       validated_ = false;
       revalidate_pending_ = false;
+      if (force_reset_validate_) {
+        display_intf_->ClearLUTs();
+      }
     }
   } else {
     CacheAvrStatus();
@@ -517,8 +520,12 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   // In case of scaling UI layer for command mode, reset validate
   if (force_reset_validate_) {
-    validated_ = false;
-    display_intf_->ClearLUTs();
+    if (layer_stack_.block_on_fb) {
+      validated_ = false;
+      display_intf_->ClearLUTs();
+    } else {
+      revalidate_pending_ = true;
+    }
   }
   return status;
 }
@@ -781,6 +788,25 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
 
   *needs_refresh = true;
   return kErrorNone;
+}
+
+DisplayError HWCDisplayBuiltIn::TeardownCwbForVirtualDisplay() {
+  DisplayError error = kErrorNotSupported;
+  if (Fence::Wait(output_buffer_.release_fence) != kErrorNone) {
+    DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    return kErrorResources;
+  }
+  if (display_intf_) {
+    error = display_intf_->TeardownConcurrentWriteback();
+  }
+
+  readback_buffer_queued_ = false;
+  cwb_config_ = {};
+  readback_configured_ = false;
+  output_buffer_ = {};
+  cwb_client_ = kCWBClientNone;
+
+  return error;
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
