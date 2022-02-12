@@ -16,6 +16,23 @@
       "message": "I think this is a better chain for this. It fixes a bir more of this stuff: https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/316025",
       "revId": "ef524977b0e81eb9accedf7cc43614bd39c24385",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "634519d0_a315a6ea",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 5911
+      },
+      "writtenOn": "2022-02-12T06:00:22Z",
+      "side": 1,
+      "message": "this stuff was all that was spit out by llvm, and been committed to i.e. 8996. we may add the rest, but i disagree doing it during bringup, as (yet) its not required",
+      "revId": "ef524977b0e81eb9accedf7cc43614bd39c24385",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
