@@ -1254,12 +1254,13 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // process once secure session ends.
   // Allow power off transition during secure session.
   {
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
     SCOPE_LOCK(locker_[display]);
     if (hwc_display_[display]) {
       bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
       bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
       if (secure_session_active_ && is_builtin && is_power_off) {
-        if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+        if (active_builtin_disp_id != HWCCallbacks::kNumDisplays) {
           DLOGI("Secure session in progress, defer power state change");
           hwc_display_[display]->SetPendingPowerMode(mode);
           return HWC2_ERROR_NONE;
