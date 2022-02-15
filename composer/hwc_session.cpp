@@ -1328,15 +1328,12 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
       return HWC2::Error::Unsupported;
     }
   }
-
-  {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
-    HWC2::Error error = TeardownConcurrentWriteback(HWC_DISPLAY_PRIMARY);
-    if (error != HWC2::Error::None) {
-      return error;
+  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DisplayError error = hwc_display_[HWC_DISPLAY_PRIMARY]->TeardownCwbForVirtualDisplay();
+    if (error) {
+      return HWC2::Error::NoResources;
     }
   }
-
   // Lock confined to this scope
   int status = -EINVAL;
   for (auto &map_info : map_info_virtual_) {

@@ -74,6 +74,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
 
   void UpdateColorModes();
   void InitializeColorModesFromColorspace();
+  DisplayError TeardownConcurrentWriteback(void) override { return kErrorNotSupported; }
 
  private:
   DisplayError GetOverrideConfig(uint32_t *mode_index);
