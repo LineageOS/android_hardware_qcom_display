@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2015 - 2018, 2020 - 2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -79,6 +80,9 @@ class ExtensionInterface {
   virtual DisplayError CreateDppsControlExtn(DppsControlInterface **dpps_control_interface,
                                              SocketHandler *socket_handler) = 0;
   virtual DisplayError DestroyDppsControlExtn(DppsControlInterface *interface) = 0;
+#ifdef PROFILE_COVERAGE_DATA
+  virtual DisplayError DumpCodeCoverage() = 0;
+#endif
 
   virtual DisplayError CreateCapabilitiesExtn(CapabilitiesInterface **interface) = 0;
   virtual DisplayError DestroyCapabilitiesExtn(CapabilitiesInterface *interface) = 0;

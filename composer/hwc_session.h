@@ -524,6 +524,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool HasHDRSupport(HWCDisplay *hwc_display);
   void PostInit();
   int GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DispType *disp_type);
+#ifdef PROFILE_COVERAGE_DATA
+  android::status_t DumpCodeCoverage(const android::Parcel *input_parcel);
+#endif
 
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);

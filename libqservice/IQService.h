@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
  * Copyright (C) 2012-2014, 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -85,6 +86,7 @@ public:
       SET_NOISE_PLUGIN_OVERRIDE = 53,          // Override NoisePlugIn parameters
       SET_DIMMING_ENABLE = 54,                 // Set display dimming enablement
       SET_DIMMING_MIN_BL = 55,                 // Set display dimming minimal backlight value
+      DUMP_CODE_COVERAGE = 56,                 // Dump the code coverage data for userspace projects
       COMMAND_LIST_END = 400,
     };
 

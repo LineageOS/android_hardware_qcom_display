@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2014 - 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -68,6 +69,7 @@ class Debug {
   static int GetSecondaryMaxFetchLayers();
   static int GetProperty(const char *property_name, char *value);
   static int GetProperty(const char *property_name, int *value);
+  static void DumpCodeCoverage();
 };
 
 }  // namespace sdm

@@ -101,6 +101,9 @@ class CoreImpl : public CoreInterface {
   virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays);
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format);
   virtual DisplayError ReserveDemuraResources();
+#ifdef PROFILE_COVERAGE_DATA
+  virtual DisplayError DumpCodeCoverage();
+#endif
 
  protected:
   void InitializeSDMUtils();
