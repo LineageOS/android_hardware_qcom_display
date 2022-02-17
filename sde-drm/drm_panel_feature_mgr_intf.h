@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2021, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2021, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,40 +27,27 @@
 *
 */
 
-#ifndef __CPUHINT_H__
-#define __CPUHINT_H__
+#ifndef __DRM_PANEL_FEATURE_MGR_INTF_H__
+#define __DRM_PANEL_FEATURE_MGR_INTF_H__
 
-#include <core/sdm_types.h>
-#include <utils/sys.h>
+#include "drm_interface.h"
 
-namespace sdm {
+namespace sde_drm {
 
-class HWCDebugHandler;
-
-class CPUHint {
+class DRMPanelFeatureMgrIntf {
  public:
-  DisplayError Init(HWCDebugHandler *debug_handler);
-  void Set();
-  void Reset();
-  void ReqHints(int hint);
-  void ReqHintsOffload(int hint, int duration);
-
- private:
-  enum { HINT =  0x4501 /* 45-display layer hint, 01-Enable */ };
-  bool enabled_ = false;
-  // frames to wait before setting this hint
-  int pre_enable_window_ = 0;
-  int frame_countdown_ = 0;
-  int lock_handle_ = 0;
-  bool lock_acquired_ = false;
-  DynLib vendor_ext_lib_;
-  int (*fn_lock_acquire_)(int handle, int duration, int *hints, int num_args) = NULL;
-  int (*fn_lock_release_)(int value) = NULL;
-  int (*fn_perf_hint_)(int hint, const char *pkg, int duration, int type) = NULL;
-  int (*fn_perf_hint_offload_)(int hint, const char *pkg, int duration, int type,
-                               int numArgs, int *) = NULL;
+  virtual ~DRMPanelFeatureMgrIntf() {}
+  virtual void Init(int fd, drmModeRes* res) = 0;
+  virtual void DeInit() = 0;
+  virtual void GetPanelFeatureInfo(DRMPanelFeatureInfo *info) = 0;
+  virtual void CachePanelFeature(const DRMPanelFeatureInfo &info) = 0;
+  virtual void CommitPanelFeatures(drmModeAtomicReq *req,
+                                   const DRMDisplayToken &tok) = 0;
 };
 
-}  // namespace sdm
+extern "C" DRMPanelFeatureMgrIntf *GetPanelFeatureManagerIntf();
 
-#endif  // __CPUHINT_H__
+}  // namespace sde_drm
+
+#endif  // __DRM_PANEL_FEATURE_MGR_INTF_H__
+

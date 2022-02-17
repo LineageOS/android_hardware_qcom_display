@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, 2020-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -298,95 +298,14 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
 
 int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display) {
   int err = 0;
-  DisplayDetailEnhancerData de_data;
-
-  PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
-  if (de_tuning_cfg_data->cfg_pending) {
-    if (!de_tuning_cfg_data->cfg_en) {
-      de_data.enable = 0;
-    } else {
-      de_data.override_flags = kOverrideDEEnable;
-      de_data.enable = 1;
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagSharpFactor) {
-        de_data.override_flags |= kOverrideDESharpen1;
-        de_data.sharp_factor = de_tuning_cfg_data->params.sharp_factor;
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagClip) {
-        de_data.override_flags |= kOverrideDEClip;
-        de_data.clip = de_tuning_cfg_data->params.clip;
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrQuiet) {
-        de_data.override_flags |= kOverrideDEThrQuiet;
-        de_data.thr_quiet = de_tuning_cfg_data->params.thr_quiet;
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrDieout) {
-        de_data.override_flags |= kOverrideDEThrDieout;
-        de_data.thr_dieout = de_tuning_cfg_data->params.thr_dieout;
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrLow) {
-        de_data.override_flags |= kOverrideDEThrLow;
-        de_data.thr_low = de_tuning_cfg_data->params.thr_low;
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrHigh) {
-        de_data.override_flags |= kOverrideDEThrHigh;
-        de_data.thr_high = de_tuning_cfg_data->params.thr_high;
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagContentQualLevel) {
-        switch (de_tuning_cfg_data->params.quality) {
-          case kDeContentQualLow:
-            de_data.quality_level = kContentQualityLow;
-            break;
-          case kDeContentQualMedium:
-            de_data.quality_level = kContentQualityMedium;
-            break;
-          case kDeContentQualHigh:
-            de_data.quality_level = kContentQualityHigh;
-            break;
-          case kDeContentQualUnknown:
-          default:
-            de_data.quality_level = kContentQualityUnknown;
-            break;
-        }
-      }
-
-      if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeBlend) {
-        de_data.override_flags |= kOverrideDEBlend;
-        de_data.de_blend = de_tuning_cfg_data->params.de_blend;
-      }
-    }
-    err = hwc_display->SetDetailEnhancerConfig(de_data);
+  if (hwc_display) {
+    // Move DE config converting to hwc_display. Here to send tuning params.
+    err = hwc_display->SetHWDetailedEnhancerConfig(params);
     if (err) {
       DLOGW("SetDetailEnhancerConfig failed. err = %d", err);
     }
-    de_tuning_cfg_data->cfg_pending = false;
   }
   return err;
-}
-
-void HWCColorManager::SetColorModeDetailEnhancer(HWCDisplay *hwc_display) {
-  SCOPE_LOCK(locker_);
-  int err = -1;
-  PPPendingParams pending_action;
-  PPDisplayAPIPayload req_payload;
-  DTRACE_SCOPED();
-
-  pending_action.action = kGetDetailedEnhancerData;
-  pending_action.params = NULL;
-
-  if (hwc_display) {
-    err = hwc_display->ColorSVCRequestRoute(req_payload, NULL, &pending_action);
-    if (!err && pending_action.action == kConfigureDetailedEnhancer) {
-      err = SetHWDetailedEnhancerConfig(pending_action.params, hwc_display);
-    }
-  }
-  return;
 }
 
 int HWCColorManager::SetDetailedEnhancer(void *params, HWCDisplay *hwc_display) {
@@ -490,8 +409,10 @@ int HWCQDCMModeManager::EnableQDCMMode(bool enable, HWCDisplay *hwc_display) {
 
   // if enter QDCM mode, disable GPU fallback idle timeout.
   if (hwc_display) {
+    int inactive_ms = IDLE_TIMEOUT_INACTIVE_MS;
+    Debug::Get()->GetProperty(IDLE_TIME_INACTIVE_PROP, &inactive_ms);
     uint32_t timeout = enable ? 0 : entry_timeout_;
-    hwc_display->SetIdleTimeoutMs(timeout);
+    hwc_display->SetIdleTimeoutMs(timeout, inactive_ms);
   }
 
   return ret;

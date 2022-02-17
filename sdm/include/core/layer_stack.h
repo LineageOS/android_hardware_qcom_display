@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -210,6 +210,12 @@ struct LayerRequestFlags {
                                    //!< destination tone map
       uint32_t src_tone_map: 1;    //!< This flag will be set by SDM when the layer needs
                                    //!< source tone map.
+      uint32_t rc: 1;  //!< This flag will be set by SDM when the layer is drawn by RC HW.
+      uint32_t update_format: 1;   //!< This flag will be set by SDM when layer format is updated
+                                   //!< The buffer format is mentioned in the LayerRequest Format
+      uint32_t update_color_metadata: 1;   //!< This flag will be set by SDM when layer color
+                                           //!< metadata is updated. The color metadata is
+                                           //!< mentioned in the LayerRequest Format
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.
@@ -225,9 +231,16 @@ struct LayerRequestFlags {
 */
 struct LayerRequest {
   LayerRequestFlags flags;  // Flags associated with this request
-  LayerBufferFormat format = kFormatRGBA8888;  // Requested format
-  uint32_t width = 0;  // Requested unaligned width.
+  LayerBufferFormat format = kFormatRGBA8888;  // Requested format - Used with tone_map and
+                                               // update_format flags
+  ColorMetaData color_metadata = { .colorPrimaries = ColorPrimaries_BT709_5,
+                                   .range = Range_Full,
+                                   .transfer = Transfer_sRGB };
+                                  // Requested color metadata
+  uint32_t width = 0;   // Requested unaligned width.
+                        // Used with tone_map flag
   uint32_t height = 0;  // Requested unalighed height
+                        // Used with tone_map flag
 };
 
 /*! @brief This structure defines flags associated with a layer stack. The 1-bit flag can be set to
@@ -278,6 +291,8 @@ struct LayerStackFlags {
       uint32_t mask_present : 1;  //!< Set if layer stack has mask layers.
 
       uint32_t config_changed : 1;  //!< This flag indicates Display config must be validated.
+
+      uint32_t scaling_rgb_layer_present : 1; //!< This flag indicates scaling rgb layer presense
 
       uint32_t fod_pressed_present : 1;
     };
@@ -463,6 +478,7 @@ struct LayerStack {
   PrimariesTransfer blend_cs = {};     //!< o/p - Blending color space of the frame, updated by SDM
 
   uint64_t elapse_timestamp = 0;       //!< system time until which display commit needs to be held
+
 };
 
 }  // namespace sdm

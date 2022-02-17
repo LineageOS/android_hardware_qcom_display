@@ -11,6 +11,7 @@ endif
 display-hals += gralloc
 display-hals += sde-drm
 display-hals += composer
+display-hals += init
 
 ifneq ($(TARGET_PROVIDES_LIBLIGHT),true)
     display-hals += liblight

@@ -252,9 +252,9 @@ DisplayError Strategy::Purge() {
   return kErrorNone;
 }
 
-DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms) {
+DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
   if (strategy_intf_) {
-    return strategy_intf_->SetIdleTimeoutMs(active_ms);
+    return strategy_intf_->SetIdleTimeoutMs(active_ms, inactive_ms);
   }
 
   return kErrorNotSupported;
