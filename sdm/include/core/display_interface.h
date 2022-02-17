@@ -150,6 +150,7 @@ enum DisplayEvent {
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
   kInvalidateDisplay,       // Event triggered by DrawCycle thread to Invalidate display.
   kSyncInvalidateDisplay,   // Event triggered by Non-DrawCycle threads to Invalidate display.
+  kPostIdleTimeout,         // Event triggered after entering idle.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
@@ -231,7 +232,7 @@ struct DisplayConfigVariableInfo : public DisplayConfigGroupInfo {
   bool operator==(const DisplayConfigVariableInfo& info) const {
     return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
             (y_dpi == info.y_dpi) && (fps == info.fps) && (vsync_period_ns == info.vsync_period_ns)
-            && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
+            && (is_yuv == info.is_yuv));
   }
 };
 
@@ -494,10 +495,11 @@ class DisplayInterface {
   /*! @brief Method to set idle timeout value. Idle fallback is disabled with timeout value 0.
 
     @param[in] active_ms value in milliseconds.
+    @param[in] in_active_ms value in milliseconds.
 
     @return \link void \endlink
   */
-  virtual void SetIdleTimeoutMs(uint32_t active_ms) = 0;
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) = 0;
 
   /*! @brief Method to set maximum number of mixer stages for each display.
 

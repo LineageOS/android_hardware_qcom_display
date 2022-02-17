@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -29,6 +29,7 @@
 
 #include <core/buffer_allocator.h>
 #include <utils/debug.h>
+#include <utils/constants.h>
 #include <sync/sync.h>
 #include <vector>
 #include <string>
@@ -425,8 +426,10 @@ int HWCSession::DisplayConfigImpl::ToggleScreenUpdate(bool on) {
 int HWCSession::SetIdleTimeout(uint32_t value) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
 
+  int inactive_ms = IDLE_TIMEOUT_INACTIVE_MS;
+  Debug::Get()->GetProperty(IDLE_TIME_INACTIVE_PROP, &inactive_ms);
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value);
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value, inactive_ms);
     return 0;
   }
 
@@ -502,38 +505,38 @@ int HWCSession::SetCameraLaunchStatus(uint32_t on) {
     return -EINVAL;
   }
 
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
-    std::vector<DisplayMapInfo> map_info = {map_info_primary_};
-    std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+  // trigger invalidate to apply new bw caps.
+  callbacks_.Refresh(0);
 
-    for (auto &info : map_info) {
-      hwc2_display_t target_display = info.client_id;
-      {
-        SCOPE_LOCK(power_state_[target_display]);
-        if (power_state_transition_[target_display]) {
-          // Route all interactions with client to dummy display.
-          target_display = map_hwc_display_.find(target_display)->second;
-        }
-      }
-      {
-        SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
-        auto &hwc_display = hwc_display_[target_display];
-        if (hwc_display && hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
-          hwc_display->ResetValidation();
-        }
-      }
-    }
-
-    // trigger invalidate to apply new bw caps.
-    callbacks_.Refresh(active_builtin_disp_id);
-  }
   return 0;
 }
 
 int HWCSession::DisplayConfigImpl::SetCameraLaunchStatus(uint32_t on) {
   return hwc_session_->SetCameraLaunchStatus(on);
 }
+
+#ifdef DISPLAY_CONFIG_CAMERA_SMOOTH_APIs_1_0
+int HWCSession::DisplayConfigImpl::SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = hwc_session_->camera_callback_.lock();
+  if (!callback) {
+    return -EAGAIN;
+  }
+
+  callback->NotifyCameraSmoothInfo(op, fps);
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::ControlCameraSmoothCallback(bool enable) {
+  if (enable) {
+    hwc_session_->camera_callback_ = callback_;
+  } else {
+    hwc_session_->camera_callback_.reset();
+  }
+
+  return 0;
+}
+#endif
 
 int HWCSession::DisplayBWTransactionPending(bool *status) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
@@ -718,12 +721,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   if (!supported) {
     return 0;
   }
-
+  // Added this flag for pixel
+  hwc_session_->async_power_mode_triggered_  = true;
   // Active builtin display needs revalidation
   hwc2_display_t active_builtin_disp_id = hwc_session_->GetActiveBuiltinDisplay();
   HWC2::PowerMode previous_mode = hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode();
 
   DLOGI("disp_id: %d power_mode: %d", disp_id, power_mode);
+  auto mode = static_cast<HWC2::PowerMode>(power_mode);
+
   HWCDisplay::HWCLayerStack stack = {};
   hwc2_display_t dummy_disp_id = hwc_session_->map_hwc_display_.at(disp_id);
 
@@ -740,6 +746,21 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   hwc_session_->hwc_display_[dummy_disp_id]->UpdatePowerMode(
                                        hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode());
 
+  buffer_handle_t target = 0;
+  shared_ptr<Fence> acquire_fence = nullptr;
+  int32_t dataspace = 0;
+  hwc_region_t damage = {};
+  VsyncPeriodNanos vsync_period = 16600000;
+  hwc_session_->hwc_display_[disp_id]->GetClientTarget(
+                                 target, acquire_fence, dataspace, damage);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetClientTarget(
+                                       target, acquire_fence, dataspace, damage);
+
+
+
+  hwc_session_->hwc_display_[disp_id]->GetDisplayVsyncPeriod(&vsync_period);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetDisplayVsyncPeriod(vsync_period);
+
   hwc_session_->locker_[dummy_disp_id].Unlock();  // Release the dummy display.
   // Release the display's power-state transition var read lock.
   hwc_session_->power_state_[disp_id].Unlock();
@@ -748,8 +769,7 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // those operations on the dummy display.
 
   // Perform the actual [synchronous] power-state change.
-  hwc_session_->hwc_display_[disp_id]->SetPowerMode(static_cast<HWC2::PowerMode>(power_mode),
-                                                    false /* teardown */);
+  hwc_session_->hwc_display_[disp_id]->SetPowerMode(mode, false /* teardown */);
 
   // Power state transition end.
   // Acquire the display's power-state transition var read lock.
@@ -760,6 +780,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // Retrieve the real display's layer-stack from the dummy display.
   hwc_session_->hwc_display_[dummy_disp_id]->GetLayerStack(&stack);
   hwc_session_->hwc_display_[disp_id]->SetLayerStack(&stack);
+  bool vsync_pending = hwc_session_->hwc_display_[dummy_disp_id]->VsyncEnablePending();
+  if (vsync_pending) {
+    hwc_session_->hwc_display_[disp_id]->SetVsyncEnabled(HWC2::Vsync::Enable);
+  }
+  hwc_session_->hwc_display_[dummy_disp_id]->GetClientTarget(
+                                       target, acquire_fence, dataspace, damage);
+  hwc_session_->hwc_display_[disp_id]->SetClientTarget(
+                                 target, acquire_fence, dataspace, damage);
+
   // Read display has got layerstack. Update the fences.
   hwc_session_->hwc_display_[disp_id]->PostPowerMode();
 
@@ -1204,6 +1233,43 @@ int HWCSession::DisplayConfigImpl::ControlQsyncCallback(bool enable) {
   }
 
   return 0;
+}
+
+int HWCSession::DisplayConfigImpl::ControlIdleStatusCallback(bool enable) {
+  if (enable) {
+    hwc_session_->idle_callback_ = callback_;
+  } else {
+    hwc_session_->idle_callback_.reset();
+  }
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::IsRCSupported(uint32_t disp_id, bool *supported) {
+  // Mask layers can potentially be shown on any display so report RC supported on all displays if
+  // the property enables the feature for use.
+  int val = false;  // Default value.
+  Debug::GetProperty(ENABLE_ROUNDED_CORNER, &val);
+  *supported = val ? true: false;
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::AllowIdleFallback() {
+  SEQUENCE_WAIT_SCOPE_LOCK(hwc_session_->locker_[HWC_DISPLAY_PRIMARY]);
+
+  uint32_t active_ms = 0;
+  uint32_t inactive_ms = 0;
+  Debug::GetIdleTimeoutMs(&active_ms, &inactive_ms);
+  if (hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("enable idle time active_ms:%d inactive_ms:%d",active_ms,inactive_ms);
+    hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(active_ms, inactive_ms);
+    hwc_session_->is_idle_time_up_ = true;
+    return 0;
+  }
+
+  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  return -ENODEV;
 }
 
 }  // namespace sdm

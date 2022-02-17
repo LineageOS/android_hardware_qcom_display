@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -373,6 +373,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string limit_value = "limit_value=";
   string use_baselayer_for_stage = "use_baselayer_for_stage=";
   string ubwc_version = "UBWC version=";
+  string rc_total_mem_size = "rc_mem_size=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -489,6 +490,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
                          std::stoi(string(line, use_baselayer_for_stage.length()));
     } else if (line.find(ubwc_version) != string::npos) {
       crtc_info_.ubwc_version = (std::stoi(string(line, ubwc_version.length()))) >> 28;
+    } else if (line.find(rc_total_mem_size) != string::npos) {
+      crtc_info_.rc_total_mem_size = std::stoi(string(line, rc_total_mem_size.length()));
     }
   }
   drmModeFreePropertyBlob(blob);

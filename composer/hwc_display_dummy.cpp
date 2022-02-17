@@ -91,4 +91,35 @@ HWC2::Error HWCDisplayDummy::UpdatePowerMode(HWC2::PowerMode mode) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayDummy::SetVsyncEnabled(HWC2::Vsync enabled) {
+  bool state = false;
+  if (enabled == HWC2::Vsync::Enable) {
+    state = true;
+  }
+  vsync_enable_ = state;
+  return HWC2::Error::None;
+}
+
+bool HWCDisplayDummy::VsyncEnablePending() {
+  return vsync_enable_;
+}
+HWC2::Error HWCDisplayDummy::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
+  *vsync_period = vsync_period_;
+  return HWC2::Error::None;
+}
+HWC2::Error HWCDisplayDummy::SetDisplayVsyncPeriod(VsyncPeriodNanos vsync_period) {
+  vsync_period_ = vsync_period;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayDummy::SetClientTarget(buffer_handle_t target,
+                                             shared_ptr<Fence> acquire_fence,
+                                             int32_t dataspace, hwc_region_t damage) {
+  client_target_handle_ = target;
+  client_acquire_fence_ = acquire_fence;
+  client_dataspace_     = dataspace;
+  client_damage_region_ = damage;
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,12 +47,19 @@ class HWCDisplayDummy : public HWCDisplay {
   virtual HWC2::Error GetActiveConfig(hwc2_config_t *out_config);
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error SetColorMode(ColorMode mode);
-
+  virtual HWC2::Error SetVsyncEnabled(HWC2::Vsync enabled);
+  virtual bool VsyncEnablePending();
+  virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                      int32_t dataspace, hwc_region_t damage);
+  virtual HWC2::Error GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period);
+  virtual HWC2::Error SetDisplayVsyncPeriod(VsyncPeriodNanos vsync_period);
  private:
   HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                   HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                   qService::QService *qservice, hwc2_display_t id, int32_t sdm_id);
   DisplayNull display_null_;
+  bool vsync_enable_ = false;
+  VsyncPeriodNanos vsync_period_ = 16600000;
 };
 
 }  // namespace sdm

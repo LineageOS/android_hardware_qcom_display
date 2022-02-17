@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -25,6 +25,7 @@
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
+#include <utils/constants.h>
 #include <qd_utils.h>
 #include <display_config.h>
 #include <vector>
@@ -59,6 +60,7 @@ namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 using HwcDisplayCapability_2_3 = composer_V2_3::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
+using HwcClientTargetProperty = composer_V2_4::IComposerClient::ClientTargetProperty;
 
 namespace sdm {
 
@@ -66,6 +68,9 @@ using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
 typedef DisplayConfig::DisplayType DispType;
+#ifdef DISPLAY_CONFIG_CAMERA_SMOOTH_APIs_1_0
+typedef DisplayConfig::CameraSmoothOp CameraSmoothOp;
+#endif
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -238,6 +243,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
   int32_t SetDisplayBrightnessScale(const android::Parcel *input_parcel);
   int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
+  int32_t GetClientTargetProperty(hwc2_display_t display,
+                                  HwcClientTargetProperty *outClientTargetProperty);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
@@ -385,6 +392,13 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int IsSmartPanelConfig(uint32_t disp_id, uint32_t config_id, bool *is_smart);
     virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported);
     virtual int ControlQsyncCallback(bool enable);
+    virtual int ControlIdleStatusCallback(bool enable);
+#ifdef DISPLAY_CONFIG_CAMERA_SMOOTH_APIs_1_0
+    virtual int SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps);
+    virtual int ControlCameraSmoothCallback(bool enable);
+#endif
+    virtual int IsRCSupported(uint32_t disp_id, bool *supported);
+    virtual int AllowIdleFallback();
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -477,6 +491,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t SetColorModeById(const android::Parcel *input_parcel);
   android::status_t SetColorModeFromClient(const android::Parcel *input_parcel);
   android::status_t getComposerStatus();
+  android::status_t SetStandByMode(const android::Parcel *input_parcel);
+  android::status_t GetPanelResolution(const android::Parcel *input_parcel,
+                                       android::Parcel *output_parcel);
   android::status_t SetQSyncMode(const android::Parcel *input_parcel);
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
   android::status_t RefreshScreen(const android::Parcel *input_parcel);
@@ -494,6 +511,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display);
   void HandleSecureSession();
+  void SetCpuPerfHintLargeCompCycle();
   void HandlePendingPowerMode(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void HandlePendingHotplug(hwc2_display_t disp_id, const shared_ptr<Fence> &retire_fence);
   bool IsPluggableDisplayConnected();
@@ -503,6 +521,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetVirtualDisplayId();
   void PerformQsyncCallback(hwc2_display_t display);
   bool isSmartPanelConfig(uint32_t disp_id, uint32_t config_id);
+  void PerformIdleStatusCallback(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -544,11 +563,17 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
   CWB cwb_;
   std::weak_ptr<DisplayConfig::ConfigCallback> qsync_callback_;
+  std::weak_ptr<DisplayConfig::ConfigCallback> idle_callback_;
+#ifdef DISPLAY_CONFIG_CAMERA_SMOOTH_APIs_1_0
+  std::weak_ptr<DisplayConfig::ConfigCallback> camera_callback_;
+#endif
   bool async_powermode_ = false;
+  bool async_power_mode_triggered_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
   bool secure_session_active_ = false;
+  bool is_idle_time_up_ = false;
 };
 }  // namespace sdm
 

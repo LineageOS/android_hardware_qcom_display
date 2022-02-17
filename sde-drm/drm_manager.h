@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -33,6 +33,7 @@
 #include <drm_interface.h>
 #include <mutex>
 #include "drm_dpps_mgr_intf.h"
+#include "drm_panel_feature_mgr_intf.h"
 
 namespace sde_drm {
 
@@ -63,12 +64,15 @@ class DRMManager : public DRMManagerInterface {
   virtual int SetScalerLUT(const DRMScalerLUTInfo &lut_info);
   virtual int UnsetScalerLUT();
   virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info);
+  virtual void GetPanelFeature(DRMPanelFeatureInfo *info);
+  virtual void SetPanelFeature(const DRMPanelFeatureInfo &info);
 
   DRMPlaneManager *GetPlaneMgr();
   DRMConnectorManager *GetConnectorMgr();
   DRMEncoderManager *GetEncoderMgr();
   DRMCrtcManager *GetCrtcMgr();
   DRMDppsManagerIntf *GetDppsMgrIntf();
+  DRMPanelFeatureMgrIntf *GetPanelFeatureMgrIntf();
 
   static DRMManager *GetInstance(int fd);
   static void Destroy();
@@ -82,6 +86,7 @@ class DRMManager : public DRMManagerInterface {
   DRMEncoderManager *encoder_mgr_ = {};
   DRMCrtcManager *crtc_mgr_ = {};
   DRMDppsManagerIntf *dpps_mgr_intf_ = {};
+  DRMPanelFeatureMgrIntf *panel_feature_mgr_intf_ = {};
 
   static DRMManager *s_drm_instance;
   static std::mutex s_lock;
