@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2022, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -38,10 +38,11 @@
 namespace sdm {
 
 enum IPCParams {
-  kIpcParamSetBacklight,            //!< Send backlight params to SVM
-  kIpcParamSetDisplayConfigs,       //!< Send display config information to SVM
-  kIpcParamSetProperties,           //!< Send display properties to SVM
-  kIpcParamSetDemuraBuffer,         //!< Cache the calibration and hfc buffers in composer
+  kIpcParamBacklight,            //!< Send backlight params to SVM
+  kIpcParamDisplayConfigs,       //!< Send display config information to SVM
+  kIpcParamProperties,           //!< Send display properties to SVM
+  kIpcParamSetDemuraBuffer,      //!< Cache the calibration and hfc buffers in composer
+  kIpcParamPanelBoot,            //!< Send the panel boot parameter to SVM
   kIPCParamMax,
 };
 
@@ -87,6 +88,10 @@ struct IPCBufferInfo {
   uint32_t payload_sz;
   uint64_t panel_id;
   char file_name[128];
+};
+
+struct IPCPanelBootParams {
+  std::string panel_boot_string = "";
 };
 
 enum IPCBufferType {

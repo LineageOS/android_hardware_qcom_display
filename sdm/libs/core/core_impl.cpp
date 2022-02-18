@@ -116,11 +116,9 @@ DisplayError CoreImpl::Init() {
   if (ReserveDemuraResources() != kErrorNone) {
     comp_mgr_.SetDemuraStatus(false);
   }
-  if (pm_intf_) {
-    vm_cb_intf_ = new CoreIPCVmCallbackImpl(ipc_intf_, pm_intf_);
-    if (vm_cb_intf_) {
-      vm_cb_intf_->Init();
-    }
+  vm_cb_intf_ = new CoreIPCVmCallbackImpl(ipc_intf_, pm_intf_, hw_info_intf_);
+  if (vm_cb_intf_) {
+    vm_cb_intf_->Init();
   }
 #endif
   signal(SIGPIPE, SIG_IGN);
@@ -451,8 +449,9 @@ DisplayError CoreImpl::ReserveDemuraResources() {
 
 // LCOV_EXCL_START
 CoreIPCVmCallbackImpl::CoreIPCVmCallbackImpl(std::shared_ptr<IPCIntf> ipc_intf,
-                                        std::shared_ptr<DemuraParserManagerIntf> pm_intf)
-  : ipc_intf_(ipc_intf), pm_intf_(pm_intf) {
+                                        std::shared_ptr<DemuraParserManagerIntf> pm_intf,
+                                        HWInfoInterface *hw_info_intf)
+  : ipc_intf_(ipc_intf), pm_intf_(pm_intf), hw_info_intf_(hw_info_intf) {
 }
 
 void CoreIPCVmCallbackImpl::Init() {
@@ -512,12 +511,15 @@ void CoreIPCVmCallbackImpl::OnServerReady() {
 }
 
 void CoreIPCVmCallbackImpl::OnServerReadyThread(CoreIPCVmCallbackImpl *obj) {
-    if (obj->SendProperties()) {
-      DLOGE("Failed to send Properties");
-    }
-    if (obj->ExportDemuraCalibBuffer()) {
-      DLOGE("Failed to export Calibration buffer");
-    }
+  if (obj->SendProperties()) {
+    DLOGE("Failed to send Properties");
+  }
+  if (obj->ExportDemuraCalibBuffer()) {
+    DLOGE("Failed to export Calibration buffer");
+  }
+  if (obj->SendPanelBootParams()) {
+    DLOGE("Failed to Send SendPanelBootParams");
+  }
 }
 
 int CoreIPCVmCallbackImpl::SendProperties() {
@@ -558,7 +560,7 @@ int CoreIPCVmCallbackImpl::SendProperties() {
 
   if (count) {
     prop_configs->props.count = count;
-    if ((ret = ipc_intf_->SetParameter(kIpcParamSetProperties, in))) {
+    if ((ret = ipc_intf_->SetParameter(kIpcParamProperties, in))) {
       DLOGW("Failed to set properties, error = %d", ret);
       return ret;
     }
@@ -568,18 +570,44 @@ int CoreIPCVmCallbackImpl::SendProperties() {
   return 0;
 }
 
+int CoreIPCVmCallbackImpl::SendPanelBootParams() {
+  if (!ipc_intf_) {
+    DLOGW("IPC interface is NULL");
+    return -EINVAL;
+  }
+
+  GenericPayload in;
+  IPCPanelBootParams *panel_boot_params = nullptr;
+  int ret = in.CreatePayload<IPCPanelBootParams>(panel_boot_params);
+  if (ret) {
+    DLOGW("failed to create the payload for panel boot params Error:%d", ret);
+    return ret;
+  }
+
+  DisplayError err = hw_info_intf_->GetPanelBootParamString(&panel_boot_params->panel_boot_string);
+  if (err != kErrorNone) {
+    return -EINVAL;
+  }
+  if ((ret = ipc_intf_->SetParameter(kIpcParamPanelBoot, in))) {
+    DLOGW("Failed to set panel boot params, error = %d", ret);
+    return ret;
+  }
+
+  return 0;
+}
+
 int CoreIPCVmCallbackImpl::ExportDemuraCalibBuffer() {
   int enable = 0;
   Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
-  if (!enable && !pm_intf_)
-    return -EINVAL;
-  GenericPayload dummy;
-  int ret = 0;
-  if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamExportCalibBuffers, dummy))) {
-    DLOGE("Failed to export calibration buffers");
-    return ret;
+  if (enable && pm_intf_) {
+    GenericPayload dummy;
+    int ret = 0;
+    if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamExportCalibBuffers, dummy))) {
+      DLOGE("Failed to export calibration buffers");
+      return ret;
+    }
+    DLOGI("Export buffer successful");
   }
-  DLOGI("Export buffer successful");
   return 0;
 }
 
