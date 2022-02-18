@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b5f6ed9d_c9fb749a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-02-18T08:56:41Z",
+      "side": 1,
+      "message": "https://github.com/MoetaYuko/proprietary_vendor_motorola/tree/lineage-19.0",
+      "revId": "30e380e06722874a5c140ceaf4731c9907487357",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
