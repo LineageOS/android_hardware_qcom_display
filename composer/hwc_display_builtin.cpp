@@ -378,9 +378,6 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
   if (display_paused_ ) {
     return status;
   } else {
-    DisplayConfigFixedInfo fixed_info = {};
-    display_intf_->GetConfig(&fixed_info);
-
     if (status != HWC2::Error::None) {
       DLOGE("Stitch failed: %d", status);
       return status;
@@ -1541,6 +1538,16 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
   int tid = gettid();
 
   if (release) {
+    if (hwc_tid_ != tid) {
+      DLOGV_IF(kTagResources, "HWC's tid:%d is updated to :%d", hwc_tid_, tid);
+      int ret = cpu_hint_->ReqHint(kHWC, hwc_tid_);
+      if (!ret) {
+        hwc_tid_ = tid;
+      }
+    }
+
+    // For long term large composition hint, release the acquired handle after a consecutive number
+    // of basic frames to avoid resending hints in animation launch use cases and others.
     num_basic_frames_++;
 
     if (num_basic_frames_ >= active_refresh_rate_) {
@@ -1554,6 +1561,7 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
     cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, tid);
     hwc_tid_ = tid;
   } else {
+    // Sending tid as 0 indicates to Perf HAL that HWC's tid is unchanged for the current frame
     cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, 0);
   }
 

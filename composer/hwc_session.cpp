@@ -1254,12 +1254,13 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // process once secure session ends.
   // Allow power off transition during secure session.
   {
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
     SCOPE_LOCK(locker_[display]);
     if (hwc_display_[display]) {
       bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
       bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
       if (secure_session_active_ && is_builtin && is_power_off) {
-        if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+        if (active_builtin_disp_id != HWCCallbacks::kNumDisplays) {
           DLOGI("Secure session in progress, defer power state change");
           hwc_display_[display]->SetPendingPowerMode(mode);
           return HWC2_ERROR_NONE;
@@ -2047,8 +2048,19 @@ android::status_t HWCSession::SetDisplayMode(const android::Parcel *input_parcel
     return -ENODEV;
   }
 
+  hwc2_config_t current_config = 0, new_config = 0;
+  android::status_t status = -EINVAL;
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveConfig(&current_config);
   uint32_t mode = UINT32(input_parcel->readInt32());
-  return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::SET_DISPLAY_MODE, mode);
+  status = hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::SET_DISPLAY_MODE, mode);
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveConfig(&new_config);
+
+  //In case of config change, notify client with the new configuration
+  if (new_config != current_config) {
+    NotifyDisplayAttributes(HWC_DISPLAY_PRIMARY, new_config);
+  }
+
+  return status;
 }
 
 android::status_t HWCSession::SetMaxMixerStages(const android::Parcel *input_parcel) {
@@ -3478,30 +3490,68 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
 
   Fence::Wait(retire_fence);
 
+  SCOPE_LOCK(pluggable_handler_lock_);
+  HWDisplaysInfo hw_displays_info = {};
+  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    DLOGE("Failed to get connected display list. Error = %d", error);
+    return;
+  }
+
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY + 1;
     display < HWCCallbacks::kNumDisplays; display++) {
-    if (display != active_builtin_disp_id) {
-      Locker::ScopeLock lock_d(locker_[display]);
-      if (pending_power_mode_[display] && hwc_display_[display]) {
-        HWC2::PowerMode pending_mode = hwc_display_[display]->GetPendingPowerMode();
+    if (display == active_builtin_disp_id) {
+      continue;
+    }
 
-        if (pending_mode == HWC2::PowerMode::Off || pending_mode == HWC2::PowerMode::DozeSuspend) {
-          active_displays_.erase(display);
-        } else {
-          active_displays_.insert(display);
-        }
-        HWC2::Error error =
-          hwc_display_[display]->SetPowerMode(pending_mode, false);
-        if (HWC2::Error::None == error) {
-          pending_power_mode_[display] = false;
-          hwc_display_[display]->ClearPendingPowerMode();
-          pending_refresh_.set(UINT32(HWC_DISPLAY_PRIMARY));
-        } else {
-          DLOGE("SetDisplayStatus error = %d (%s)", error, to_string(error).c_str());
-        }
+    Locker::ScopeLock lock_d(locker_[display]);
+    if (!pending_power_mode_[display] || !hwc_display_[display]) {
+      continue;
+    }
+
+    // check if a pluggable display which is in pending power state is already disconnected.
+    // In such cases, avoid powering up the display. It will be disconnected as part of
+    // HandlePendingHotplug.
+    bool disconnected = false;
+    for (auto &map_info : map_info_pluggable_) {
+      if (display != map_info.client_id) {
+        continue;
       }
+
+      for (auto &iter : hw_displays_info) {
+        auto &info = iter.second;
+        if (info.display_id != map_info.sdm_id) {
+          continue;
+        }
+        if (!info.is_connected) {
+          disconnected = true;
+        }
+        break;
+      }
+      break;
+    }
+
+    if (disconnected) {
+      continue;
+    }
+
+    HWC2::PowerMode pending_mode = hwc_display_[display]->GetPendingPowerMode();
+
+    if (pending_mode == HWC2::PowerMode::Off || pending_mode == HWC2::PowerMode::DozeSuspend) {
+      active_displays_.erase(display);
+    } else {
+      active_displays_.insert(display);
+    }
+    HWC2::Error error = hwc_display_[display]->SetPowerMode(pending_mode, false);
+    if (HWC2::Error::None == error) {
+      pending_power_mode_[display] = false;
+      hwc_display_[display]->ClearPendingPowerMode();
+      pending_refresh_.set(UINT32(HWC_DISPLAY_PRIMARY));
+    } else {
+      DLOGE("SetDisplayStatus error = %d (%s)", error, to_string(error).c_str());
     }
   }
+
   secure_session_active_ = false;
 }
 

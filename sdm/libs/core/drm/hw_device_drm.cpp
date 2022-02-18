@@ -27,6 +27,38 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the
+      names of its contributors may be used to endorse or promote
+      products derived from this software without specific prior
+      written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
@@ -853,7 +885,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
     (connector_info_.panel_orientation == DRMRotation::ROT_180);
 
   GetHWDisplayPortAndMode();
-  GetHWPanelMaxBrightness();
+
   if (connector_info_.modes[current_mode_index_].cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     hw_panel_info_.mode = kModeCommand;
   }
@@ -1823,10 +1855,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
 
   if (vrefresh_) {
     // Update current mode index if refresh rate is changed
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+      if ((current_mode.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (current_mode.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+          (current_mode.cur_panel_mode == connector_info_.modes[mode_index].cur_panel_mode) &&
           (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
         SetDisplaySwitchMode(mode_index);
         break;
@@ -3085,4 +3118,12 @@ DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
   return kErrorNone;
 }
+
+DisplayError HWDeviceDRM::CancelDeferredPowerMode() {
+  DLOGI("Pending state reset %d on CRTC: %u", pending_power_state_, token_.crtc_id);
+  pending_power_state_ = kPowerStateNone;
+
+  return kErrorNone;
+}
+
 }  // namespace sdm

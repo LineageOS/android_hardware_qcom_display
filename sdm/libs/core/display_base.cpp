@@ -1680,7 +1680,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
         display_type_, teardown);
 
-  if (state == state_ && (pending_power_state_ == kPowerStateNone)) {
+  if (state == state_) {
+    if (pending_power_state_ != kPowerStateNone) {
+      hw_intf_->CancelDeferredPowerMode();
+    }
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
@@ -2823,6 +2826,9 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
+    if (layer->flags.is_demura) {
+      continue;
+    }
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
     uint32_t layer_height = UINT32(layer->src_rect.bottom - layer->src_rect.top);

@@ -27,6 +27,38 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the
+      names of its contributors may be used to endorse or promote
+      products derived from this software without specific prior
+      written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <fcntl.h>
 #include <display/drm/sde_drm.h>
 #include <utils/debug.h>
@@ -67,12 +99,21 @@ DisplayError HWPeripheralDRM::Init() {
     return ret;
   }
 
+  InitBrightnessFd();
+  GetHWPanelMaxBrightness();
   InitDestScaler();
 
   PopulateBitClkRates();
   CreatePanelFeaturePropertyMap();
 
   return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::Deinit() {
+  Sys::close_(brightness_fd_);
+  Sys::close_(max_brightness_fd_);
+
+  return HWDeviceDRM::Deinit();
 }
 
 void HWPeripheralDRM::InitDestScaler() {
@@ -189,6 +230,8 @@ DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode
 
   // update bit clk rates.
   hw_panel_info_.bitclk_rates = bitclk_rates_;
+  // update max panel brightness
+  GetHWPanelMaxBrightness();
 
   return kErrorNone;
 }
@@ -606,6 +649,8 @@ DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
   HWDeviceDRM::SetDisplayAttributes(index);
   // update bit clk rates.
   hw_panel_info_.bitclk_rates = bitclk_rates_;
+  // update max panel brightness
+  GetHWPanelMaxBrightness();
 
   return kErrorNone;
 }
@@ -674,31 +719,28 @@ DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
 
   char buffer[kMaxSysfsCommandLength] = {0};
 
-  if (brightness_base_path_.empty()) {
-    return kErrorHardware;
-  }
   if (!active_) {
     return kErrorNone;
   }
 
   std::string brightness_node(brightness_base_path_ + "brightness");
-  int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
-  if (fd < 0) {
-    DLOGE("Failed to open node = %s, error = %s ", brightness_node.c_str(),
-          strerror(errno));
-    return kErrorFileDescriptor;
+
+  if (brightness_fd_ < 0) {
+    brightness_fd_ = Sys::open_(brightness_node.c_str(), O_RDWR);
+    if (brightness_fd_ < 0) {
+      DLOGE("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
+            strerror(errno));
+      return kErrorFileDescriptor;
+    }
   }
 
   int32_t bytes = snprintf(buffer, kMaxSysfsCommandLength, "%d\n", level);
-  ssize_t ret = Sys::pwrite_(fd, buffer, static_cast<size_t>(bytes), 0);
+  ssize_t ret = Sys::pwrite_(brightness_fd_, buffer, static_cast<size_t>(bytes), 0);
   if (ret <= 0) {
     DLOGE("Failed to write to node = %s, error = %s ", brightness_node.c_str(),
           strerror(errno));
-    Sys::close_(fd);
     return kErrorHardware;
   }
-
-  Sys::close_(fd);
 
   return kErrorNone;
 }
@@ -712,27 +754,24 @@ DisplayError HWPeripheralDRM::GetPanelBrightness(int *level) {
     return kErrorParameters;
   }
 
-  if (brightness_base_path_.empty()) {
-    return kErrorHardware;
-  }
-
   std::string brightness_node(brightness_base_path_ + "brightness");
-  int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
-  if (fd < 0) {
-    DLOGE("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
-           strerror(errno));
-    return kErrorFileDescriptor;
+
+  if (brightness_fd_ < 0) {
+    brightness_fd_ = Sys::open_(brightness_node.c_str(), O_RDWR);
+    if (brightness_fd_ < 0) {
+      DLOGE("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
+            strerror(errno));
+      return kErrorFileDescriptor;
+    }
   }
 
-  if (Sys::pread_(fd, value, sizeof(value), 0) > 0) {
+
+  if (Sys::pread_(brightness_fd_, value, sizeof(value), 0) > 0) {
     *level = atoi(value);
   } else {
     DLOGE("Failed to read panel brightness");
-    Sys::close_(fd);
     return kErrorHardware;
   }
-
-  Sys::close_(fd);
 
   return kErrorNone;
 }
@@ -742,29 +781,24 @@ void HWPeripheralDRM::GetHWPanelMaxBrightness() {
   char value[kMaxStringLength] = {0};
   hw_panel_info_.panel_max_brightness = 255.0f;
 
-  // Panel nodes, driver connector creation, and DSI probing all occur in sync, for each DSI. This
-  // means that the connector_type_id - 1 will reflect the same # as the panel # for panel node.
-  char s[kMaxStringLength] = {};
-  snprintf(s, sizeof(s), "/sys/class/backlight/panel%d-backlight/",
-           static_cast<int>(connector_info_.type_id - 1));
-  brightness_base_path_.assign(s);
+  std::string max_brightness_node(brightness_base_path_ + "max_brightness");
 
-  std::string brightness_node(brightness_base_path_ + "max_brightness");
-  int fd = Sys::open_(brightness_node.c_str(), O_RDONLY);
-  if (fd < 0) {
-    DLOGE("Failed to open max brightness node = %s, error = %s", brightness_node.c_str(),
-          strerror(errno));
-    return;
+  if (max_brightness_fd_ < 0) {
+    max_brightness_fd_ = Sys::open_(max_brightness_node.c_str(), O_RDONLY);
+    if (max_brightness_fd_ < 0) {
+      DLOGE("Failed to open max brightness node = %s, error = %s", max_brightness_node.c_str(),
+            strerror(errno));
+      return;
+    }
   }
 
-  if (Sys::pread_(fd, value, sizeof(value), 0) > 0) {
+  if (Sys::pread_(max_brightness_fd_, value, sizeof(value), 0) > 0) {
     hw_panel_info_.panel_max_brightness = static_cast<float>(atof(value));
     DLOGI_IF(kTagDriverConfig, "Max brightness = %f", hw_panel_info_.panel_max_brightness);
   } else {
     DLOGE("Failed to read max brightness. error = %s", strerror(errno));
   }
 
-  Sys::close_(fd);
   return;
 }
 
@@ -976,6 +1010,29 @@ DisplayError HWPeripheralDRM::GetQsyncFps(uint32_t *qsync_fps) {
   }
 
   return kErrorNotSupported;
+}
+
+void HWPeripheralDRM::InitBrightnessFd() {
+  // Panel nodes, driver connector creation, and DSI probing all occur in sync, for each DSI. This
+  // means that the connector_type_id - 1 will reflect the same # as the panel # for panel node.
+  char s[kMaxStringLength] = {};
+  snprintf(s, sizeof(s), "/sys/class/backlight/panel%d-backlight/",
+           static_cast<int>(connector_info_.type_id - 1));
+  brightness_base_path_.assign(s);
+
+  std::string max_brightness_node(brightness_base_path_ + "max_brightness");
+  max_brightness_fd_ = Sys::open_(max_brightness_node.c_str(), O_RDONLY);
+  if (max_brightness_fd_ < 0) {
+    DLOGW("Failed to open max brightness node = %s, error = %s", max_brightness_node.c_str(),
+          strerror(errno));
+  }
+
+  std::string brightness_node(brightness_base_path_ + "brightness");
+  brightness_fd_ = Sys::open_(brightness_node.c_str(), O_RDWR);
+  if (brightness_fd_ < 0) {
+    DLOGW("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
+           strerror(errno));
+  }
 }
 
 }  // namespace sdm
