@@ -1439,7 +1439,13 @@ DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
-  DisplayError error = PerformCommit(hw_layers_info);
+
+  DisplayError error = comp_manager_->PreCommit(display_comp_ctx_);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = PerformCommit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("Commit IOCTL failed %d", error);
     CleanupOnError();

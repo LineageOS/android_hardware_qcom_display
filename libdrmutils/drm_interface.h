@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef __DRM_INTERFACE_H__
 #define __DRM_INTERFACE_H__
 
@@ -478,6 +514,28 @@ enum struct DRMOps {
    * Arg: uint32_t - New transfer time to be used
    */
   CONNECTOR_SET_TRANSFER_TIME,
+  /*
+   * Op: set LLC cache state
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Enable-1, Disable-0
+   */
+  CONNECTOR_CACHE_STATE,
+  /*
+   * Op: set line number for early fence signaling
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - line number
+   */
+  CONNECTOR_EARLY_FENCE_LINE,
+  /*
+   * Op: downscale blur properties
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  CONNECTOR_DNSC_BLR,
+  /*
+   * Op: WB usage type (wfd/cwb/iwe)
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  CONNECTOR_WB_USAGE_TYPE,
 };
 
 enum struct DRMRotation {
@@ -1005,6 +1063,7 @@ enum struct DRMTopologyControl {
   RESERVE_CLEAR = 1 << 1,
   DSPP          = 1 << 2,
   DEST_SCALER   = 1 << 3,
+  DNSC_BLUR     = 1 << 6,
 };
 
 struct DRMSolidfillStage {
@@ -1058,6 +1117,12 @@ enum struct DRMCompressionMode {
   NONE = 0,
   DSC_ENABLED,
   DSC_DISABLED,
+};
+
+enum struct DRMWBUsageType {
+  WB_USAGE_WFD,
+  WB_USAGE_CWB,
+  WB_USAGE_OFFLINE_WB,
 };
 
 /* DRM Atomic Request Property Set.
