@@ -1150,14 +1150,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_level) = 0;
 
-  /*! @brief Method to set display dimming config.
+  /*! @brief Method to enable/disable or config PP event/feature.
 
-    @param[in] payload of dimming config.
+    @param[in] payload of PP event/feature
     @param[in] size of the payload.
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetDimmingConfig(void *payload, size_t size) = 0;
+  virtual DisplayError SetPPConfig(void *payload, size_t size) = 0;
 
   /*! @brief Method to trigger a screen refresh and mark needs validate.
 
