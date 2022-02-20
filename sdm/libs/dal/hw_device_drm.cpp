@@ -3185,14 +3185,25 @@ DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
+DisplayError HWDeviceDRM::SetPPConfig(void *payload, size_t size) {
   if (!payload || size != sizeof(DRMPPFeatureInfo)) {
     DLOGE("Invalid input params on display %d-%d payload %pK, size %zd expect size %zd",
           display_id_, disp_type_, payload, size, sizeof(DRMPPFeatureInfo));
       return kErrorParameters;
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
+  struct DRMPPFeatureInfo *info = reinterpret_cast<struct DRMPPFeatureInfo *> (payload);
+
+  if (info->object_type == DRM_MODE_OBJECT_CONNECTOR && token_.conn_id) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
+  } else if (info->object_type == DRM_MODE_OBJECT_CRTC && token_.crtc_id) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, payload);
+  } else {
+    DLOGE("Invalid feature input, obj_type: 0x%x , feature_id: %d, event_type: 0x%x",
+          info->object_type, info->id, info->event_type);
+    return kErrorParameters;
+  }
+
   return kErrorNone;
 }
 }  // namespace sdm
