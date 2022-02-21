@@ -396,7 +396,7 @@ void DisplayBuiltIn::UpdateQsyncMode() {
   }
 
   QSyncMode mode = kQSyncModeNone;
-  if (handle_idle_timeout_ && enable_qsync_idle_) {
+  if (disp_layer_stack_.info.lower_fps && enable_qsync_idle_) {
     // Override to continuous mode upon idling.
     mode = kQSyncModeContinuous;
     DLOGV_IF(kTagDisplay, "Qsync entering continuous mode");
