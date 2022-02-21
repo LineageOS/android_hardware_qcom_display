@@ -2467,7 +2467,8 @@ void DisplayIPCVmCallbackImpl::OnServerExit() {
 // LCOV_EXCL_STOP
 
 void DisplayBuiltIn::InitCWBBuffer() {
-  if (hw_panel_info_.mode != kModeVideo || !hw_resource_info_.has_concurrent_writeback) {
+  if (hw_panel_info_.mode != kModeVideo || !hw_resource_info_.has_concurrent_writeback
+      || !hw_panel_info_.is_primary_panel) {
     return;
   }
 
@@ -2517,7 +2518,7 @@ void DisplayBuiltIn::InitCWBBuffer() {
 }
 
 void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
-  if (disable_cwb_idle_fallback_) {
+  if (!hw_panel_info_.is_primary_panel || disable_cwb_idle_fallback_) {
     return;
   }
 
