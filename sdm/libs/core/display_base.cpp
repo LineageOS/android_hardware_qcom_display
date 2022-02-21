@@ -399,6 +399,7 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
   DisplayConfigVariableInfo display_config;
 
   CwbTapPoint cwb_tappoint = cwb_config->tap_point;
+  bool pu_as_cwb_roi = cwb_config->pu_as_cwb_roi;
   if (cwb_tappoint == CwbTapPoint::kDsppTapPoint || cwb_tappoint == CwbTapPoint::kDemuraTapPoint) {
     // To dump post-processed (DSPP) output for CWB, use Panel resolution.
     uint32_t active_index = 0;
@@ -409,9 +410,12 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
         cwb_config->cwb_full_rect.right = display_config.x_pixels;
         cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
         LayerRect cwb_roi = cwb_config->cwb_roi;
-        if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
-            *x_pixels = cwb_roi.right - cwb_roi.left;
-            *y_pixels = cwb_roi.bottom - cwb_roi.top;
+        if (pu_as_cwb_roi) {
+          *x_pixels = display_config.x_pixels;
+          *y_pixels = display_config.y_pixels;
+        } else if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+          *x_pixels = cwb_roi.right - cwb_roi.left;
+          *y_pixels = cwb_roi.bottom - cwb_roi.top;
         } else {
           *x_pixels = display_config.x_pixels;
           *y_pixels = display_config.y_pixels;
@@ -426,9 +430,12 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
       cwb_config->cwb_full_rect.right = display_config.x_pixels;
       cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
       LayerRect cwb_roi = cwb_config->cwb_roi;
-      if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
-          *x_pixels = cwb_roi.right - cwb_roi.left;
-          *y_pixels = cwb_roi.bottom - cwb_roi.top;
+      if (pu_as_cwb_roi) {
+        *x_pixels = display_config.x_pixels;
+        *y_pixels = display_config.y_pixels;
+      } else if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+        *x_pixels = cwb_roi.right - cwb_roi.left;
+        *y_pixels = cwb_roi.bottom - cwb_roi.top;
         } else {
           *x_pixels = display_config.x_pixels;
           *y_pixels = display_config.y_pixels;
