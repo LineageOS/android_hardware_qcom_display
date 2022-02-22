@@ -80,7 +80,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
                                ExtensionInterface *extension_intf,
                                BufferAllocator *buffer_allocator,
                                SocketHandler *socket_handler) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayError error = kErrorNone;
 
@@ -108,7 +108,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
 }
 
 DisplayError CompManager::Deinit() {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   if (extension_intf_) {
     extension_intf_->DestroyResourceExtn(resource_intf_);
@@ -127,7 +127,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
                                           const HWMixerAttributes &mixer_attributes,
                                           const DisplayConfigVariableInfo &fb_config,
                                           Handle *display_ctx, HWQosData*default_qos_data) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayError error = kErrorNone;
 
@@ -211,7 +211,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
 }
 
 DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -240,7 +240,7 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
 
 DisplayError CompManager::CheckEnforceSplit(Handle comp_handle,
                                             uint32_t new_refresh_rate) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayError error = kErrorNone;
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(comp_handle);
@@ -256,7 +256,7 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
                                              const HWMixerAttributes &mixer_attributes,
                                              const DisplayConfigVariableInfo &fb_config,
                                              HWQosData*default_qos_data) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DTRACE_SCOPED();
 
   DisplayError error = kErrorNone;
@@ -362,14 +362,14 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle,
 }
 
 void CompManager::GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *disp_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   return disp_comp_ctx->strategy->GenerateROI(disp_layer_stack, disp_comp_ctx->pu_constraints);
 }
 
 DisplayError CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -389,7 +389,7 @@ DisplayError CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_la
 }
 
 DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DTRACE_SCOPED();
   DisplayCompositionContext *display_comp_ctx =
@@ -433,7 +433,7 @@ DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer
 }
 
 DisplayError CompManager::PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
@@ -457,7 +457,7 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, DispLayerStack *disp_l
 }
 
 DisplayError CompManager::Commit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -474,7 +474,7 @@ DisplayError CompManager::Commit(Handle display_ctx, DispLayerStack *disp_layer_
 }
 
 DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayError error = kErrorNone;
   DisplayCompositionContext *display_comp_ctx =
@@ -498,7 +498,7 @@ DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_la
 }
 
 void CompManager::Purge(Handle display_ctx) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -510,7 +510,7 @@ void CompManager::Purge(Handle display_ctx) {
 
 DisplayError CompManager::SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms,
                                            uint32_t inactive_ms) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -520,7 +520,7 @@ DisplayError CompManager::SetIdleTimeoutMs(Handle display_ctx, uint32_t active_m
 
 void CompManager::ProcessIdleTimeout(Handle display_ctx) {
   DTRACE_SCOPED();
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -534,7 +534,7 @@ void CompManager::ProcessIdleTimeout(Handle display_ctx) {
 
 void CompManager::DoGpuFallback(Handle display_ctx) {
   DTRACE_SCOPED();
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -545,7 +545,7 @@ void CompManager::DoGpuFallback(Handle display_ctx) {
 }
 
 void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
           reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -557,7 +557,7 @@ void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {
 }
 
 DisplayError CompManager::SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayError error = kErrorNone;
   DisplayCompositionContext *display_comp_ctx =
@@ -572,6 +572,7 @@ DisplayError CompManager::SetMaxMixerStages(Handle display_ctx, uint32_t max_mix
 }
 
 DisplayError CompManager::GetHDR10PlusCapability(bool *hdr_plus_support) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayError error = kErrorNone;
   if (cap_intf_) {
     DLOGD_IF(kTagCompManager, "Attempting to get HDR10+ capability");
@@ -584,7 +585,7 @@ DisplayError CompManager::GetHDR10PlusCapability(bool *hdr_plus_support) {
 }
 
 void CompManager::ControlPartialUpdate(Handle display_ctx, bool enable) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -593,6 +594,7 @@ void CompManager::ControlPartialUpdate(Handle display_ctx, bool enable) {
 
 DisplayError CompManager::ValidateScaling(const LayerRect &crop, const LayerRect &dst,
                                           bool rotate90) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   BufferLayout layout = Debug::IsUbwcTiledFrameBuffer() ? kUBWC : kLinear;
   return resource_intf_->ValidateScaling(crop, dst, rotate90, layout, true);
 }
@@ -600,6 +602,7 @@ DisplayError CompManager::ValidateScaling(const LayerRect &crop, const LayerRect
 DisplayError CompManager::ValidateAndSetCursorPosition(Handle display_ctx,
                                                        DispLayerStack *disp_layer_stack,
                                                        int x, int y) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
@@ -608,7 +611,7 @@ DisplayError CompManager::ValidateAndSetCursorPosition(Handle display_ctx,
 }
 
 DisplayError CompManager::SetMaxBandwidthMode(HWBwModes mode) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   if (mode >= kBwModeMax) {
     return kErrorNotSupported;
   }
@@ -617,12 +620,13 @@ DisplayError CompManager::SetMaxBandwidthMode(HWBwModes mode) {
 }
 
 DisplayError CompManager::GetScaleLutConfig(HWScaleLutInfo *lut_info) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return resource_intf_->GetScaleLutConfig(lut_info);
 }
 
 DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,
                                                 const DisplayDetailEnhancerData &de_data) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -636,7 +640,7 @@ DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,
 
 DisplayError CompManager::SetCompositionState(Handle display_ctx,
                                               LayerComposition composition_type, bool enable) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -645,6 +649,7 @@ DisplayError CompManager::SetCompositionState(Handle display_ctx,
 }
 
 DisplayError CompManager::ControlDpps(bool enable) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   // DPPS feature and HDR using SSPP tone mapping can co-exist
   // DPPS feature and HDR using DSPP tone mapping are mutually exclusive
   if (dpps_ctrl_intf_ && hw_res_info_.src_tone_map.none()) {
@@ -664,6 +669,7 @@ DisplayError CompManager::ControlDpps(bool enable) {
 
 bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
                                   const SyncPoints &sync_points) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -701,6 +707,7 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
 
 DisplayError CompManager::SetColorModesInfo(Handle display_ctx,
                                             const std::vector<PrimariesTransfer> &colormodes_cs) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -710,6 +717,7 @@ DisplayError CompManager::SetColorModesInfo(Handle display_ctx,
 }
 
 std::string CompManager::StringDisplayList(const std::set<int32_t> &displays) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   std::string displays_str;
   for (auto disps : displays) {
     if (displays_str.empty()) {
@@ -722,6 +730,7 @@ std::string CompManager::StringDisplayList(const std::set<int32_t> &displays) {
 }
 
 DisplayError CompManager::SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -731,6 +740,7 @@ DisplayError CompManager::SetBlendSpace(Handle display_ctx, const PrimariesTrans
 }
 
 void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   // Disable rotator for non secure layers at the end of secure display session, because scm call
@@ -763,7 +773,7 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
 
 bool CompManager::CheckResourceState(Handle display_ctx, bool *res_exhausted,
                                      HWDisplayAttributes attr) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   bool res_wait_needed = false;
@@ -775,7 +785,7 @@ bool CompManager::CheckResourceState(Handle display_ctx, bool *res_exhausted,
 }
 
 DisplayError CompManager::SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -792,6 +802,7 @@ DisplayError CompManager::SetDrawMethod(Handle display_ctx, const DisplayDrawMet
 }
 
 bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   if (resource_intf_) {
     return resource_intf_->IsRotatorSupportedFormat(format);
   }
@@ -800,24 +811,24 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
 }
 
 DisplayError CompManager::FreeDemuraFetchResources(const uint32_t &display_id) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return resource_intf_->FreeDemuraFetchResources(display_id);
 }
 
 DisplayError CompManager::GetDemuraFetchResourceCount(
                           std::map<uint32_t, uint8_t> *fetch_resource_cnt) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return resource_intf_->GetDemuraFetchResourceCount(fetch_resource_cnt);
 }
 
 DisplayError CompManager::ReserveDemuraFetchResources(const uint32_t &display_id,
                                                       const int8_t &preferred_rect) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return resource_intf_->ReserveDemuraFetchResources(display_id, preferred_rect);
 }
 
 DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   return resource_intf_->GetDemuraFetchResources(display_comp_ctx->display_resource_ctx, frl);
@@ -825,6 +836,7 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
 
 DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
   DTRACE_SCOPED();
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   if (resource_intf_) {
     DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -835,7 +847,7 @@ DisplayError CompManager::SetMaxSDEClk(Handle display_ctx, uint32_t clk) {
 }
 
 void CompManager::GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   if (resource_intf_ == nullptr) {
     return;
   }
@@ -847,7 +859,7 @@ void CompManager::GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_f
 }
 
 void CompManager::NeedsValidate(Handle display_ctx, bool *needs_validate) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   if (resource_intf_ == nullptr) {
     return;
   }
@@ -861,6 +873,7 @@ void CompManager::NeedsValidate(Handle display_ctx, bool *needs_validate) {
 
 DisplayError CompManager::SetBacklightLevel(Handle display_ctx,
     const uint32_t &backlight_level) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -871,6 +884,7 @@ DisplayError CompManager::SetBacklightLevel(Handle display_ctx,
 
 DisplayError CompManager::ForceToneMapConfigure(Handle display_ctx,
     DispLayerStack *disp_layer_stack) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -879,6 +893,7 @@ DisplayError CompManager::ForceToneMapConfigure(Handle display_ctx,
 }
 
 DisplayError CompManager::GetDefaultQosData(Handle display_ctx, HWQosData *qos_data) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   return resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
@@ -886,18 +901,53 @@ DisplayError CompManager::GetDefaultQosData(Handle display_ctx, HWQosData *qos_d
 }
 
 DisplayError CompManager::HandleCwbFrequencyBoost(bool isRequest) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayError error = kErrorNone;
   error = resource_intf_->Perform(ResourceInterface::kCmdSetCwbBoost, &isRequest);
   return error;
 }
 
 DisplayError CompManager::PreCommit(Handle display_ctx) {
-  SCOPE_LOCK(locker_);
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   return resource_intf_->PreCommit(display_comp_ctx->display_resource_ctx);
+}
+
+void CompManager::SetSafeMode(bool enable) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  safe_mode_ = enable;
+}
+
+bool CompManager::IsSafeMode() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  return safe_mode_;
+}
+
+DppsControlInterface* CompManager::GetDppsControlIntf() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  return dpps_ctrl_intf_;
+}
+
+void CompManager::SetDemuraStatus(bool status) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  demura_enabled_ = status;
+}
+
+bool CompManager::GetDemuraStatus() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  return demura_enabled_;
+}
+
+void CompManager::SetDemuraStatusForDisplay(const int32_t &display_id, bool status) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  display_demura_status_[display_id] = status;
+}
+
+bool CompManager::GetDemuraStatusForDisplay(const int32_t &display_id) {
+  return display_demura_status_[display_id];
 }
 
 }  // namespace sdm
