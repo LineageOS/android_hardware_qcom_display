@@ -105,7 +105,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
                           hw_res_info_, hw_panel_info, mixer_attributes, display_attributes,
                           fb_config);
   if (!strategy) {
-    DLOGE("Unable to create strategy");
+    DLOGE("Unable to create strategy for display %d-%d", display_id, type);
     delete display_comp_ctx;
     return kErrorMemory;
   }
@@ -233,14 +233,16 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
                                              display_attributes, hw_panel_info, mixer_attributes,
                                              fb_resolution);
   if (error != kErrorNone) {
-    DLOGW("ReconfigureDisplay returned error=%d", error);
+    DLOGW("ReconfigureDisplay on display %d-%d returned error=%d", display_comp_ctx->display_id,
+          display_comp_ctx->display_type, error);
     return error;
   }
 
   error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
                                   display_comp_ctx->display_resource_ctx, default_qos_data);
   if (error != kErrorNone) {
-    DLOGW("GetDefaultQosData Data returned error=%d", error);
+    DLOGW("GetDefaultQosData Data on display %d-%d returned error=%d", display_comp_ctx->display_id,
+          display_comp_ctx->display_type, error);
     return error;
   }
 
@@ -255,7 +257,8 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
     error = display_comp_ctx->strategy->Reconfigure(hw_panel_info, display_attributes,
                                                     mixer_attributes, fb_config);
     if (error != kErrorNone) {
-      DLOGE("Unable to Reconfigure strategy.");
+      DLOGE("Unable to Reconfigure strategy on display %d-%d.", display_comp_ctx->display_id,
+            display_comp_ctx->display_type);
       display_comp_ctx->strategy->Deinit();
       delete display_comp_ctx->strategy;
       display_comp_ctx->strategy = NULL;
@@ -405,7 +408,8 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, DispLayerStack *disp_l
 
   error = resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {
-    DLOGE("Resource stop failed for display = %d", display_comp_ctx->display_type);
+    DLOGE("Resource stop failed for display %d-%d", display_comp_ctx->display_id,
+          display_comp_ctx->display_type);
   }
 
   error = resource_intf_->PostPrepare(display_resource_ctx, disp_layer_stack);

@@ -188,7 +188,8 @@ DisplayError DisplayBuiltIn::Init() {
 
     if (SetupDemura() != kErrorNone) {
       // Non-fatal but not expected, log error
-      DLOGE("Demura failed to initialize, Error = %d", error);
+      DLOGE("Demura failed to initialize on display %d-%d, Error = %d", display_id_,
+            display_type_, error);
       comp_manager_->FreeDemuraFetchResources(display_id_);
       comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
       if (demura_) {
@@ -248,7 +249,7 @@ DisplayError DisplayBuiltIn::Deinit() {
       SetDemuraIntfStatus(false);
 
       if (demura_->Deinit() != 0) {
-        DLOGE("Unable to DeInit Demura on Display %d", display_id_);
+        DLOGE("Unable to DeInit Demura on Display %d-%d", display_id_, display_type_);
       }
     }
   }
@@ -358,7 +359,8 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 void DisplayBuiltIn::NotifyDppsHdrPresent(LayerStack *layer_stack) {
   if (hdr_present_ != layer_stack->flags.hdr_present) {
     hdr_present_ = layer_stack->flags.hdr_present;
-    DLOGV_IF(kTagDisplay, "Notify DPPS hdr_present %d", hdr_present_);
+    DLOGV_IF(kTagDisplay, "Notify DPPS hdr_present %d on display %d-%d", hdr_present_,
+             display_id_, display_type_);
     DppsNotifyPayload info = {};
     info.is_primary = IsPrimaryDisplay();
     info.payload = &hdr_present_;
@@ -392,13 +394,15 @@ void DisplayBuiltIn::UpdateQsyncMode() {
   } else {
     // Set Qsync mode requested by client.
     mode = qsync_mode_;
-    DLOGV_IF(kTagDisplay, "Restoring client's qsync mode: %d", mode);
+    DLOGV_IF(kTagDisplay, "Restoring display %d-%d client's qsync mode: %d", display_id_,
+             display_type_, mode);
   }
 
   disp_layer_stack_.info.hw_avr_info.update = (mode != active_qsync_mode_) || needs_avr_update_;
   disp_layer_stack_.info.hw_avr_info.mode = GetAvrMode(mode);
 
-  DLOGV_IF(kTagDisplay, "update: %d mode: %d", disp_layer_stack_.info.hw_avr_info.update, mode);
+  DLOGV_IF(kTagDisplay, "display %d-%d update: %d mode: %d",
+           display_id_, display_type_, disp_layer_stack_.info.hw_avr_info.update, mode);
 
   // Store active mde.
   active_qsync_mode_ = mode;
@@ -564,17 +568,17 @@ DisplayError DisplayBuiltIn::SetupDemura() {
     demura_ = pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
 
     if (!demura_) {
-      DLOGE("Unable to create Demura on Display %d", display_id_);
+      DLOGE("Unable to create Demura on Display %d-%d", display_id_, display_type_);
       return kErrorMemory;
     }
 
     if (demura_->Init() != 0) {
-      DLOGE("Unable to initialize Demura on Display %d", display_id_);
+      DLOGE("Unable to initialize Demura on Display %d-%d", display_id_, display_type_);
       return kErrorUndefined;
     }
 
     if (SetupDemuraLayer() != kErrorNone) {
-      DLOGE("Unable to setup Demura layer on Display %d", display_id_);
+      DLOGE("Unable to setup Demura layer on Display %d-%d", display_id_, display_type_);
       return kErrorUndefined;
     }
 
@@ -679,7 +683,8 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
     if (error != kErrorNone) {
       DLOGE("Failed to set frame trigger mode %d, err %d", (int)trigger_mode_debug_, error);
     } else {
-      DLOGV_IF(kTagDisplay, "Set frame trigger mode %d", trigger_mode_debug_);
+      DLOGV_IF(kTagDisplay, "Set frame trigger mode %d on display %d-%d", trigger_mode_debug_,
+               display_id_, display_type_);
       trigger_mode_debug_ = kFrameTriggerMax;
     }
   }
@@ -880,20 +885,21 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
     }
 
     if (hw_display_mode != kModeCommand && hw_display_mode != kModeVideo) {
-      DLOGW("Invalid panel mode parameters. Requested = %d", hw_display_mode);
+      DLOGW("Invalid panel mode parameters on display %d-%d. Requested = %d",
+            display_id_, display_type_, hw_display_mode);
       return kErrorParameters;
     }
 
     if (hw_display_mode == hw_panel_info_.mode) {
-      DLOGW("Same display mode requested. Current = %d, Requested = %d", hw_panel_info_.mode,
-            hw_display_mode);
+      DLOGW("Same display mode requested on display %d-%d. Current = %d, Requested = %d",
+            display_id_, display_type_, hw_panel_info_.mode, hw_display_mode);
       return kErrorNone;
     }
 
     error = hw_intf_->SetDisplayMode(hw_display_mode);
     if (error != kErrorNone) {
-      DLOGW("Retaining current display mode. Current = %d, Requested = %d", hw_panel_info_.mode,
-            hw_display_mode);
+      DLOGW("Retaining current display mode on display %d-%d. Current = %d, Requested = %d",
+            display_id_, display_type_, hw_panel_info_.mode, hw_display_mode);
       return error;
     }
 
@@ -1216,7 +1222,7 @@ DisplayError DisplayBuiltIn::ControlPartialUpdateLocked(bool enable, uint32_t *p
 
   if (dpps_info_.disable_pu_ && enable) {
     // Nothing to be done.
-    DLOGI("partial update is disabled by DPPS for display id = %d", display_id_);
+    DLOGI("partial update is disabled by DPPS for display %d-%d", display_id_, display_type_);
     return kErrorNotSupported;
   }
 
@@ -1394,17 +1400,19 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
   blend_space = GetBlendSpaceFromStcColorMode(color_mode);
   ret = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (ret != kErrorNone) {
-    DLOGE("SetBlendSpace failed, ret = %d display_type_ = %d", ret, display_type_);
+    DLOGE("SetBlendSpace failed, ret = %d on display %d-%d", ret, display_id_, display_type_);
   }
 
   ret = hw_intf_->SetBlendSpace(blend_space);
   if (ret != kErrorNone) {
-    DLOGE("Failed to pass blend space, ret = %d display_type_ = %d", ret, display_type_);
+    DLOGE("Failed to pass blend space, ret = %d on display %d-%d", ret, display_id_,
+          display_type_);
   }
 
   ret = color_mgr_->ColorMgrSetStcMode(color_mode);
   if (ret != kErrorNone) {
-    DLOGE("Failed to set stc color mode, ret = %d display_type_ = %d", ret, display_type_);
+    DLOGE("Failed to set stc color mode, ret = %d on display %d-%d", ret,
+          display_id_, display_type_);
     return ret;
   }
 
@@ -1686,7 +1694,8 @@ void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
     != display_id_.end()) {
     return;
   }
-  DLOGI("Ready to register display id %d ", info_payload.display_id);
+  DLOGI("Ready to register display %d-%d ", info_payload.display_id,
+        info_payload.display_type);
 
   if (!dpps_intf_) {
     if (!dpps_impl_lib_.Open(kDppsLib_)) {
@@ -1712,7 +1721,8 @@ void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
   }
 
   display_id_.push_back(info_payload.display_id);
-  DLOGI("Register display id %d successfully", info_payload.display_id);
+  DLOGI("Registered display %d-%d successfully", info_payload.display_id,
+        info_payload.display_type);
   return;
 
 exit:
@@ -1770,7 +1780,8 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
 DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
   ClientLock lock(disp_mutex_);
   if (!active_) {
-    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    DLOGW("Invalid display state = %d on display %d-%d. Panel must be on.", state_, display_id_,
+          display_type_);
     return kErrorPermission;
   }
   if (hw_panel_info_.mode == kModeVideo) {
@@ -1794,7 +1805,8 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   ClientLock lock(disp_mutex_);
   if (!active_) {
-    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    DLOGW("Invalid display state = %d on display %d-%d. Panel must be on.", state_, display_id_,
+          display_type_);
     return kErrorNone;
   }
 
@@ -1837,7 +1849,8 @@ DisplayError DisplayBuiltIn::SetBLScale(uint32_t level) {
   if (err) {
     DLOGE("Failed to set backlight scale to level %d", level);
   } else {
-    DLOGI_IF(kTagDisplay, "Setting backlight scale to level %d", level);
+    DLOGI_IF(kTagDisplay, "Setting backlight scale on display %d-%d to level %d", display_id_,
+             display_type_, level);
   }
   return err;
 }
@@ -1955,12 +1968,14 @@ DisplayError DisplayBuiltIn::HandleDemuraLayer(LayerStack *layer_stack) {
       needs_validate_ = true;
     }
     layers.push_back(&demura_layer_);
-    DLOGI_IF(kTagDisplay, "Demura layer added to layer stack");
+    DLOGI_IF(kTagDisplay, "Demura layer added to layer stack on display %d-%d", display_id_,
+             display_type_);
   } else if (hw_layers_info.demura_target_index != -1) {
     // Demura was present last frame but is now disabled
     needs_validate_ = true;
     hw_layers_info.demura_present = false;
-    DLOGD_IF(kTagDisplay, "Demura layer to be removed in this frame");
+    DLOGD_IF(kTagDisplay, "Demura layer to be removed on display %d-%d in this frame",
+             display_id_, display_type_);
   }
   return kErrorNone;
 }
@@ -1995,7 +2010,8 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
       hw_layers_info.demura_target_index = index;
       disp_layer_stack_.stack->flags.demura_present = true;
       hw_layers_info.demura_present = true;
-      DLOGD_IF(kTagDisplay, "Display %d shall request Demura in this frame", display_id_);
+      DLOGD_IF(kTagDisplay, "Display %d-%d shall request Demura in this frame", display_id_,
+               display_type_);
     } else if (layer->flags.is_noise) {
       hw_layers_info.flags.noise_present = true;
       hw_layers_info.noise_layer_index = index;
@@ -2600,7 +2616,7 @@ bool DisplayBuiltIn::IdleFallbackLowerFps(bool idle_screen) {
   clock_gettime(CLOCK_MONOTONIC, &now);
   uint64_t elapsed_time_ms = GetTimeInMs(now) - GetTimeInMs(idle_timer_start_);
   bool can_lower = elapsed_time_ms >= UINT32(idle_time_ms_);
-  DLOGV_IF(kTagDisplay, "lower fps: %d", can_lower);
+  DLOGV_IF(kTagDisplay, "display %d-%d , lower fps: %d", display_id_, display_type_, can_lower);
 
   return can_lower;
 }

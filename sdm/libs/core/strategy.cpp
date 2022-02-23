@@ -57,7 +57,7 @@ DisplayError Strategy::Init() {
                                                 hw_resource_info_, hw_panel_info_,
                                                 mixer_attributes_, fb_config_, &strategy_intf_);
     if (error != kErrorNone) {
-      DLOGE("Failed to create strategy");
+      DLOGE("Failed to create strategy for display %d-%d", display_id_, display_type_);
       return error;
     }
 
@@ -120,7 +120,8 @@ DisplayError Strategy::Stop() {
 
 DisplayError Strategy::GetNextStrategy() {
   if (!disable_gpu_comp_ && !disp_layer_stack_->info.gpu_target_index) {
-    DLOGE("GPU composition is enabled and GPU target buffer not provided.");
+    DLOGE("GPU composition is enabled and GPU target buffer not provided for display %d-%d.",
+          display_id_, display_type_);
     return kErrorNotSupported;
   }
 
@@ -232,7 +233,8 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
 }
 
 DisplayError Strategy::SetCompositionState(LayerComposition composition_type, bool enable) {
-  DLOGI("composition type = %d, enable = %d", composition_type, enable);
+  DLOGI("composition type = %d, enable = %d for display %d-%d", composition_type, enable,
+        display_id_, display_type_);
 
   if (composition_type == kCompositionGPU) {
     disable_gpu_comp_ = !enable;

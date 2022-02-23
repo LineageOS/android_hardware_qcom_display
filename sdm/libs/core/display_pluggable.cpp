@@ -89,7 +89,7 @@ DisplayError DisplayPluggable::Init() {
 
   error = DisplayBase::Init();
   if (error == kErrorResources) {
-    DLOGI("Reattempting display creation for Pluggable %d", display_id_);
+    DLOGI("Reattempting display creation for Pluggable display %d-%d", display_id_, display_type_);
     uint32_t default_mode_index = 0;
     error = hw_intf_->GetDefaultConfig(&default_mode_index);
     if (error == kErrorNone) {
@@ -115,7 +115,8 @@ DisplayError DisplayPluggable::Init() {
   if (error != kErrorNone) {
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
-    DLOGE("Failed to create hardware events interface. Error = %d", error);
+    DLOGE("Failed to create hardware events interface. Error = %d for display %d-%d", error,
+          display_id_, display_type_);
   }
 
   InitializeColorModes();
@@ -373,8 +374,8 @@ static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_ga
     blend_space_.primaries = ColorPrimaries_BT709_5;
     blend_space_.transfer = Transfer_sRGB;
   } else {
-    DLOGW("Failed to Get blend space color_gamut = %s transfer = %s", color_gamut.c_str(),
-          transfer.c_str());
+    DLOGW("Failed to Get blend space color_gamut = %s transfer = %s",
+          color_gamut.c_str(), transfer.c_str());
   }
   DLOGI("Blend Space Primaries = %d Transfer = %d", blend_space_.primaries, blend_space_.transfer);
 
@@ -384,7 +385,8 @@ static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_ga
 DisplayError DisplayPluggable::SetColorMode(const std::string &color_mode) {
   auto current_color_attr_ = color_mode_attr_map_.find(color_mode);
   if (current_color_attr_ == color_mode_attr_map_.end()) {
-    DLOGE("Failed to get the color mode = %s", color_mode.c_str());
+    DLOGE("Failed to get the color mode for display %d-%d = %s", display_id_,
+          display_type_, color_mode.c_str());
     return kErrorNone;
   }
   AttrVal attr = current_color_attr_->second;
@@ -404,12 +406,14 @@ DisplayError DisplayPluggable::SetColorMode(const std::string &color_mode) {
   PrimariesTransfer blend_space = GetBlendSpaceFromAttributes(color_gamut, transfer);
   error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (error != kErrorNone) {
-    DLOGE("Failed Set blend space, error = %d display_type_ = %d", error, display_type_);
+    DLOGE("Failed Set blend space, error = %d for display %d-%d", error,
+          display_id_, display_type_);
   }
 
   error = hw_intf_->SetBlendSpace(blend_space);
   if (error != kErrorNone) {
-    DLOGE("Failed to pass blend space, error = %d display_type_ = %d", error, display_type_);
+    DLOGE("Failed to pass blend space, error = %d for display %d-%d", error,
+    display_id_, display_type_);
   }
 
   current_color_mode_ = color_mode;
@@ -452,7 +456,8 @@ DisplayError DisplayPluggable::GetColorModeAttr(const std::string &color_mode, A
 
   auto it = color_mode_attr_map_.find(color_mode);
   if (it == color_mode_attr_map_.end()) {
-    DLOGI("Mode %s has no attribute", color_mode.c_str());
+    DLOGI("Mode %s has no attribute for display %d-%d", color_mode.c_str(), display_id_,
+          display_type_);
     return kErrorNotSupported;
   }
   *attr = it->second;
