@@ -433,6 +433,7 @@ class DisplayBase : public DisplayInterface {
   bool handle_idle_timeout_ = false;
   bool pending_commit_ = false;
   uint32_t active_refresh_rate_ = 0;
+  bool disable_cwb_idle_fallback_ = false;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
@@ -474,6 +475,7 @@ class DisplayBase : public DisplayInterface {
   LayerBuffer cached_framebuffer_ = {};
   Layer noise_layer_ = {};
   DisplayError ConfigureCwbForIdleFallback(LayerStack *layer_stack);
+  bool cwb_fence_wait_ = false;
 };
 
 }  // namespace sdm
