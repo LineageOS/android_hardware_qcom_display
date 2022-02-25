@@ -733,7 +733,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
   uint32_t height = UINT(hnd->height);
   int format = hnd->format;
   uint64_t usage = hnd->usage;
-  int32_t interlaced = hnd->flags;
+  int32_t interlaced = 0;
   int plane_count = 0;
   int unaligned_width = INT(hnd->unaligned_width);
   int unaligned_height = INT(hnd->unaligned_height);
@@ -741,10 +741,20 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
 
   memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
 
+  // Check metadata for interlaced content.
+  int interlace_flag = 0;
+  if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), QTI_PP_PARAM_INTERLACED,
+                       &interlace_flag) == Error::NONE) {
+    if (interlace_flag) {
+      interlaced = LAYOUT_INTERLACED_FLAG;
+    }
+  }
+
   PlaneLayoutInfo plane_info[8] = {};
   // Get the chroma offsets from the handle width/height. We take advantage
   // of the fact the width _is_ the stride
-  err = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info);
+  err = GetYUVPlaneInfo(info, format, width, height, interlaced, &plane_count, plane_info, hnd,
+                        ycbcr);
   return err;
 }
 
@@ -1549,7 +1559,7 @@ int GetBufferType(int inputFormat) {
 
 // Here width and height are aligned width and aligned height.
 int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
-                    int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info,
+                    int32_t interlaced, int *plane_count, PlaneLayoutInfo *plane_info,
                     const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
   int err = 0;
   unsigned int y_stride, c_stride, y_height, c_height, y_size, c_size, mmm_color_format;
@@ -1641,7 +1651,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
-      if (flags & LAYOUT_INTERLACED_FLAG) {
+      if (interlaced & LAYOUT_INTERLACED_FLAG) {
         *plane_count = 8;
         GetYuvUbwcInterlacedSPPlaneInfo(width, height, plane_info);
         plane_info[0].step = plane_info[4].step = 1;
@@ -1828,7 +1838,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       err = -EINVAL;
   }
   if (err == 0 && hnd != nullptr && ycbcr != nullptr) {
-    if ((flags & LAYOUT_INTERLACED_FLAG) &&
+    if ((interlaced & LAYOUT_INTERLACED_FLAG) &&
         (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC || IsUbwcFlexFormat(format))) {
       CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, *plane_count, plane_info, ycbcr);
       unsigned int uv_stride = 0, uv_height = 0, uv_size = 0;
