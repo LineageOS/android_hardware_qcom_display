@@ -95,7 +95,9 @@ int HWCDisplayVirtual::Init() {
 }
 
 int HWCDisplayVirtual::Deinit() {
-  notify_concurrency_fps_.join();
+  if (notify_concurrency_fps_.joinable()) {
+    notify_concurrency_fps_.join();
+  }
   return HWCDisplay::Deinit();
 }
 
