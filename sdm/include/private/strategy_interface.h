@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2014 - 2019, 2021, The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -43,6 +45,7 @@ struct StrategyConstraints {
   LayerFeedback feedback = LayerFeedback(0);  //!< Feedback from Layer Precheck
 
   bool idle_timeout = false;
+  bool gpu_fallback_mode = false;  //!< This flag forces GPU composition strategy.
 };
 
 class StrategyInterface {

@@ -24,7 +24,8 @@ ifneq ($(TARGET_IS_HEADLESS),true)
                             vendor.display.config@2.0.vendor \
                             init.qti.display_boot.sh \
                             libfilefinder \
-                            vendor.qti.hardware.display.demura-service
+                            vendor.qti.hardware.display.demura-service \
+                            modetest
 endif
 
 DISPLAY_MODULES_DRIVER:= msm_drm.ko

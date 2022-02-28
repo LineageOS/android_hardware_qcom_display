@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2022, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -24,6 +24,42 @@
 * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+* * Redistributions of source code must retain the above copyright
+* notice, this list of conditions and the following disclaimer.
+*
+* * Redistributions in binary form must reproduce the above
+* copyright notice, this list of conditions and the following
+* disclaimer in the documentation and/or other materials provided
+* with the distribution.
+*
+* * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+* contributors may be used to endorse or promote products derived
+* from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
@@ -106,6 +142,9 @@ static HWQseedStepVersion GetQseedStepVersion(sde_drm::QSEEDStepVersion drm_vers
       break;
     case sde_drm::QSEEDStepVersion::V3LITE_V7:
       sdm_version = kQseed3litev7;
+      break;
+    case sde_drm::QSEEDStepVersion::V3LITE_V8:
+      sdm_version = kQseed3litev8;
       break;
   }
   return sdm_version;
@@ -1032,6 +1071,39 @@ DisplayError HWInfoDRM::GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) {
     }
   }
 
+  return kErrorNone;
+}
+
+DisplayError HWInfoDRM::GetPanelBootParamString(std::string *panel_boot_param_string) {
+  if (!panel_boot_param_string) {
+    return kErrorResources;
+  }
+  (*panel_boot_param_string) = "";
+  char read_str[kMaxStringLength] = {0};
+  string node_str_base = "/sys/module/msm_drm/parameters/";
+  int panel_id = 0;
+  while (1) {
+    string disp_str = ("dsi_display" + std::to_string(panel_id));
+    string node_str = (node_str_base + disp_str);
+    int fd = Sys::open_(node_str.c_str(), O_RDONLY);
+    if (fd < 0) {
+      break;
+    }
+    if (Sys::pread_(fd, read_str, sizeof(read_str), 0) > 0) {
+      string str_temp(read_str);
+      str_temp.erase(std::remove(str_temp.begin(), str_temp.end(), '\n'), str_temp.end());
+      str_temp.erase(std::remove(str_temp.begin(), str_temp.end(), '\r'), str_temp.end());
+      if (!str_temp.empty()) {
+        (*panel_boot_param_string) += panel_id ? " ": "";
+        (*panel_boot_param_string) += (disp_str + "=" + str_temp);
+      }
+      memset(read_str, 0, sizeof(read_str));
+    }
+    Sys::close_(fd);
+    panel_id++;
+  }
+
+  DLOGI("Panel Boot param string %s", panel_boot_param_string->c_str());
   return kErrorNone;
 }
 

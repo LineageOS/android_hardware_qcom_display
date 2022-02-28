@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
 * met:
@@ -161,7 +163,13 @@
 
 // Add all vendor.display properties above
 
+#define DISABLE_AHARDWARE_BUFFER_PROP        GRALLOC_PROP("disable_ahardware_buffer")
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+#define ENABLE_LOGS_PROP                     GRALLOC_PROP("enable_logs")
+#define SECURE_PREVIEW_BUFFER_FORMAT_PROP    GRALLOC_PROP("secure_preview_buffer_format")
+#define SECURE_PREVIEW_ONLY_PROP             GRALLOC_PROP("secure_preview_only")
+#define USE_DMA_BUF_HEAPS_PROP               GRALLOC_PROP("use_dma_buf_heaps")
+#define USE_SYSTEM_HEAP_FOR_SENSORS_PROP     GRALLOC_PROP("use_system_heap_for_sensors")
 
 // Add all vendor.gralloc.properties above
 
@@ -176,6 +184,7 @@
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")
 #define ENABLE_CWB_IDLE_FALLBACK             DISPLAY_PROP("enable_cwb_idle_fallback")
+#define DISABLE_LLCC_DURING_AOD              DISPLAY_PROP("disable_llcc_during_aod")
 
 // Add all other.properties above
 // End of property

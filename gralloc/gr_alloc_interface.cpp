@@ -41,7 +41,7 @@ namespace gralloc {
 AllocInterface *AllocInterface::GetInstance() {
   // Detect DMABUF Heaps usage
   char property[PROPERTY_VALUE_MAX];
-  if (property_get("vendor.gralloc.use_dma_buf_heaps", property, NULL) > 0) {
+  if (property_get(USE_DMA_BUF_HEAPS_PROP, property, NULL) > 0) {
     return DmaManager::GetInstance();
   } else {
     return DmaLegacyManager::GetInstance();

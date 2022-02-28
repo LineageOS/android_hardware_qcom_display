@@ -67,6 +67,7 @@ class CompManager {
   void Purge(Handle display_ctx);
   DisplayError SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms, uint32_t inactive_ms);
   void ProcessIdleTimeout(Handle display_ctx);
+  void DoGpuFallback(Handle display_ctx);
   void ProcessThermalEvent(Handle display_ctx, int64_t thermal_level);
   void ProcessIdlePowerCollapse(Handle display_ctx);
   DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);

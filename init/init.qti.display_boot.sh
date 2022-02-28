@@ -1,4 +1,5 @@
 #!/vendor/bin/sh
+# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 # Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,15 @@ else
 fi
 
 case "$target" in
+    "kalama")
+    #SOC ID for Kalama is 519
+    case "$soc_hwid" in
+      519)
+        setprop vendor.display.enable_fb_scaling 0
+        setprop vendor.display.target.version 4
+      ;;
+    esac
+    ;;
     "taro")
     #Set property to differentiate Waipio
     #SOC ID for Waipio is 457
@@ -53,6 +63,7 @@ case "$target" in
         setprop vendor.display.thermal.version 1
         setprop vendor.display.enable_rc_support 1
         setprop vendor.display.target.version 3
+        setprop vendor.display.enable_fb_scaling 0
         ;;
         530|531|540)
         setprop vendor.gralloc.use_dma_buf_heaps 1

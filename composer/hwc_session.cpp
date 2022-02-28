@@ -79,6 +79,7 @@ std::bitset<HWCCallbacks::kNumDisplays> HWCSession::clients_waiting_for_vm_relea
 int32_t GetDataspaceFromColorMode(ColorMode mode) {
   switch (mode) {
     case ColorMode::SRGB:
+    // dataspace is ignored in native mode
     case ColorMode::NATIVE:
       return HAL_DATASPACE_V0_SRGB;
     case ColorMode::DCI_P3:

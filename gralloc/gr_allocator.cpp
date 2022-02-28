@@ -1,7 +1,6 @@
 /*
- * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
- *
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,11 +33,9 @@
 #include <algorithm>
 #include <vector>
 #include <string>
-
 #ifndef QMAA
 #include <linux/msm_ion.h>
 #endif
-
 #include "gr_allocator.h"
 #include "gr_utils.h"
 #include <QtiGralloc.h>

@@ -29,7 +29,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define DEBUG 0
 #include "QtiAllocator.h"
 
 #include <cutils/properties.h>
@@ -43,11 +42,11 @@
 
 static void get_properties(gralloc::GrallocProperties *props) {
   props->use_system_heap_for_sensors =
-      property_get_bool("vendor.gralloc.use_system_heap_for_sensors", 1);
+      property_get_bool(USE_SYSTEM_HEAP_FOR_SENSORS_PROP, 1);
 
-  props->ubwc_disable = property_get_bool("vendor.gralloc.disable_ubwc", 0);
+  props->ubwc_disable = property_get_bool(DISABLE_UBWC_PROP, 0);
 
-  props->ahardware_buffer_disable = property_get_bool("vendor.gralloc.disable_ahardware_buffer", 0);
+  props->ahardware_buffer_disable = property_get_bool(DISABLE_AHARDWARE_BUFFER_PROP, 0);
 }
 
 namespace vendor {
@@ -68,11 +67,12 @@ QtiAllocator::QtiAllocator() {
   get_properties(&properties);
   buf_mgr_ = BufferManager::GetInstance();
   buf_mgr_->SetGrallocDebugProperties(properties);
+  enable_logs_ = property_get_bool(ENABLE_LOGS_PROP, 0);
 }
 
 Return<void> QtiAllocator::allocate(const hidl_vec<uint8_t> &descriptor, uint32_t count,
                                     allocate_cb hidl_cb) {
-  ALOGD_IF(DEBUG, "Allocating buffers count: %d", count);
+  ALOGD_IF(enable_logs_, "Allocating buffers count: %d", count);
   gralloc::BufferDescriptor desc;
 
   auto err = ::vendor::qti::hardware::display::mapper::V4_0::implementation::QtiMapper::Decode(
@@ -86,7 +86,7 @@ Return<void> QtiAllocator::allocate(const hidl_vec<uint8_t> &descriptor, uint32_
   buffers.reserve(count);
   for (uint32_t i = 0; i < count; i++) {
     buffer_handle_t buffer;
-    ALOGD_IF(DEBUG, "buffer: %p", &buffer);
+    ALOGD_IF(enable_logs_, "buffer: %p", &buffer);
     err = buf_mgr_->AllocateBuffer(desc, &buffer);
     if (err != Error::NONE) {
       break;

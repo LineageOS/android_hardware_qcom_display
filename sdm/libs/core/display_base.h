@@ -24,6 +24,42 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef __DISPLAY_BASE_H__
 #define __DISPLAY_BASE_H__
 
@@ -204,7 +240,7 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported);
   virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format);
-  virtual DisplayError GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+  virtual DisplayError GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
                                               uint32_t *y_pixels);
   virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) {
     return kErrorNotSupported;
@@ -225,6 +261,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack);
+  virtual void EnableLlccDuringAodMode(LayerStack *layer_stack);
 
  protected:
   struct DisplayMutex {
@@ -368,6 +405,7 @@ class DisplayBase : public DisplayInterface {
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
+  bool disable_llcc_during_aod_ = false;
   bool custom_mixer_resolution_ = false;
   bool vsync_enable_pending_ = false;
   HWPowerState pending_power_state_ = kPowerStateNone;
