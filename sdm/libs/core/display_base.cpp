@@ -2828,7 +2828,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t max_layer_area = 0;
   uint32_t max_area_layer_index = 0;
   std::vector<Layer *> layers = layer_stack->layers;
-  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_x = display_attributes_.is_3d_mux_used ? 4 : 2;
   uint32_t align_y = 2;
 
   for (uint32_t i = 0; i < layer_count; i++) {
