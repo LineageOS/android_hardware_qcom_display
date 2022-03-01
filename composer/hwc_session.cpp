@@ -3998,6 +3998,7 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   shared_ptr<Fence> retire_fence = nullptr;
+  int timeout_ms = -1;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
     clients_waiting_for_commit_[display].set(client_id);
@@ -4010,9 +4011,17 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
     }
     retire_fence = retire_fence_[display];
     retire_fence_[display] = nullptr;
+    if (hwc_display_[display]) {
+      uint32_t config = 0;
+      hwc_display_[display]->GetActiveDisplayConfig(&config);
+      DisplayConfigVariableInfo display_attributes = {};
+      hwc_display_[display]->GetDisplayAttributesForConfig(config, &display_attributes);
+      timeout_ms = kNumDrawCycles * (display_attributes.vsync_period_ns / kDenomNstoMs);
+      DLOGI("timeout in ms %d", timeout_ms);
+    }
   }
 
-  int ret = Fence::Wait(retire_fence, kCommitDoneTimeoutMs);
+  int ret = Fence::Wait(retire_fence, timeout_ms);
   if (ret != 0) {
     DLOGE("Retire fence wait failed with error %d for client %d display %" PRIu64, ret,
           client_id, display);
@@ -4020,13 +4029,13 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   return ret;
 }
 
-int HWCSession::WaitForVmRelease(hwc2_display_t display) {
+int HWCSession::WaitForVmRelease(hwc2_display_t display, int timeout_ms) {
   SCOPE_LOCK(vm_release_locker_[display]);
   clients_waiting_for_vm_release_.set(display);
   int re_try = kVmReleaseRetry;
   int ret = 0;
   do {
-    ret = vm_release_locker_[display].WaitFinite(kVmReleaseTimeoutMs);
+    ret = vm_release_locker_[display].WaitFinite(timeout_ms + kVmReleaseTimeoutMs);
     if (!ret) {
       break;
     }
@@ -4124,6 +4133,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     return -EINVAL;
   }
 
+  int timeout_ms = -1;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
@@ -4131,6 +4141,12 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
                                                           &needs_refresh) != kErrorNone) {
         return -EINVAL;
       }
+      uint32_t config = 0;
+      hwc_display_[target_display]->GetActiveDisplayConfig(&config);
+      DisplayConfigVariableInfo display_attributes = {};
+      hwc_display_[target_display]->GetDisplayAttributesForConfig(config, &display_attributes);
+      timeout_ms = kNumDrawCycles * (display_attributes.vsync_period_ns / kDenomNstoMs);
+      DLOGI("timeout in ms %d", timeout_ms);
     } else {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
@@ -4141,7 +4157,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     callbacks_.Refresh(target_display);
 
     DLOGI("Waiting for device assign");
-    int ret = WaitForVmRelease(target_display);
+    int ret = WaitForVmRelease(target_display, timeout_ms);
     if (ret != 0) {
       DLOGE("Device assign failed with error %d", ret);
       return -EINVAL;
@@ -4257,7 +4273,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     callbacks_.Refresh(target_display);
     int ret = WaitForCommitDone(target_display, kClientTrustedUI);
     if (ret != 0) {
-      DLOGE("WaitForVmRelease failed with error %d", ret);
+      DLOGE("WaitForCommitDone failed with error %d", ret);
       return -EINVAL;
     }
   }
