@@ -475,9 +475,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   };
 
   static const int kExternalConnectionTimeoutMs = 500;
-  static const int kCommitDoneTimeoutMs = 100;
   static const int kVmReleaseTimeoutMs = 100;
   static const int kVmReleaseRetry = 3;
+  static const int kDenomNstoMs = 1000000;
+  static const int kNumDrawCycles = 3;
+
   uint32_t throttling_refresh_rate_ = 60;
   std::mutex hotplug_mutex_;
   std::condition_variable hotplug_cv_;
@@ -598,7 +600,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
   int WaitForCommitDone(hwc2_display_t display, int client_id);
   void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
-  int WaitForVmRelease(hwc2_display_t display);
+  int WaitForVmRelease(hwc2_display_t display, int timeout_ms);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
