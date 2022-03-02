@@ -54,6 +54,16 @@
 
 using HwcAttribute = composer_V2_4::IComposerClient::Attribute;
 
+#ifdef PROFILE_COVERAGE_DATA
+extern "C" {
+
+int __llvm_profile_runtime = 0;
+
+void __llvm_profile_try_write_file(void);
+
+}
+#endif
+
 namespace sdm {
 
 static HWCUEvent g_hwc_uevent_;
@@ -1810,6 +1820,17 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       output_parcel->writeInt32(port_id);
     }
     break;
+#ifdef PROFILE_COVERAGE_DATA
+    case qService::IQService::DUMP_CODE_COVERAGE: {
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = DumpCodeCoverage(input_parcel);
+      DLOGD("QService command = DUMP_CODE_COVERAGE status: %d", status);
+     break;
+    }
+#endif
 
     case qService::IQService::SET_DIMMING_ENABLE: {
       if (!input_parcel || !output_parcel) {
@@ -4121,6 +4142,16 @@ int HWCSession::GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DispType *d
   }
   return -ENODEV;
 }
+
+#ifdef PROFILE_COVERAGE_DATA
+android::status_t HWCSession::DumpCodeCoverage(const android::Parcel *input_parcel) {
+  auto enable = input_parcel->readInt32();
+  DLOGD("HWCSession: Flushing llvm profile data");
+  __llvm_profile_try_write_file();
+
+  return static_cast<android::status_t>(core_intf_->DumpCodeCoverage());
+}
+#endif
 
 android::status_t HWCSession::GetDisplayPortId(uint32_t disp_id, int *port_id) {
   hwc2_display_t target_display = GetDisplayIndex(disp_id);

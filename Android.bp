@@ -9,12 +9,17 @@ soong_config_module_type {
         "gralloc4",
         "default",
         "var3",
+        "llvmcov",
     ],
     properties: [
         "cflags",
         "enabled",
         "srcs",
         "header_libs",
+        "host_ldlibs",
+        "ldflags",
+        "native_coverage",
+        "proprietary",
     ],
 }
 
@@ -120,6 +125,53 @@ qtidisplay_cc_defaults {
                 enabled: true,
             },
         },
+        llvmcov: {
+            cflags: [
+                "-Wl",
+                "-fprofile-instr-generate",
+                "-fcoverage-mapping",
+                "-fprofile-instr-append-file",
+                "-DPROFILE_COVERAGE_DATA",
+            ],
+
+            ldflags: [
+                "-fcoverage-mapping",
+                " -fprofile-instr-generate",
+                "-fuse-ld=lld",
+                "-gline-tables-only",
+                "-fdebug-info-for-profiling",
+            ],
+            proprietary: true,
+            host_ldlibs: ["-lgcov"],
+            native_coverage: true,
+        },
+    },
+}
+
+qtidisplay_cc_defaults {
+    name: "qtidisplay_alloc_defaults",
+    defaults: ["qtidisplay_common_defaults"],
+    soong_config_variables: {
+        llvmcov: {
+            cflags: [
+                "-Wl",
+                "-fprofile-instr-generate",
+                "-fcoverage-mapping",
+                "-fprofile-instr-append-file",
+                "-DPROFILE_COVERAGE_DATA"
+            ],
+
+            ldflags: [
+                "-fcoverage-mapping",
+                " -fprofile-instr-generate",
+                "-fuse-ld=lld",
+                "-gline-tables-only",
+                "-fdebug-info-for-profiling",
+            ],
+            proprietary: true,
+            host_ldlibs: ["-lgcov"],
+            native_coverage: true,
+        },
     },
 }
 
@@ -127,6 +179,32 @@ qtidisplay_cc_defaults {
     name: "qti_qmaa_display_defaults",
     defaults: ["qtidisplay_common_defaults"],
     header_libs: ["qmaa_display_headers"],
+}
+
+qtidisplay_cc_defaults {
+    name: "qtidisplay_coverage_defaults",
+    soong_config_variables: {
+        llvmcov: {
+            cflags: [
+                "-Wl",
+                "-fprofile-instr-generate",
+                "-fcoverage-mapping",
+                "-fprofile-instr-append-file",
+                "-DPROFILE_COVERAGE_DATA"
+            ],
+
+            ldflags: [
+                "-fcoverage-mapping",
+                " -fprofile-instr-generate",
+                "-fuse-ld=lld",
+                "-gline-tables-only",
+                "-fdebug-info-for-profiling",
+            ],
+            proprietary: true,
+            host_ldlibs: ["-lgcov"],
+            native_coverage: true,
+        },
+    },
 }
 
 cc_library_headers {

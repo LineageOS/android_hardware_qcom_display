@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2014 - 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -32,6 +33,16 @@
 #include <utils/constants.h>
 #include <string>
 #include <algorithm>
+
+#ifdef PROFILE_COVERAGE_DATA
+extern "C" {
+
+int __llvm_profile_runtime = 0;
+
+void __llvm_profile_try_write_file(void);
+
+}
+#endif
 
 namespace sdm {
 
@@ -249,6 +260,12 @@ int Debug::GetProperty(const char *property_name, char *value) {
 
   return 0;
 }
+
+#ifdef PROFILE_COVERAGE_DATA
+void Debug::DumpCodeCoverage() {
+  __llvm_profile_try_write_file();
+}
+#endif
 
 int Debug::GetProperty(const char *property_name, int *value) {
   if (DebugHandler::Get()->GetProperty(property_name, value)) {
