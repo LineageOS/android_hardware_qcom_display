@@ -2107,7 +2107,7 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
       *drm_format = DRM_FORMAT_YVU420;
       break;
     case static_cast<uint32_t>(PixelFormat::RGBA_FP16):
-      ALOGW("PixelFormat::RGBA_FP16 currently not supported");
+      *drm_format = DRM_FORMAT_ABGR16161616F;
       break;
     default:
       ALOGE("%s: Unsupported format %d", __FUNCTION__, format);
