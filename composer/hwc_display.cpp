@@ -1591,22 +1591,18 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
   uint32_t num_types = 0;
   if (fixed_info.hdr_plus_supported) {
-    num_types = UINT32(Hdr::HDR10_PLUS) - 1;
+    num_types = UINT32(Hdr::HDR10_PLUS);
   } else {
-    num_types = UINT32(Hdr::HLG) - 1;
+    num_types = UINT32(Hdr::HLG);
   }
 
-  // We support HDR10, HLG and HDR10_PLUS.
+  // We support DOLBY_VISION, HDR10, HLG and HDR10_PLUS.
   if (out_types == nullptr) {
     *out_num_types = num_types;
   } else {
     uint32_t max_out_types = std::min(*out_num_types, num_types);
     int32_t type = static_cast<int32_t>(Hdr::DOLBY_VISION);
     for (int32_t i = 0; i < max_out_types; i++) {
-      while (type == static_cast<int32_t>(Hdr::DOLBY_VISION) /* Skip list */) {
-        // Skip the type
-        type++;
-      }
       if (type > (num_types + 1)) {
         break;
       }
