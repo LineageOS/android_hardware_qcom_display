@@ -139,6 +139,7 @@ class CoreImpl : public CoreInterface {
  protected:
   void InitializeSDMUtils();
   void ReleaseDemuraResources();
+  void OverRideDemuraPanelIds(std::vector<uint64_t> *panel_ids);
 
   Locker locker_;
   BufferAllocator *buffer_allocator_ = NULL;
