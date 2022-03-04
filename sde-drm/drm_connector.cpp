@@ -717,6 +717,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string pu_roimerge = "partial_update_roimerge=";
   const string bit_clk_rate = "bit_clk_rate=";
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
+  const string mdp_transfer_time_us_min = "mdp_transfer_time_us_min=";
+  const string mdp_transfer_time_us_max = "mdp_transfer_time_us_max=";
   const string allowed_mode_switch = "allowed_mode_switch=";
   const string panel_mode_caps = "panel_mode_capabilities=";
   const string has_cwb_crop = "has_cwb_crop=";
@@ -782,6 +784,10 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item->curr_bit_clk_rate = std::stoi(string(line, bit_clk_rate.length()));
     } else if (line.find(mdp_transfer_time_us) != string::npos) {
       mode_item->transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
+    } else if (line.find(mdp_transfer_time_us_min) != string::npos) {
+      mode_item->transfer_time_us_min = std::stoi(string(line, mdp_transfer_time_us_min.length()));
+    } else if (line.find(mdp_transfer_time_us_max) != string::npos) {
+      mode_item->transfer_time_us_max = std::stoi(string(line, mdp_transfer_time_us_max.length()));
     } else if (line.find(allowed_mode_switch) != string::npos) {
       mode_item->allowed_mode_switch = std::stoi(string(line, allowed_mode_switch.length()));
     } else if (line.find(panel_mode_caps) != string::npos) {
@@ -1242,6 +1248,22 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
                  obj_id, prop_id, drm_compression_mode, ret);
       } else {
         DRM_LOGD("Connector %d: Setting compression mode %d", obj_id, drm_compression_mode);
+      }
+    } break;
+
+    case DRMOps::CONNECTOR_SET_TRANSFER_TIME: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::DYN_TRANSFER_TIME)) {
+        return;
+      }
+      uint32_t drm_transfer_time = va_arg(args, uint32_t);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::DYN_TRANSFER_TIME);
+      int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, drm_transfer_time);
+      if (ret < 0) {
+        DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d, transfer_time %" PRIu64
+                 " ret %d",
+                 obj_id, prop_id, drm_transfer_time, ret);
+      } else {
+        DRM_LOGD("Connector %d: Setting new transfer time %" PRIu64, obj_id, drm_transfer_time);
       }
     } break;
 

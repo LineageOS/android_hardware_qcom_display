@@ -130,7 +130,8 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::CONNECTOR_SET_COLORSPACE:
     case DRMOps::CONNECTOR_SET_PANEL_MODE: 
     case DRMOps::CONNECTOR_SET_DYN_BIT_CLK:
-    case DRMOps::CONNECTOR_SET_DSC_MODE: {
+    case DRMOps::CONNECTOR_SET_DSC_MODE:
+    case DRMOps::CONNECTOR_SET_TRANSFER_TIME: {
       drm_mgr_->GetConnectorMgr()->Perform(opcode, obj_id, drm_atomic_req_, args);
     } break;
     case DRMOps::DPPS_CACHE_FEATURE: {

@@ -1267,6 +1267,14 @@ class DisplayInterface {
   */
   virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) = 0;
 
+  /*! @brief Method to set a new transfer time
+
+    @param[in] transfer_time to set
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

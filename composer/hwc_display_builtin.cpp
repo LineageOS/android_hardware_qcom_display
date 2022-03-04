@@ -606,6 +606,10 @@ int HWCDisplayBuiltIn::Perform(uint32_t operation, ...) {
       rect = va_arg(args, LayerRect*);
       solid_fill_rect_ = *rect;
       break;
+    case UPDATE_TRANSFER_TIME:
+      val = va_arg(args, int32_t);
+      UpdateTransferTime(UINT32(val));
+      break;
     default:
       DLOGW("Invalid operation %d", operation);
       va_end(args);
@@ -1127,6 +1131,15 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
 
   DLOGI("Buffer w: h: %d %d", sdm_layer->input_buffer.unaligned_width, sdm_layer->input_buffer.unaligned_height);
   return HWC2::Error::None;
+}
+
+DisplayError HWCDisplayBuiltIn::UpdateTransferTime(uint32_t transfer_time) {
+  DisplayError error = display_intf_->UpdateTransferTime(transfer_time);
+  if (error != kErrorNone) {
+    DLOGE(" failed: Transfer time: %" PRIu32 " Error: %d", transfer_time, error);
+    return error;
+  }
+  return kErrorNone;
 }
 
 bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {

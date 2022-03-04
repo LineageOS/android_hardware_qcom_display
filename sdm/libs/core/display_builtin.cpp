@@ -208,6 +208,11 @@ DisplayError DisplayBuiltIn::Init() {
   enable_qsync_idle_ = hw_panel_info_.qsync_support && (value == 1);
   if (enable_qsync_idle_) {
     DLOGI("Enabling qsync on idling");
+
+    if (hw_panel_info_.transfer_time_us_min) {
+      DLOGI("Setting transfer time to min: %d", hw_panel_info_.transfer_time_us_min);
+      UpdateTransferTime(hw_panel_info_.transfer_time_us_min);
+    }
   }
 
   value = 0;
@@ -1488,6 +1493,8 @@ std::string DisplayBuiltIn::Dump() {
   os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
      << " cur:" << display_attributes_.fps;
   os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
+  os << " Min TransferTime: " << hw_panel_info_.transfer_time_us_min << "us";
+  os << " Max TransferTime: " << hw_panel_info_.transfer_time_us_max << "us";
   os << " AllowedModeSwitch: " << hw_panel_info_.allowed_mode_switch;
   os << " PanelModeCaps: ";
   snprintf(capabilities, sizeof(capabilities), "0x%x", hw_panel_info_.panel_mode_caps);
@@ -1772,7 +1779,16 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   needs_avr_update_ = true;
   validated_ = false;
   event_handler_->Refresh();
-  DLOGI("Qsync mode set to %d successfully", qsync_mode_);
+
+  if (qsync_mode_ == kQSyncModeNone) {
+    DLOGI("Qsync mode set to %d successfully, setting transfer time to min: %d", qsync_mode_,
+          hw_panel_info_.transfer_time_us_min);
+    UpdateTransferTime(hw_panel_info_.transfer_time_us_min);
+  } else {
+    DLOGI("Qsync mode set to %d successfully, setting transfer time to max: %d", qsync_mode_,
+          hw_panel_info_.transfer_time_us_max);
+    UpdateTransferTime(hw_panel_info_.transfer_time_us_max);
+  }
 
   return kErrorNone;
 }
@@ -1978,6 +1994,46 @@ DisplayError DisplayBuiltIn::HandleDemuraLayer(LayerStack *layer_stack) {
              display_id_, display_type_);
   }
   return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::UpdateTransferTime(uint32_t transfer_time) {
+  DisplayError error = kErrorNone;
+  {
+    ClientLock lock(disp_mutex_);
+
+    if (!active_) {
+      DLOGW("Invalid display state = %d. Panel must be on.", state_);
+      return kErrorNotSupported;
+    }
+
+    if (transfer_time == hw_panel_info_.transfer_time_us) {
+      DLOGW("Same transfer time requested. Current = %d, Requested = %d",
+            hw_panel_info_.transfer_time_us, transfer_time);
+      return kErrorNone;
+    } else if (transfer_time > hw_panel_info_.transfer_time_us_max ||
+               transfer_time < hw_panel_info_.transfer_time_us_min) {
+      DLOGW(
+          "Invalid transfer time requested or panel info missing valid range. Min = %d, Max = %d, "
+          "Requested = %d, Current = %d",
+          hw_panel_info_.transfer_time_us_min, hw_panel_info_.transfer_time_us_max, transfer_time,
+          hw_panel_info_.transfer_time_us);
+      return kErrorParameters;
+    }
+
+    error = hw_intf_->UpdateTransferTime(transfer_time);
+    if (error != kErrorNone) {
+      DLOGW("Retaining the older transfer time.");
+      return error;
+    }
+
+    DLOGV_IF(kTagDisplay, "Updated transfer time to %d", transfer_time);
+
+    DisplayBase::ReconfigureDisplay();
+  }
+
+  event_handler_->Refresh();
+
+  return error;
 }
 
 DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {

@@ -164,6 +164,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status);
   virtual void FlushConcurrentWriteback();
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time);
   virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
     return kErrorNotSupported;
   }
@@ -317,6 +318,7 @@ class HWDeviceDRM : public HWInterface {
   bool has_cwb_dither_ = false;     // virtual connector supports CWB Dither feature.
   static HWCwbConfig cwb_config_;
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
+  uint32_t transfer_time_updated_ = 0;
 
  private:
   void GetCWBCapabilities();

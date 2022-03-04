@@ -262,6 +262,7 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack);
   virtual void EnableLlccDuringAodMode(LayerStack *layer_stack);
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time) { return kErrorNotSupported; }
 
  protected:
   struct DisplayMutex {

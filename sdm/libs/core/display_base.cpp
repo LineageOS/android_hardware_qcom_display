@@ -1960,6 +1960,8 @@ std::string DisplayBase::Dump() {
   os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
      << " cur:" << display_attributes_.fps;
   os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
+  os << " Min TransferTime: " << hw_panel_info_.transfer_time_us_min << "us";
+  os << " Max TransferTime: " << hw_panel_info_.transfer_time_us_max << "us";
   os << " MaxBrightness:" << hw_panel_info_.panel_max_brightness;
   os << "\n Display WxH: " << display_attributes_.x_pixels << "x" << display_attributes_.y_pixels;
   os << " MixerWxH: " << mixer_attributes_.width << "x" << mixer_attributes_.height;

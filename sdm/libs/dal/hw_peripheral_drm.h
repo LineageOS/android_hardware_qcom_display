@@ -80,6 +80,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError EnableSelfRefresh();
   virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config);
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time);
 
  private:
   void InitDestScaler();
