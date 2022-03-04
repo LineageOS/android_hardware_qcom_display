@@ -3817,17 +3817,21 @@ void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
   DTRACE_SCOPED();
   // Wait on current retire fence.
   if (draw_method_ == kDrawDefault || display_type_ == kVirtual) {
+    DLOGI("Wait for current retire fence");
     Fence::Wait(sync_points->retire_fence);
+    DLOGI("Received retire fence");
     return;
   }
 
   // Wait for CRTC power event on first cycle.
   if (first_cycle_) {
+    DLOGI("Wait for CRTC power event on first cycle");
     std::unique_lock<std::mutex> lck(power_mutex_);
     while (!transition_done_) {
       cv_.wait(lck);
     }
 
+    DLOGI("Received CRTC power event on first cycle");
     // Unregister power events.
     hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, false);
     return;
@@ -3835,7 +3839,9 @@ void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
 
   // For displays in unified draw, wait on cached retire fence in steady state.
   shared_ptr<Fence> retire_fence = sync_points->retire_fence;
+  DLOGI("Wait for cached retire fence to be in steady state");
   Fence::Wait(retire_fence, kPowerStateTimeout);
+  DLOGI("Cached retire fence is in ready state");
 }
 
 void DisplayBase::ProcessPowerEvent() {
