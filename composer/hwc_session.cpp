@@ -3984,16 +3984,20 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     return -ENODEV;
   }
 
-  // disable idle time out for video mode
   {
+    // disable idle time out for video mode
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     hwc_display_[target_display]->SetIdleTimeoutMs(0, 0);
+
+    // disable qsync
+    hwc_display_[target_display]->SetQSyncMode(kQSyncModeNone);
   }
 
-  // disable qsync
-  error = DisableQsync(target_display);
-  if (error != HWC2::Error::None) {
-    return -ENODEV;
+  callbacks_.Refresh(target_display);
+  int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+  if (ret != 0) {
+    DLOGE("WaitForCommitDone failed with error = %d", ret);
+    return -EINVAL;
   }
 
   {
@@ -4227,18 +4231,6 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
     DLOGE("concurrent WB teardown failed with error %d", error);
     return HWC2::Error::NoResources;
   }
-  return HWC2::Error::None;
-}
-
-HWC2::Error HWCSession::DisableQsync(hwc2_display_t display) {
-  if (hwc_display_[display]->SetQSyncMode(kQSyncModeNone) == HWC2::Error::None) {
-    int error = WaitForCommitDone(display, kClientTrustedUI);
-    if (error != 0) {
-      DLOGE("Disable Qsync failed with error = %d", error);
-      return HWC2::Error::NoResources;
-    }
-  }
-
   return HWC2::Error::None;
 }
 
