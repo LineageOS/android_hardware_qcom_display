@@ -552,7 +552,7 @@ void CoreIPCVmCallbackImpl::OnServerReadyThread(CoreIPCVmCallbackImpl *obj) {
     DLOGE("Failed to export Calibration buffer");
   }
   if (obj->SendPanelBootParams()) {
-    DLOGE("Failed to Send SendPanelBootParams");
+    DLOGW("Failed to Send SendPanelBootParams");
   }
 }
 

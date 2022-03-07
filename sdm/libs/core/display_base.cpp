@@ -399,6 +399,7 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
   DisplayConfigVariableInfo display_config;
 
   CwbTapPoint cwb_tappoint = cwb_config->tap_point;
+  bool pu_as_cwb_roi = cwb_config->pu_as_cwb_roi;
   if (cwb_tappoint == CwbTapPoint::kDsppTapPoint || cwb_tappoint == CwbTapPoint::kDemuraTapPoint) {
     // To dump post-processed (DSPP) output for CWB, use Panel resolution.
     uint32_t active_index = 0;
@@ -409,9 +410,12 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
         cwb_config->cwb_full_rect.right = display_config.x_pixels;
         cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
         LayerRect cwb_roi = cwb_config->cwb_roi;
-        if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
-            *x_pixels = cwb_roi.right - cwb_roi.left;
-            *y_pixels = cwb_roi.bottom - cwb_roi.top;
+        if (pu_as_cwb_roi) {
+          *x_pixels = display_config.x_pixels;
+          *y_pixels = display_config.y_pixels;
+        } else if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+          *x_pixels = cwb_roi.right - cwb_roi.left;
+          *y_pixels = cwb_roi.bottom - cwb_roi.top;
         } else {
           *x_pixels = display_config.x_pixels;
           *y_pixels = display_config.y_pixels;
@@ -426,9 +430,12 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
       cwb_config->cwb_full_rect.right = display_config.x_pixels;
       cwb_config->cwb_full_rect.bottom = display_config.y_pixels;
       LayerRect cwb_roi = cwb_config->cwb_roi;
-      if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
-          *x_pixels = cwb_roi.right - cwb_roi.left;
-          *y_pixels = cwb_roi.bottom - cwb_roi.top;
+      if (pu_as_cwb_roi) {
+        *x_pixels = display_config.x_pixels;
+        *y_pixels = display_config.y_pixels;
+      } else if (IsValidCwbRoi(cwb_roi, cwb_config->cwb_full_rect)) {
+        *x_pixels = cwb_roi.right - cwb_roi.left;
+        *y_pixels = cwb_roi.bottom - cwb_roi.top;
         } else {
           *x_pixels = display_config.x_pixels;
           *y_pixels = display_config.y_pixels;
@@ -1311,6 +1318,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
   if (layer_stack->request_flags.trigger_refresh) {
+    if (!disable_cwb_idle_fallback_ && disp_layer_stack_.info.output_buffer) {
+      cwb_fence_wait_ = true;
+    }
     layer_stack->output_buffer = nullptr;
   }
 
@@ -1417,6 +1427,16 @@ DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
       return flush_err;
     }
   }
+
+  // TODO(user): Workaround for messenger app flicker issue in CWB idle fallback,
+  // to be removed when issue is fixed.
+  if (cwb_fence_wait_ && hw_layers_info->output_buffer &&
+      (hw_layers_info->output_buffer->release_fence != nullptr)) {
+    if (Fence::Wait(hw_layers_info->output_buffer->release_fence) != kErrorNone) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    }
+  }
+  cwb_fence_wait_ = false;
 
   error = PostCommit(hw_layers_info);
   if (error != kErrorNone) {
@@ -2821,7 +2841,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t max_layer_area = 0;
   uint32_t max_area_layer_index = 0;
   std::vector<Layer *> layers = layer_stack->layers;
-  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_x = display_attributes_.is_3d_mux_used ? 4 : 2;
   uint32_t align_y = 2;
 
   for (uint32_t i = 0; i < layer_count; i++) {

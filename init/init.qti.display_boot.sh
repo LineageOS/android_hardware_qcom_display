@@ -104,7 +104,7 @@ case "$target" in
         setprop vendor.display.disable_mitigated_fps 1
         setprop vendor.display.disable_cwb_idle_fallback 1
         ;;
-        506|547)
+        506|547|564)
         # Set property for Diwali
         # SOC ID for Diwali is 506
         setprop vendor.gralloc.use_dma_buf_heaps 1

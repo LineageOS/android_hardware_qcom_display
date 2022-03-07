@@ -869,8 +869,7 @@ void HWCSession::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType ty
     return;
   }
 
-  std::thread(&HWCSession::NotifyFpsMitigation, this,
-              target_display, attributes, concurrency).detach();
+  NotifyFpsMitigation(target_display, attributes, concurrency);
 }
 
 void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {

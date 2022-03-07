@@ -767,6 +767,8 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   SetTopology(topology, &display_attributes_[index].topology);
   SetTopologySplit(display_attributes_[index].topology,
                    &display_attributes_[index].topology_num_split);
+  SetTopologyMuxUsage(display_attributes_[index].topology,
+                      &display_attributes_[index].is_3d_mux_used);
   display_attributes_[index].is_device_split = (display_attributes_[index].topology_num_split > 1);
 
   DLOGI(
@@ -2819,6 +2821,19 @@ void HWDeviceDRM::SetTopologySplit(HWTopology hw_topology, uint32_t *split_numbe
     case kPPSplit:
     default:
       *split_number = 1;
+  }
+}
+
+void HWDeviceDRM::SetTopologyMuxUsage(HWTopology hw_topology, bool *is_3d_mux_used) {
+  switch (hw_topology) {
+    case kDualLMMerge:
+    case kDualLMMergeDSC:
+    case kQuadLMMerge:
+    case kQuadLMMergeDSC:
+      *is_3d_mux_used = true;
+      break;
+    default:
+      *is_3d_mux_used = false;
   }
 }
 
