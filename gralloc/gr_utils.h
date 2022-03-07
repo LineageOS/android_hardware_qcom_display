@@ -208,7 +208,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
 int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
-                    int32_t flags, int *plane_count, PlaneLayoutInfo plane_info[8],
+                    int32_t interlaced, int *plane_count, PlaneLayoutInfo plane_info[8],
                     const private_handle_t *hnd = nullptr, struct android_ycbcr *ycbcr = nullptr);
 void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
                      int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info);

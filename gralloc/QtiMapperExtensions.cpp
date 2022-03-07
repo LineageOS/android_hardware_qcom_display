@@ -379,6 +379,7 @@ Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage
   ALOGD_IF(enable_logs_, "%s: Aligned width and height - wxh: %ux%u custom_format = %d",
            __FUNCTION__, alignedw, alignedh, custom_format);
   if (gralloc::IsYuvFormat(custom_format)) {
+    // flags here only refers to layout (interlaced) flags, not private or buffer usage flags
     gralloc::GetYUVPlaneInfo(info, custom_format, alignedw, alignedh, flags, &plane_count,
                              plane_layout);
   } else if (gralloc::IsUncompressedRGBFormat(custom_format) ||
