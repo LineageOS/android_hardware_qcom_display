@@ -380,6 +380,9 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
   if (feature_id == sde_drm::kFeatureLtmHistCtrl)
     ltm_hist_en_ = value;
 
+  if (feature_id == sde_drm::kFeatureAbaHistCtrl)
+    aba_hist_en_ = value;
+
   if (object_type == DRM_MODE_OBJECT_CRTC) {
     obj_id = token_.crtc_id;
   } else if (object_type == DRM_MODE_OBJECT_CONNECTOR) {
@@ -909,6 +912,9 @@ void HWPeripheralDRM::SetVMReqState() {
     if (ltm_hist_en_)
       drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
                                 sde_drm::kFeatureLtmHistCtrl, 0);
+    if (aba_hist_en_)
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                sde_drm::kFeatureAbaHistCtrl, 0);
   } else if (tui_state_ == kTUIStateEnd) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                               sde_drm::DRMVMRequestState::ACQUIRE);
@@ -916,6 +922,9 @@ void HWPeripheralDRM::SetVMReqState() {
     if (ltm_hist_en_)
       drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
                                 sde_drm::kFeatureLtmHistCtrl, 1);
+    if (aba_hist_en_)
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                sde_drm::kFeatureAbaHistCtrl, 1);
   } else if (tui_state_ == kTUIStateNone) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                               sde_drm::DRMVMRequestState::NONE);
