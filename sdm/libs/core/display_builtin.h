@@ -293,6 +293,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   uint32_t hfc_buffer_size_ = 0;
   DisplayIPCVmCallbackImpl *vm_cb_intf_ = nullptr;
   Layer cwb_layer_ = {};
+  bool lower_fps_ = false;
 };
 
 }  // namespace sdm
