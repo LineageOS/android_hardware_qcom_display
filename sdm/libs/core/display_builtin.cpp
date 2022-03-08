@@ -294,6 +294,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
     }
   }
   error = ChangeFps();
+  lower_fps_ = disp_layer_stack_.info.lower_fps;
 
   return kErrorNotValidated;
 }
@@ -389,7 +390,7 @@ void DisplayBuiltIn::UpdateQsyncMode() {
   }
 
   QSyncMode mode = kQSyncModeNone;
-  if (disp_layer_stack_.info.lower_fps && enable_qsync_idle_) {
+  if (lower_fps_ && enable_qsync_idle_) {
     // Override to continuous mode upon idling.
     mode = kQSyncModeContinuous;
     DLOGV_IF(kTagDisplay, "Qsync entering continuous mode");
@@ -786,6 +787,7 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
   handle_idle_timeout_ = false;
 
   pending_commit_ = false;
+  lower_fps_ = false;
 
   return kErrorNone;
 }
