@@ -291,6 +291,9 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     // Avoid flush for Command mode panel.
     flush_ = !client_connected_;
     validated_ = true;
+    layer_changes_.clear();
+    layer_requests_.clear();
+    DLOGV_IF(kTagDisplay, "layer_set is empty");
     return status;
   }
 
