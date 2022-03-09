@@ -279,6 +279,10 @@ MetadataType getMetadataType(uint32_t in) {
     case QTI_MEM_HANDLE:
       return MetadataType_MemHandle;
 #endif
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      return MetadataType_TimedRendering;
+#endif
     default:
       return MetadataType_Invalid;
   }
@@ -415,6 +419,13 @@ Error get(void *buffer, uint32_t type, void *param) {
                                          reinterpret_cast<int64_t *>(param)));
       break;
 #endif
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      err = static_cast<Error>(android::gralloc4::decodeUint32(
+          qtigralloc::MetadataType_TimedRendering,
+          bytestream, reinterpret_cast<uint32_t *>(param)));
+      break;
+#endif
     default:
       param = nullptr;
       return Error::UNSUPPORTED;
@@ -489,6 +500,13 @@ Error set(void *buffer, uint32_t type, void *param) {
     case QTI_BUFFER_PERMISSION:
       err = encodeBufferPermission(reinterpret_cast<BufferPermission*>(param), &bytestream);
       break;
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      err = static_cast<Error>(
+          android::gralloc4::encodeUint32(qtigralloc::MetadataType_TimedRendering,
+                                          *reinterpret_cast<uint32_t *>(param), &bytestream));
+      break;
+#endif
     default:
       param = nullptr;
       return Error::UNSUPPORTED;

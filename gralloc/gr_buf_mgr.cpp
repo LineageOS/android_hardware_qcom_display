@@ -1300,6 +1300,16 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       }
       break;
 #endif
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      if (metadata_ptr != nullptr) {
+        android::gralloc4::encodeUint32(qtigralloc::MetadataType_TimedRendering,
+                                        *reinterpret_cast<uint32_t *>(metadata_ptr), out);
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
+#endif
     default:
       error = Error::UNSUPPORTED;
   }
@@ -1535,6 +1545,12 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       allocator_->SetBufferPermission(handle->fd, &metadata->bufferPerm[0], &metadata->memHandle);
     }
     break;
+#endif
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      android::gralloc4::decodeUint32(qtigralloc::MetadataType_TimedRendering, in,
+                                      &metadata->timedRendering);
+      break;
 #endif
     default:
 #ifdef METADATA_V2

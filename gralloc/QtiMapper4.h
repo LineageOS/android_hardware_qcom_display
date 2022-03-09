@@ -280,6 +280,9 @@ class QtiMapper : public IQtiMapper {
 #ifdef QTI_MEM_HANDLE
       {qtigralloc::MetadataType_MemHandle, "MemHandle", true, false},
 #endif
+#ifdef QTI_TIMED_RENDERING
+      {qtigralloc::MetadataType_TimedRendering, "timed rendering", true, true},
+#endif
   };
 };
 

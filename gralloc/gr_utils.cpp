@@ -3027,6 +3027,15 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         *out = &data->videoTsInfo;
       }
       break;
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      if (copy) {
+        *(reinterpret_cast<uint32_t *>(in)) = data->timedRendering;
+      } else {
+        *out = &data->timedRendering;
+      }
+      break;
+#endif
     case (int64_t)StandardMetadataType::BUFFER_ID:
       if (copy) {
         *(reinterpret_cast<uint64_t *>(in)) = (uint64_t)handle->id;
