@@ -22,6 +22,30 @@
       },
       "revId": "749eaae748c135a7e6e7282b92711e13c2a62a83",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "be6f1523_ebc9ee53",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 188,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2022-03-10T13:21:20Z",
+      "side": 1,
+      "message": "Yeah, this is 6 + 1. Also change id is wrong so i\u0027ll reupload with correct one.",
+      "parentUuid": "701f08ea_833d2f30",
+      "range": {
+        "startLine": 188,
+        "startChar": 73,
+        "endLine": 188,
+        "endChar": 88
+      },
+      "revId": "749eaae748c135a7e6e7282b92711e13c2a62a83",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
