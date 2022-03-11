@@ -148,6 +148,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   int max_brightness_fd_ = -1;
   SelfRefreshState self_refresh_state_ = kSelfRefreshNone;
   bool ltm_hist_en_ = false;
+  bool aba_hist_en_ = false;
   std::map<PanelFeaturePropertyID, sde_drm::DRMPanelFeatureID> panel_feature_property_map_ {};
 };
 
