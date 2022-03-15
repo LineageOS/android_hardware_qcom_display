@@ -863,6 +863,7 @@ void HWCDisplay::BuildLayerStack() {
     layer->flags.compatible = hwc_layer->IsLayerCompatible();
 
     layer->layer_id = hwc_layer->GetId();
+    layer->layer_name = hwc_layer->GetName();
     layer->geometry_changes = hwc_layer->GetGeometryChanges();
     layer_stack_.layers.push_back(layer);
   }
@@ -2627,6 +2628,7 @@ void HWCDisplay::Dump(std::ostringstream *os) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
     *os << "layer: " << std::setw(4) << layer->GetId();
+    *os << " name: " << std::setw(100) << layer->GetName();
     *os << " z: " << layer->GetZ();
     *os << " composition: " <<
           to_string(layer->GetOrigClientRequestedCompositionType()).c_str();
