@@ -507,6 +507,8 @@ struct Layer {
   uint64_t layer_id = 0;                           //!< A Unique Layer Id which will persist across
                                                    //!< frames until layer gets removed from stack,
                                                    //!< if LayerStackFlag layer_id_support is True.
+
+  std::string layer_name = "";                     //!< Layer full name
 };
 
 /*! @brief This structure defines the color space + transfer of a given layer.

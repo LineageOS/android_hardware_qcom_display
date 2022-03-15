@@ -971,6 +971,10 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   LayerBuffer *layer_buffer = &layer->input_buffer;
   void *handle = const_cast<private_handle_t *>(pvt_handle);
 
+  std::string name = "";
+  gralloc::GetMetaDataValue(handle, android::gralloc4::MetadataType_Name.value, &name);
+  name_ = name;
+
   float fps = 0;
   uint32_t frame_rate = layer->frame_rate;
   if (gralloc::GetMetaDataValue(handle, qtigralloc::MetadataType_RefreshRate.value, &fps) ==

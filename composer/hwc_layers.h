@@ -72,6 +72,7 @@ class HWCLayer {
   ~HWCLayer();
   uint32_t GetZ() const { return z_; }
   hwc2_layer_t GetId() const { return id_; }
+  std::string GetName() const { return name_; }
   LayerTypes GetType() const { return type_; }
   Layer *GetSDMLayer() { return layer_; }
   void ResetPerFrameData();
@@ -129,6 +130,7 @@ class HWCLayer {
   LayerTypes type_ = kLayerUnknown;
   uint32_t z_ = 0;
   const hwc2_layer_t id_;
+  std::string name_;
   const hwc2_display_t display_id_;
   static std::atomic<hwc2_layer_t> next_id_;
   shared_ptr<Fence> release_fence_;
