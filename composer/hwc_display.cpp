@@ -3229,18 +3229,20 @@ HWC2::Error HWCDisplay::TryDrawMethod(IQtiComposerClient::DrawMethod client_draw
     // If driver doesn't support return unsupported and set default method.
     draw_method_ = kDrawDefault;
     status = HWC2::Error::Unsupported;
+    DLOGI("Enabling default draw method");
   } else if (client_drawMethod != IQtiComposerClient::DrawMethod::UNIFIED_DRAW) {
     // Driver supports unified draw.
     // If client doesnt support unified draw, limit to kDrawUnified.
     draw_method_ = kDrawUnified;
     status = HWC2::Error::Unsupported;
+    DLOGI("Enabling unified draw");
   } else {
     // Driver and client supports unified draw.
     draw_method_ = kDrawUnifiedWithGPUTarget;
     status = HWC2::Error::None;
+    DLOGI("Enabling unified draw with GPU target");
   }
 
-  DLOGI("method: %d", draw_method_);
   display_intf_->SetDrawMethod(draw_method_);
 
   draw_method_set_ = true;
