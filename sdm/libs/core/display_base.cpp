@@ -760,7 +760,20 @@ void DisplayBase::EnableLlccDuringAodMode(LayerStack *layer_stack) {
     disp_layer_stack_.info.enable_self_refresh = true;
     hw_intf_->EnableSelfRefresh();
 
-    uint32_t size_ff = 1;  // gpu target layer always present
+    uint32_t size_ff = 0;
+    std::vector<Layer *> &layers = layer_stack->layers;
+    for (auto &layer : layers) {
+      if (layer->composition == kCompositionGPUTarget) {
+        size_ff++;
+      } else if (layer->composition == kCompositionStitchTarget) {
+        size_ff++;
+      } else if (layer->composition == kCompositionDemura) {
+        size_ff++;
+      } else if (layer->composition == kCompositionCWBTarget) {
+        size_ff++;
+      }
+    }
+
     uint32_t app_layer_count = UINT32(layer_stack->layers.size()) - size_ff;
     // Switch to Single-layer/GPU comp during Doze/Doze-suspend mode with video mode panel.
     // Avoid GPU comp, if there is only one app layer.
