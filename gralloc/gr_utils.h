@@ -38,6 +38,7 @@
 #include <QtiGrallocDefs.h>
 #include <utils/debug.h>
 #include <android/hardware/graphics/common/1.2/types.h>
+#include <aidl/android/hardware/graphics/common/PixelFormat.h>
 #include <gralloctypes/Gralloc4.h>
 #include <limits>
 #include <vector>

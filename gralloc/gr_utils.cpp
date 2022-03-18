@@ -130,6 +130,7 @@ bool IsUncompressedRGBFormat(int format) {
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
     case HAL_PIXEL_FORMAT_R_8:
+    case static_cast<int>(aidl::android::hardware::graphics::common::PixelFormat::R_8):
     case HAL_PIXEL_FORMAT_RG_88:
     case HAL_PIXEL_FORMAT_BGRX_8888:
     case static_cast<int>(PixelFormat::RGBA_1010102):
@@ -297,6 +298,7 @@ uint32_t GetBppForUncompressedRGB(int format) {
       bpp = 2;
       break;
     case HAL_PIXEL_FORMAT_R_8:
+    case static_cast<int>(aidl::android::hardware::graphics::common::PixelFormat::R_8):
       bpp = 1;
       break;
     default:
@@ -2507,12 +2509,19 @@ static Error getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &com
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_R_8):
+    case static_cast<int32_t>(aidl::android::hardware::graphics::common::PixelFormat::R_8):
+      comp.sizeInBits = 8;
+      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_R.value) {
+        comp.offsetInBits = 0;
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RG_88):
       comp.sizeInBits = 8;
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_R.value) {
         comp.offsetInBits = 0;
-      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_G.value &&
-                 format != HAL_PIXEL_FORMAT_R_8) {
+      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_G.value) {
         comp.offsetInBits = 8;
       } else {
         return Error::BAD_VALUE;
