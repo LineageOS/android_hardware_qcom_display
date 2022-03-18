@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4466e609_f4fa0197",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2022-03-18T18:22:07Z",
+      "side": 1,
+      "message": "I would split the edits you did to the original commit into a separate change. After all, it should be picked to the other branches and we can squash in the next cycle.",
+      "revId": "7e7a23c241d0460380414282399241f5d35c0ed4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
