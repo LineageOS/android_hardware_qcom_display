@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "2eaba3c6_9a569ad5",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 498,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2022-03-18T18:33:51Z",
+      "side": 0,
+      "message": "Let\u0027s just fix this.",
+      "revId": "4a50865c961a21a797b94b5315af093a3a0cdbdc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
