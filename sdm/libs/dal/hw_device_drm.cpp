@@ -771,6 +771,10 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
+  hw_panel_info_.transfer_time_us_min = (connector_info_.modes[index].transfer_time_us_min)
+                                            ? connector_info_.modes[index].transfer_time_us_min
+                                            : 1;
+  hw_panel_info_.transfer_time_us_max = connector_info_.modes[index].transfer_time_us_max;
   hw_panel_info_.allowed_mode_switch = connector_info_.modes[index].allowed_mode_switch;
   hw_panel_info_.panel_mode_caps =
                  connector_info_.modes[index].sub_modes[sub_mode_index].panel_mode_caps;
@@ -798,16 +802,19 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
     hw_panel_info_.max_fps = current_mode.vrefresh;
   }
 
-  uint32_t min_transfer_time_us = hw_panel_info_.transfer_time_us;
+  uint32_t transfer_time_us_min = hw_panel_info_.transfer_time_us;
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
     if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay)) {
-      if (min_transfer_time_us > connector_info_.modes[mode_index].transfer_time_us)  {
-        min_transfer_time_us = connector_info_.modes[mode_index].transfer_time_us;
+      if (transfer_time_us_min > connector_info_.modes[mode_index].transfer_time_us) {
+        transfer_time_us_min = connector_info_.modes[mode_index].transfer_time_us;
       }
     }
   }
-  hw_panel_info_.min_transfer_time_us = min_transfer_time_us;
+
+  if (hw_panel_info_.transfer_time_us_min <= 1) {
+    hw_panel_info_.transfer_time_us_min = transfer_time_us_min;
+  }
 
   if (connector_info_.qsync_fps > 0) {
     // For command mode panel, driver will set connector property qsync_fps
@@ -875,7 +882,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
            hw_panel_info_.split_info.left_split, hw_panel_info_.split_info.right_split);
   DLOGI_IF(kTagDriverConfig, "Mode Transfer time = %d us", hw_panel_info_.transfer_time_us);
   DLOGI_IF(kTagDriverConfig, "Panel Minimum Transfer time = %d us",
-    hw_panel_info_.min_transfer_time_us);
+           hw_panel_info_.transfer_time_us_min);
+  DLOGI_IF(kTagDriverConfig, "Panel Maximum Transfer time = %d us",
+           hw_panel_info_.transfer_time_us_max);
   DLOGI_IF(kTagDriverConfig, "Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
 }
 
@@ -1572,6 +1581,11 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_DYN_BIT_CLK, token_.conn_id, bit_clk_rate_);
   }
 
+  if (transfer_time_updated_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TRANSFER_TIME, token_.conn_id,
+                              transfer_time_updated_);
+  }
+
   if (first_cycle_) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TOPOLOGY_CONTROL, token_.conn_id,
                               topology_control_);
@@ -1694,6 +1708,7 @@ DisplayError HWDeviceDRM::Validate(HWLayersInfo *hw_layers_info) {
     panel_mode_changed_ = 0;
     seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
+    transfer_time_updated_ = 0;
     err = kErrorHardware;
   }
 
@@ -1795,6 +1810,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     panel_mode_changed_ = 0;
     seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
+    transfer_time_updated_ = 0;
     return kErrorHardware;
   }
 
@@ -1835,6 +1851,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     connector_info_.modes[current_mode_index_].curr_bit_clk_rate = bit_clk_rate_;
 
     bit_clk_rate_ = 0;
+  }
+
+  if (transfer_time_updated_) {
+    transfer_time_updated_ = 0;
+    synchronous_commit_ = false;
   }
 
   if (panel_mode_changed_ & DRM_MODE_FLAG_CMD_MODE_PANEL) {
@@ -2608,6 +2629,14 @@ DisplayError HWDeviceDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
 
 DisplayError HWDeviceDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return kErrorNotSupported;
+}
+
+DisplayError HWDeviceDRM::UpdateTransferTime(uint32_t transfer_time) {
+  connector_info_.modes[current_mode_index_].transfer_time_us = transfer_time;
+  PopulateHWPanelInfo();
+  transfer_time_updated_ = transfer_time;
+  synchronous_commit_ = true;
+  return kErrorNone;
 }
 
 void HWDeviceDRM::DumpHWLayers(HWLayersInfo *hw_layers_info) {

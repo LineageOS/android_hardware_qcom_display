@@ -193,6 +193,12 @@ DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode
   return kErrorNone;
 }
 
+DisplayError HWPeripheralDRM::UpdateTransferTime(uint32_t transfer_time) {
+  DisplayError error = HWDeviceDRM::UpdateTransferTime(transfer_time);
+
+  return error;
+}
+
 DisplayError HWPeripheralDRM::Validate(HWLayersInfo *hw_layers_info) {
   SetDestScalarData(*hw_layers_info);
   SetIdlePCState();

@@ -73,6 +73,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
     SET_QDCM_SOLID_FILL_INFO,
     UNSET_QDCM_SOLID_FILL_INFO,
     SET_QDCM_SOLID_FILL_RECT,
+    UPDATE_TRANSFER_TIME,
   };
 
   static int Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -146,6 +147,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetAlternateDisplayConfig(bool set);
   virtual HWC2::Error SetDimmingEnable(int int_enabled);
   virtual HWC2::Error SetDimmingMinBl(int min_bl);
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

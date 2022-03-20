@@ -87,6 +87,7 @@ public:
       SET_DIMMING_ENABLE = 54,                 // Set display dimming enablement
       SET_DIMMING_MIN_BL = 55,                 // Set display dimming minimal backlight value
       DUMP_CODE_COVERAGE = 56,                 // Dump the code coverage data for userspace projects
+      UPDATE_TRANSFER_TIME = 57,               // Update transfer time
       COMMAND_LIST_END = 400,
     };
 

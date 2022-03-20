@@ -185,6 +185,7 @@ enum struct DRMProperty {
   DIMMING_BL_LUT,
   DIMMING_DYN_CTRL,
   DIMMING_MIN_BL,
+  DYN_TRANSFER_TIME,
 
   // Insert above
   MAX

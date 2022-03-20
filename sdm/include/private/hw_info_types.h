@@ -448,12 +448,13 @@ struct HWPanelInfo {
   float blackness_level = 0.0f;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
-  uint32_t transfer_time_us = 0;       // transfer time in micro seconds to panel's active region
-  uint32_t min_transfer_time_us = 1;   // minimum transfer time across all modes
-  uint32_t allowed_mode_switch = 0;    // Allowed mode switch bit mask
-  uint32_t panel_mode_caps = 0;        // Video/Command mode capability bit mask
-  bool qsync_support = false;          // Specifies panel supports qsync feature or not.
-  bool dyn_bitclk_support = false;     // Bit clk can be updated to avoid RF interference.
+  uint32_t transfer_time_us = 0;      // transfer time in micro seconds to panel's active region
+  uint32_t transfer_time_us_min = 0;  // min transfer time in micro seconds to panel's active region
+  uint32_t transfer_time_us_max = 0;  // max transfer time in micro seconds to panel's active region
+  uint32_t allowed_mode_switch = 0;   // Allowed mode switch bit mask
+  uint32_t panel_mode_caps = 0;       // Video/Command mode capability bit mask
+  bool qsync_support = false;         // Specifies panel supports qsync feature or not.
+  bool dyn_bitclk_support = false;    // Bit clk can be updated to avoid RF interference.
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
   uint32_t supported_colorspaces = 0;  // supported_colorspaces for DP displays.
   uint32_t qsync_fps = 0;              // Min qsync fps
@@ -474,6 +475,8 @@ struct HWPanelInfo {
             (left_roi_count != panel_info.left_roi_count) ||
             (right_roi_count != panel_info.right_roi_count) ||
             (transfer_time_us != panel_info.transfer_time_us) ||
+            (transfer_time_us_min != panel_info.transfer_time_us_min) ||
+            (transfer_time_us_max != panel_info.transfer_time_us_max) ||
             (allowed_mode_switch != panel_info.allowed_mode_switch) ||
             (panel_mode_caps != panel_info.panel_mode_caps) ||
             (qsync_support != panel_info.qsync_support) ||

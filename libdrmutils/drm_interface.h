@@ -473,6 +473,11 @@ enum struct DRMOps {
    * Arg: drmModeAtomicReq - Atomic request
    */
   RESET_PANEL_FEATURES,
+  /*
+   * Op: Set new transfer time va;lue for the current mode
+   * Arg: uint32_t - New transfer time to be used
+   */
+  CONNECTOR_SET_TRANSFER_TIME,
 };
 
 enum struct DRMRotation {
@@ -725,6 +730,8 @@ struct DRMModeInfo {
   bool roi_merge;
   uint64_t default_bit_clk_rate;
   uint32_t transfer_time_us;
+  uint32_t transfer_time_us_min;
+  uint32_t transfer_time_us_max;
   uint32_t allowed_mode_switch;
   uint32_t cur_panel_mode;
   uint32_t has_cwb_crop;

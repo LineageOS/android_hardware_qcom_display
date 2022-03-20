@@ -1856,12 +1856,33 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     }
     break;
 
+    case qService::IQService::UPDATE_TRANSFER_TIME: {
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = UpdateTransferTime(input_parcel);
+    } break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
   }
 
   return status;
+}
+
+android::status_t HWCSession::UpdateTransferTime(const android::Parcel *input_parcel) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+    return -ENODEV;
+  }
+
+  uint32_t transfer_time = UINT32(input_parcel->readInt32());
+  return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::UPDATE_TRANSFER_TIME,
+                                                    transfer_time);
 }
 
 android::status_t HWCSession::getComposerStatus() {
