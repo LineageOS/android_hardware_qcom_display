@@ -174,6 +174,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
                                  const CwbTapPoint &cwb_tappoint);
   void LoadMixedModePerfHintThreshold();
   void HandleLargeCompositionHint(bool release);
+  void ReqPerfHintRelease();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,

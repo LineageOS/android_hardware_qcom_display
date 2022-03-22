@@ -1283,6 +1283,7 @@ void DisplayBase::CommitThread() {
       return (disp_mutex_.worker_busy);
     }))) {
       DLOGI("Received idle timeout");
+      event_handler_->HandleEvent(kIdleTimeout);
       IdleTimeout();
       continue;
     }
