@@ -1064,12 +1064,20 @@ DisplayError HWInfoDRM::GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) {
   if (!panel_ids) {
     return kErrorResources;
   }
+  int primary_off = 0;
+  int secondary_off = 0;
+  Debug::Get()->GetProperty(DISABLE_DEMURA_PRIMARY, &primary_off);
+  Debug::Get()->GetProperty(DISABLE_DEMURA_SECONDARY, &secondary_off);
 
   sde_drm::DRMConnectorsInfo conn_infos;
   drm_mgr_intf_->GetConnectorsInfo(&conn_infos);
   for (auto &conn : conn_infos) {
     sde_drm::DRMConnectorInfo &info = conn.second;
     if (info.panel_id) {
+      // skip adding demura disabled panels
+      if ((info.is_primary && primary_off) || (!info.is_primary && secondary_off)) {
+        continue;
+      }
       panel_ids->push_back(info.panel_id);
     }
   }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2022, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -26,6 +26,42 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ *  Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted (subject to the limitations in the
+ *  disclaimer below) provided that the following conditions are met:
+ *
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *
+ *      * Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer in the documentation and/or other materials provided
+ *        with the distribution.
+ *
+ *      * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *        contributors may be used to endorse or promote products derived
+ *        from this software without specific prior written permission.
+ *
+ *  NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ *  GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ *  HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ *   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ *  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ *  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #ifndef __DISPLAY_PROPERTIES_H__
 #define __DISPLAY_PROPERTIES_H__
@@ -132,6 +168,7 @@
 #define DISABLE_ROUNDED_CORNER_THREAD        DISPLAY_PROP("disable_rounded_corner_thread")
 // SPR
 #define ENABLE_SPR                           DISPLAY_PROP("enable_spr")
+#define ENABLE_SPR_BYPASS                    DISPLAY_PROP("enable_spr_bypass")
 #define ENABLE_MEMORY_MAPPING                DISPLAY_PROP("enable_memory_mapping")
 
 // Panel Feature Demura Properties
@@ -140,6 +177,10 @@
 #define DISABLE_DEMURA_SECONDARY             DISPLAY_PROP("disable_demura_secondary")
 #define DISABLE_DEMURA_PANEL_REPLACEMENT     DISPLAY_PROP("disable_demura_panel_replacement")
 #define DISABLE_DEMURA_OPT_SINGLELM          DISPLAY_PROP("disable_demura_opt_singlelm")
+#define DEMURA_PRIMARY_PANEL_OVERRIDE_LOW    DISPLAY_PROP("demura_primary_panel_override_low")
+#define DEMURA_PRIMARY_PANEL_OVERRIDE_HIGH    DISPLAY_PROP("demura_primary_panel_override_high")
+#define DEMURA_SECONDARY_PANEL_OVERRIDE_LOW    DISPLAY_PROP("demura_secondary_panel_override_low")
+#define DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH    DISPLAY_PROP("demura_secondary_panel_override_high")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
@@ -176,6 +217,7 @@
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")
 #define DISABLE_CWB_IDLE_FALLBACK            DISPLAY_PROP("disable_cwb_idle_fallback")
+#define TRANSIENT_FPS_CYCLE_COUNT            DISPLAY_PROP("transient_fps_cycle_count")
 
 // Add all other.properties above
 // End of property

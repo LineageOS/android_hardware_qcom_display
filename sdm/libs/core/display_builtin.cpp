@@ -472,11 +472,14 @@ DisplayError DisplayBuiltIn::colorSamplingOff() {
 
 DisplayError DisplayBuiltIn::SetupSPR() {
   int spr_prop_value = 0;
+  int spr_bypass_prop_value = 0;
   Debug::GetProperty(ENABLE_SPR, &spr_prop_value);
+  Debug::GetProperty(ENABLE_SPR_BYPASS, &spr_bypass_prop_value);
 
   if (spr_prop_value) {
     SPRInputConfig spr_cfg;
     spr_cfg.panel_name = std::string(hw_panel_info_.panel_name);
+    spr_cfg.spr_bypassed = (spr_bypass_prop_value) ? true : false;
     spr_ = pf_factory_->CreateSPRIntf(spr_cfg, prop_intf_);
 
     if (spr_ == nullptr) {
@@ -505,9 +508,21 @@ DisplayError DisplayBuiltIn::SetupDemura() {
   }
 
   int value = 0;
+  uint64_t panel_id = 0;
+  int panel_id_w = 0;
   if (IsPrimaryDisplay()) {
+    Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_LOW, &panel_id_w);
+    panel_id = static_cast<uint32_t>(panel_id_w);
+    Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
+    panel_id |=  ((static_cast<uint64_t>(panel_id_w)) << 32);
+    DLOGI("panel overide total value %lx\n", panel_id);
     Debug::Get()->GetProperty(DISABLE_DEMURA_PRIMARY, &value);
   } else {
+    Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_LOW, &panel_id_w);
+    panel_id = static_cast<uint32_t>(panel_id_w);
+    Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
+    panel_id |=  ((static_cast<uint64_t>(panel_id_w)) << 32);
+    DLOGI("panel overide total value %lx\n", panel_id);
     Debug::Get()->GetProperty(DISABLE_DEMURA_SECONDARY, &value);
   }
 
@@ -565,6 +580,8 @@ DisplayError DisplayBuiltIn::SetupDemura() {
     hfc_buffer_fd_ = buf_out_params->buffers[0].fd;
     hfc_buffer_size_ = buf_out_params->buffers[0].size;
 #endif
+    DLOGI("panel id %lx\n", input_cfg.panel_id);
+    input_cfg.panel_id = panel_id;
     demura_ = pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
 
     if (!demura_) {

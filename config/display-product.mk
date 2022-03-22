@@ -149,6 +149,16 @@ ifeq ($(TARGET_USES_QMAA),true)
     ifneq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
         #QMAA Mode is enabled
         TARGET_IS_HEADLESS := true
+        TARGET_DISABLE_DISPLAY := true
+    endif
+endif
+
+ifeq ($(TARGET_USES_QSPA),true)
+    ifeq ($(TARGET_USES_QSPA_CONFIG_DISPLAY),false)
+        #QSPA Mode is disabled for subsystem.
+        #Subsystem will be Plugged out.
+        TARGET_IS_HEADLESS := true
+        TARGET_DISABLE_DISPLAY := true
     endif
 endif
 
