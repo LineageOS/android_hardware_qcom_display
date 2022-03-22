@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2014 - 2016, 2018 - 2021 The Linux Foundation. All rights reserved.
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -215,6 +216,13 @@ class CoreInterface {
     @sa CreateDisplay
   */
   virtual DisplayError DestroyDisplay(DisplayInterface *interface) = 0;
+
+#ifdef PROFILE_COVERAGE_DATA
+  /*! @brief Method to destroy a display device.
+
+  */
+  virtual DisplayError DumpCodeCoverage() = 0;
+#endif
 
   /*! @brief Method to update the bandwidth limit as per given mode.
 

@@ -125,8 +125,8 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   if (set_max_lum_ != -1.0 || set_min_lum_ != -1.0) {
     hw_panel_info.peak_luminance = set_max_lum_;
     hw_panel_info.blackness_level = set_min_lum_;
-    DLOGI("set peak_luminance %f blackness_level %f", hw_panel_info.peak_luminance,
-          hw_panel_info.blackness_level);
+    DLOGI("set peak_luminance %f blackness_level %f for display %d-%d", display_id_,
+          display_type_, hw_panel_info.peak_luminance, hw_panel_info.blackness_level);
   }
 
   error = hw_intf_->GetMixerAttributes(&mixer_attributes);
@@ -159,8 +159,8 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   hw_panel_info_ = hw_panel_info;
   fb_config_ = fb_config;
 
-  DLOGI("Virtual display resolution changed to[%dx%d]", display_attributes_.x_pixels,
-        display_attributes_.y_pixels);
+  DLOGI("Virtual display %d-%d resolution changed to [%dx%d]", display_id_,
+        display_type_, display_attributes_.x_pixels, display_attributes_.y_pixels);
 
   return kErrorNone;
 }

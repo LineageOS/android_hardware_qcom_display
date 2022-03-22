@@ -151,7 +151,7 @@ cc_library_shared {
 //allocator
 cc_binary {
     name: "vendor.qti.hardware.display.allocator-service",
-    defaults: ["qtidisplay_common_defaults"],
+    defaults: ["qtidisplay_alloc_defaults"],
     sanitize: {
         integer_overflow: true,
     },

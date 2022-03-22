@@ -632,8 +632,8 @@ void HWDeviceDRM::InitializeConfigs() {
   // Update current mode with preferred mode
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
       if (connector_info_.modes[mode_index].mode.type & DRM_MODE_TYPE_PREFERRED) {
-        DLOGI("Updating current display mode %d to preferred mode %d.", current_mode_index_,
-              mode_index);
+        DLOGI("Updating current display %d-%d mode %d to preferred mode %d.", display_id_,
+              disp_type_, current_mode_index_, mode_index);
         current_mode_index_ = mode_index;
         break;
       }
@@ -731,9 +731,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].is_device_split = (display_attributes_[index].topology_num_split > 1);
 
   DLOGI(
-      "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
-      " V_FRONT_PORCH: %d [RFI Adjusted : %s], V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d,"
-      " CLK: %dKHZ, TOPOLOGY: %d [SPLIT NUMBER: %d], HW_SPLIT: %d",
+      "Display %d-%d attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH:"
+      " %d, V_FRONT_PORCH: %d [RFI Adjusted : %s], V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d,"
+      " CLK: %dKHZ, TOPOLOGY: %d [SPLIT NUMBER: %d], HW_SPLIT: %d", display_id_, disp_type_,
       index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
       display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
       display_attributes_[index].fps, display_attributes_[index].is_device_split,
@@ -1088,9 +1088,10 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   UpdateMixerAttributes();
 
   DLOGI_IF(kTagDriverConfig,
-      "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
+      "Display %d-%d attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, "
+      "LM_SPLIT: %d, V_BACK_PORCH: %d,"
       " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, "
-      "TOPOLOGY: %d, PanelMode %s",
+      "TOPOLOGY: %d, PanelMode %s", display_id_, disp_type_,
       index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
       display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
       display_attributes_[index].fps, display_attributes_[index].is_device_split,
@@ -1619,8 +1620,8 @@ void HWDeviceDRM::SetNoiseLayerConfig(const NoiseLayerConfig &noise_config) {
   noise_cfg_.noise_strength =  noise_config.noise_strength;
   noise_cfg_.alpha_noise = noise_config.alpha_noise;
   noise_cfg_.temporal_en = noise_config.temporal_en;
-  DLOGV_IF(kTagDriverConfig, "Display_id = %d z_noise = %d z_attn = %d attn_f = %d noise_str = %d"
-           "alpha noise = %d temporal_en = %d", display_id_,
+  DLOGV_IF(kTagDriverConfig, "Display %d-%d z_noise = %d z_attn = %d attn_f = %d"
+           " noise_str = %d alpha noise = %d temporal_en = %d", display_id_, disp_type_,
            noise_cfg_.zpos_noise, noise_cfg_.zpos_attn, noise_cfg_.attn_factor,
            noise_cfg_.noise_strength, noise_cfg_.alpha_noise, noise_cfg_.temporal_en);
 }
@@ -2572,8 +2573,9 @@ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
 
 void HWDeviceDRM::DumpConnectorModeInfo() {
   for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
-    DLOGI("Mode[%d] Name:%s vref:%d hdisp:%d hsync_s:%d hsync_e:%d htotal:%d " \
-          "vdisp:%d vsync_s:%d vsync_e:%d vtotal:%d\n", i, connector_info_.modes[i].mode.name,
+    DLOGI("Display %d-%d Mode[%d] Name:%s vref:%d hdisp:%d hsync_s:%d hsync_e:%d htotal:%d " \
+          "vdisp:%d vsync_s:%d vsync_e:%d vtotal:%d\n", display_id_, disp_type_, i,
+          connector_info_.modes[i].mode.name,
           connector_info_.modes[i].mode.vrefresh, connector_info_.modes[i].mode.hdisplay,
           connector_info_.modes[i].mode.hsync_start, connector_info_.modes[i].mode.hsync_end,
           connector_info_.modes[i].mode.htotal, connector_info_.modes[i].mode.vdisplay,
@@ -2811,7 +2813,8 @@ bool HWDeviceDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bo
 
   if (cwb_config_.cwb_disp_id != -1 && cwb_config_.cwb_disp_id != display_id_) {
     // Either cwb is currently active or tearing down on display cwb_config_.cwb_disp_id
-    DLOGW("CWB already busy with display : %d", cwb_config_.cwb_disp_id);
+    DLOGW("On display %d-%d CWB already busy with display : %d", display_id_, disp_type_,
+          cwb_config_.cwb_disp_id);
     return false;
   } else {
     cwb_config_.cwb_disp_id = display_id_;
@@ -3029,7 +3032,8 @@ DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
     kernel_params.id = DRMPPFeatureID::kFeatureCWBDither;
   } else {
     kernel_params.id = DRMPPFeatureID::kFeatureDither;
-    DLOGI_IF(kTagDriverConfig, "pp cwb blocks not supported, to config pp-dither hw");
+    DLOGI_IF(kTagDriverConfig, "On display %d-%d pp cwb blocks not supported, to"
+             " config pp-dither hw", display_id_, disp_type_);
   }
 
   if (payload && (mode == sde_drm::DRMCWbCaptureMode::DSPP_OUT ||
@@ -3037,13 +3041,15 @@ DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
     PPFeatureInfo * feature_wrapper = reinterpret_cast<PPFeatureInfo *>(payload);
     ret = hw_color_mgr_->GetDrmFeature(feature_wrapper, &kernel_params);
     if (ret)
-      DLOGE("Failed to get drm feature %d params, ret %d", kernel_params.id, ret);
+      DLOGE("Failed to get drm feature %d params on display %d-%d, ret %d", kernel_params.id,
+            display_id_, disp_type_,  ret);
   } else {
     kernel_params.type = sde_drm::kPropBlob;
     kernel_params.payload = NULL;
   }
 
-  DLOGI_IF(kTagDriverConfig, "CWB dither %s case", kernel_params.payload ? "enable" : "disable");
+  DLOGI_IF(kTagDriverConfig, "On display %d-%d CWB dither %s case", display_id_, disp_type_,
+           kernel_params.payload ? "enable" : "disable");
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, conn_id, &kernel_params);
   hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
   return kErrorNone;
@@ -3051,7 +3057,7 @@ DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
 
 DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
   if (!bl_max) {
-    DLOGE("Invalid input param");
+    DLOGE("Display %d-%d Invalid input param", display_id_, disp_type_);
     return kErrorParameters;
   }
 
@@ -3061,8 +3067,8 @@ DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
 
 DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
   if (!payload || size != sizeof(DRMPPFeatureInfo)) {
-    DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
-        sizeof(DRMPPFeatureInfo));
+    DLOGE("Invalid input params on display %d-%d payload %pK, size %zd expect size %zd",
+          display_id_, disp_type_, payload, size, sizeof(DRMPPFeatureInfo));
       return kErrorParameters;
   }
 

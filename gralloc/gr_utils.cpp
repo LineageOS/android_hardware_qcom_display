@@ -2711,7 +2711,7 @@ static Error getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &com
       }
       break;
     default:
-      ALOGI("Offset and size in bits unknown for format %d", format);
+      ALOGD_IF(DEBUG, "Offset and size in bits unknown for format %d", format);
       return Error::UNSUPPORTED;
   }
   return Error::NONE;

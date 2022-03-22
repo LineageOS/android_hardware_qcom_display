@@ -45,6 +45,16 @@
 
 #define __CLASS__ "CoreImpl"
 
+#ifdef PROFILE_COVERAGE_DATA
+extern "C" {
+
+int __llvm_profile_runtime = 0;
+
+void __llvm_profile_try_write_file(void);
+
+}
+#endif
+
 namespace sdm {
 
 CoreImpl::CoreImpl(BufferAllocator *buffer_allocator,
@@ -625,5 +635,20 @@ void CoreIPCVmCallbackImpl::OnServerExit() {
   DLOGI("Free Export buffers successful");
 }
 // LCOV_EXCL_STOP
+
+#ifdef PROFILE_COVERAGE_DATA
+DisplayError CoreImpl::DumpCodeCoverage() {
+  DLOGD("CoreImpl: Flushing Gcov data---");
+  __llvm_profile_try_write_file();
+  if (!extension_intf_) {
+    DLOGE("CoreImpl: extension_intf_ undefined");
+    return kErrorUndefined;
+  }
+
+  Debug::DumpCodeCoverage();
+  extension_intf_->DumpCodeCoverage();
+  return kErrorNone;
+}
+#endif
 
 }  // namespace sdm
