@@ -1142,6 +1142,7 @@ void DisplayBuiltIn::IdlePowerCollapse() {
     ClientLock lock(disp_mutex_);
     validated_ = false;
     comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+    event_handler_->HandleEvent(kIdleTimeout);
   }
 }
 

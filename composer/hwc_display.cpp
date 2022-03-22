@@ -1493,6 +1493,9 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
+    case kIdleTimeout:
+      ReqPerfHintRelease();
+      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;

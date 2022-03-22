@@ -1642,4 +1642,8 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
   num_basic_frames_ = 0;
 }
 
+void HWCDisplayBuiltIn::ReqPerfHintRelease() {
+  cpu_hint_->ReqHintRelease();
+}
+
 }  // namespace sdm
