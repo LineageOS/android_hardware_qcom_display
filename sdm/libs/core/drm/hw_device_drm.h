@@ -48,7 +48,7 @@
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
 #define UI_FBID_LIMIT 4
-#define VIDEO_FBID_LIMIT 16
+#define VIDEO_FBID_LIMIT 36
 #define OFFLINE_ROTATOR_FBID_LIMIT 2
 
 using sde_drm::DRMPowerMode;
