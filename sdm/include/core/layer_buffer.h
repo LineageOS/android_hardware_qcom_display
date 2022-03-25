@@ -275,6 +275,12 @@ struct LayerHistData {
   uint32_t display_height;      /* video display_height */
 };
 
+struct LayerTimestamp {
+  uint32_t valid; /* Below fields are valid only if this boolean is set to true */
+  uint32_t frame_number; /* Frame position of the content contained in the layer buffer */
+  uint64_t frame_timestamp_us; /* Content timestamp of the frame contained in the layer buffer */
+};
+
 /*! @brief This structure defines a layer buffer handle which contains raw buffer and its associated
   properties.
 
@@ -331,6 +337,9 @@ struct LayerBuffer {
                                 //! of (tile size, #of tiles)
 
   LayerHistData hist_data;      //!< Histogram data associated with this layer buffer.
+  LayerTimestamp timestamp_data;
+                                //!< Timestamp data associated with this layer buffer.
+
 
   LayerBuffer() {
     color_metadata.colorPrimaries = ColorPrimaries_BT709_5;

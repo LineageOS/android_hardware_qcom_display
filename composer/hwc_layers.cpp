@@ -1085,6 +1085,19 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
     }
   }
 
+  int timestamp_set = qtigralloc::getMetadataState(handle, QTI_VIDEO_TS_INFO);
+  if (timestamp_set > 0) {
+    VideoTimestampInfo timestamp_info = {};
+    layer_buffer->timestamp_data.valid = false;
+    int err = static_cast<int>(qtigralloc::get(handle, QTI_VIDEO_TS_INFO, &timestamp_info));
+
+    if (!err && timestamp_info.enable) {
+      layer_buffer->timestamp_data.valid = true;
+      layer_buffer->timestamp_data.frame_number = timestamp_info.frame_number;
+      layer_buffer->timestamp_data.frame_timestamp_us = timestamp_info.frame_timestamp_us;
+    }
+  }
+
   return kErrorNone;
 }
 
