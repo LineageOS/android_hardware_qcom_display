@@ -311,11 +311,17 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
 }
 
 FrameBufferObject::FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
-                             uint32_t width, uint32_t height)
-  :fb_id_(fb_id), format_(format), width_(width), height_(height) {
-}
+                             uint32_t width, uint32_t height, bool shallow)
+  :fb_id_(fb_id), format_(format), width_(width), height_(height),
+  shallow_(shallow) {}
 
 FrameBufferObject::~FrameBufferObject() {
+  // Don't call RemoveFbId in case its a shallow copy from other display
+  if (shallow_) {
+    DLOGI("FBID: %d is a shallow copy", fb_id_);
+    return;
+  }
+
   DRMMaster *master;
   DRMMaster::GetInstance(&master);
   int ret = master->RemoveFbId(fb_id_);
