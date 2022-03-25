@@ -1342,7 +1342,7 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
         return;
       }
       uint64_t cache_state = va_arg(args, uint32_t);
-      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::LLC_CACHE_STATE);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::CACHE_STATE);
       int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, cache_state);
       if (ret < 0) {
         DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d, cache_state %d ret %d",

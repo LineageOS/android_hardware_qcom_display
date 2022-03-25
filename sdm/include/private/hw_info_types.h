@@ -908,6 +908,7 @@ struct HWLayersInfo {
   bool cwb_present = false;  // Indicates there is cwb layer or not
   bool lower_fps = false;  // This field hints to lower the fps in case of idle fallback
   bool enable_self_refresh = false;  // This field hints to enable self refresh when idle timeout
+  bool iwe_enabled = false;
   HWDNSCInfo dnsc_cfg = {};
 };
 
