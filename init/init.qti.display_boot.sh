@@ -41,7 +41,7 @@ case "$target" in
     #SOC ID for Kalama is 519
     case "$soc_hwid" in
       519)
-        setprop vendor.display.enable_fb_scaling 0
+        setprop vendor.display.enable_fb_scaling 1
         setprop vendor.display.target.version 4
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
