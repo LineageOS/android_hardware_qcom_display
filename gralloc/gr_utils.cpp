@@ -3055,7 +3055,7 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
     }
     case (int64_t)StandardMetadataType::ALLOCATION_SIZE:
       if (copy) {
-        *(reinterpret_cast<uint64_t *>(in)) = (uint64_t)handle->size;
+        *(reinterpret_cast<uint32_t *>(in)) = (uint32_t)handle->size;
       } else {
         *out = &handle->size;
       }

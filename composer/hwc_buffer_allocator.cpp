@@ -35,6 +35,7 @@
 #include <core/buffer_allocator.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <gr_utils.h>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_debugger.h"
@@ -379,10 +380,9 @@ int HWCBufferAllocator::GetBufferGeometry(void *buf, int32_t &slice_width, int32
 int HWCBufferAllocator::GetCustomWidthAndHeight(const native_handle_t *handle, int *width,
                                                 int *height) {
   void *hnd = const_cast<native_handle_t *>(handle);
-  private_handle_t *priv_handle = static_cast<private_handle_t *>(hnd);
 
-  *width = priv_handle->width;
-  *height = priv_handle->height;
+  gralloc::GetMetaDataValue(hnd, QTI_ALIGNED_WIDTH_IN_PIXELS, width);
+  gralloc::GetMetaDataValue(hnd, QTI_ALIGNED_HEIGHT_IN_PIXELS, height);
 
   auto err = GetGrallocInstance();
   if (err != 0) {
