@@ -218,6 +218,7 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_RGBA_4444:
       return ADRENO_PIXELFORMAT_R4G4B4A4;
     case HAL_PIXEL_FORMAT_R_8:
+    case static_cast<int>(aidl::android::hardware::graphics::common::PixelFormat::R_8):
       return ADRENO_PIXELFORMAT_R8_UNORM;
     case HAL_PIXEL_FORMAT_RG_88:
       return ADRENO_PIXELFORMAT_R8G8_UNORM;
