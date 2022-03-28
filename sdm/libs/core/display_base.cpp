@@ -1703,6 +1703,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (state == state_) {
     if (pending_power_state_ != kPowerStateNone) {
       hw_intf_->CancelDeferredPowerMode();
+      pending_power_state_ = kPowerStateNone;
     }
     DLOGI("Same state transition is requested.");
     return kErrorNone;
