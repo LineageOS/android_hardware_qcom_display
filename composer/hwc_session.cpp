@@ -1305,16 +1305,6 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   }
 
   if (!override_mode) {
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    bool needs_validation = false;
-    {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-      needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
-                          mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
-                          active_builtin_disp_id < HWCCallbacks::kNumDisplays);
-
-    }
-
     if (mode == HWC2::PowerMode::Off || mode == HWC2::PowerMode::DozeSuspend) {
       active_displays_.erase(display);
     } else {
