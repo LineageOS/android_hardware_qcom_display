@@ -563,6 +563,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
   android::status_t RefreshScreen(const android::Parcel *input_parcel);
   android::status_t SetAd4RoiConfig(const android::Parcel *input_parcel);
+  android::status_t SetJitterConfig(const android::Parcel *input_parcel);
   android::status_t SetDsiClk(const android::Parcel *input_parcel);
   android::status_t GetDsiClk(const android::Parcel *input_parcel, android::Parcel *output_parcel);
   android::status_t GetSupportedDsiClk(const android::Parcel *input_parcel,

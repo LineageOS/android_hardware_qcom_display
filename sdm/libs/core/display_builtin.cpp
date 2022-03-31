@@ -1826,6 +1826,22 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  ClientLock lock(disp_mutex_);
+  if (!active_) {
+    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    return kErrorNone;
+  }
+
+  if (jitter_type > 2 || (value > 10.0f || value < 0.0f)) {
+    return kErrorNotSupported;
+  }
+
+  DLOGV("Setting jitter configuration; jitter_type: %d, jitter_val: %lf, jitter_time: %d",
+        jitter_type, value, time);
+  return hw_intf_->SetJitterConfig(jitter_type, value, time);
+}
+
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   ClientLock lock(disp_mutex_);
   if (!active_) {

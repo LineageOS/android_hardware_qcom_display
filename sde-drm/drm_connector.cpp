@@ -1303,6 +1303,40 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       }
     } break;
 
+    case DRMOps::CONNECTOR_GET_TRANSFER_TIME: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::TRANSFER_TIME)) {
+        return;
+      }
+      uint32_t *transfer_time = va_arg(args, uint32_t *);
+      *transfer_time = 0;
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::TRANSFER_TIME);
+      drmModeAtomicAddProperty(req, obj_id, prop_id, reinterpret_cast<uint64_t>(transfer_time));
+    } break;
+
+    case DRMOps::CONNECTOR_SET_JITTER_CONFIG: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::JITTER_CONFIG)) {
+        return;
+      }
+      jitter_cfg_.type = va_arg(args, uint32_t);
+      float jitter_value = va_arg(args, double);
+      jitter_cfg_.value = (uint32_t)((float)jitter_value * 100);
+      jitter_cfg_.time = va_arg(args, uint32_t);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::JITTER_CONFIG);
+      int ret = drmModeAtomicAddProperty(req, obj_id, prop_id,
+                                         reinterpret_cast<uint64_t>(&jitter_cfg_));
+      if (ret < 0) {
+        DRM_LOGE(
+            "AtomicAddProperty failed obj_id 0x%x, prop_id %d, jitter_type %d, jitter_val %d,"
+            " jitter_time %d ret %d",
+            obj_id, prop_id, jitter_cfg_.type, jitter_cfg_.value, jitter_cfg_.time, ret);
+      } else {
+        DRM_LOGD(
+            "Connector %d: Setting jitter config; jitter_type: %d, jitter_val: %d, "
+            "jitter_time: %d",
+            obj_id, jitter_cfg_.type, jitter_cfg_.value, jitter_cfg_.time);
+      }
+    } break;
+
     case DRMOps::CONNECTOR_CACHE_STATE: {
       if (!prop_mgr_.IsPropertyAvailable(DRMProperty::CACHE_STATE)) {
         return;

@@ -152,6 +152,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                             PPDisplayAPIPayload *out_payload,
                                             PPPendingParams *pending_action);
+  virtual DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) {
     return kErrorNotSupported;
   }

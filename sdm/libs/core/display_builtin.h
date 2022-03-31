@@ -158,6 +158,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDisplayDppsAdROI(void *payload) override;
   DisplayError SetQSyncMode(QSyncMode qsync_mode) override;
   DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) override;
+  DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) override;
   DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) override;
   DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) override;
   DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) override;

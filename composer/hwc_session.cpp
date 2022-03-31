@@ -1731,6 +1731,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetDsiClk(input_parcel);
       break;
 
+    case qService::IQService::SET_JITTER_CONFIG:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetJitterConfig(input_parcel);
+      break;
+
     case qService::IQService::GET_DSI_CLK:
       if (!input_parcel || !output_parcel) {
         DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
@@ -2528,6 +2536,20 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
     pstr = pstr+strlen(token);
 
   return pstr;
+}
+
+android::status_t HWCSession::SetJitterConfig(const android::Parcel *input_parcel) {
+  uint32_t jitter_type = UINT32(input_parcel->readInt32());
+  float jitter_val = input_parcel->readFloat();
+  uint32_t jitter_time = UINT32(input_parcel->readInt32());
+
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+    return -ENODEV;
+  }
+
+  return hwc_display_[HWC_DISPLAY_PRIMARY]->SetJitterConfig(jitter_type, jitter_val, jitter_time);
 }
 
 android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {

@@ -183,6 +183,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetAlternateDisplayConfig(uint32_t *))
   MAKE_NO_OP(ForceToneMapUpdate(LayerStack *layer_stack))
   MAKE_NO_OP(UpdateTransferTime(uint32_t transfer_time))
+  MAKE_NO_OP(SetJitterConfig(uint32_t, float, uint32_t))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};
