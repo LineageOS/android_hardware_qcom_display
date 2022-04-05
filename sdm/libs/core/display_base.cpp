@@ -1327,7 +1327,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
   if (first_cycle_ && (draw_method_ != kDrawDefault) && (display_type_ != kVirtual) &&
-      !hw_panel_info_.is_primary_panel) {
+      !hw_panel_info_.is_primary_panel && (display_type_ != kHDMI)) {
     DLOGI("Registering for power events");
     hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
   }
@@ -1703,6 +1703,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (state == state_) {
     if (pending_power_state_ != kPowerStateNone) {
       hw_intf_->CancelDeferredPowerMode();
+      pending_power_state_ = kPowerStateNone;
     }
     DLOGI("Same state transition is requested.");
     return kErrorNone;
@@ -1738,6 +1739,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateOn:
+    if (display_type_ == kHDMI && first_cycle_) {
+      hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
+    }
+
     error = hw_intf_->PowerOn(cached_qos_data_, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
@@ -1803,7 +1808,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
-  if ((pending_power_state_ == kPowerStateNone) && !first_cycle_) {
+  if ((pending_power_state_ == kPowerStateNone) && (!first_cycle_ || display_type_ == kHDMI)) {
     CacheRetireFence();
     SyncPoints sync = {};
     sync.retire_fence = retire_fence_;
