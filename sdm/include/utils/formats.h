@@ -52,6 +52,7 @@ struct FormatTileSize {
 
 bool IsUBWCFormat(LayerBufferFormat format);
 bool Is10BitFormat(LayerBufferFormat format);
+bool Is16BitFormat(LayerBufferFormat format);
 const char *GetFormatString(const LayerBufferFormat &format);
 BufferLayout GetBufferLayout(LayerBufferFormat format);
 int GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size);
@@ -60,8 +61,7 @@ int GetCwbAlignmentFactor(LayerBufferFormat format);
 bool HasAlphaChannel(LayerBufferFormat format);
 bool IsWideColor(const ColorPrimaries &color_primary);
 bool IsRgbFormat(const LayerBufferFormat &format);
-
+bool IsExtendedRange(LayerBuffer buffer);
 }  // namespace sdm
 
 #endif  // __FORMATS_H__
-

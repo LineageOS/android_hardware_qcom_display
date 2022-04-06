@@ -712,6 +712,17 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   return HWC2::Error::None;
 }
 
+static bool IsHDRLayerPresent(Layer *layer) {
+  if (layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                     (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                     layer->input_buffer.color_metadata.transfer == Transfer_HLG)) {
+    return true;
+  } else if (IsExtendedRange(layer->input_buffer)) {
+    // Treat input format FP16 with extended range as HDR layer
+    return true;
+  }
+  return false;
+}
 
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
@@ -785,9 +796,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.single_buffered_layer_present = true;
     }
 
-    bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
-                     (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
-                     layer->input_buffer.color_metadata.transfer == Transfer_HLG);
+    bool hdr_layer = IsHDRLayerPresent(layer);
     if (hdr_layer && !disable_hdr_handling_) {
       // Dont honor HDR when its handling is disabled
       layer->input_buffer.flags.hdr = true;
@@ -1282,6 +1291,8 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
+
+  SetClientTargetDataSpace(dataspace);
   client_target_->SetLayerSurfaceDamage(damage);
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_handle_ = target;

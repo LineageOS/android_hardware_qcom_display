@@ -160,6 +160,31 @@ static struct sde_drm_csc_v1 csc_10bit_convert[kCscTypeMax] = {
   },
 };
 
+static struct drm_msm_fp16_csc csc_fp16_convert[kFP16CscTypeMax] = {
+  [kFP16CscSrgb2Dcip3] = {
+      0x0,  // flags -- currently unused
+      FP16_CSC_CFG0_PARAM_LEN,
+      {
+        0x3A94, 0x31AE, 0x0, 0x0,
+        0x2840, 0x3BBC, 0x0, 0x0,
+        0x2460, 0x2CA2, 0x3B49, 0x0,
+      },
+      FP16_CSC_CFG1_PARAM_LEN,
+      {0xB333, 0x3CE6, 0XA962, 0x3C2B, 0xAE49, 0x3C65, 0x0, 0x3C00,}
+  },
+  [kFP16CscSrgb2Bt2020] = {
+      0x0,  // flags -- currently unused
+      FP16_CSC_CFG0_PARAM_LEN,
+      {
+        0x3905, 0x3545, 0x2988, 0x0,
+        0x2C6D, 0x3B58, 0x21D8, 0x0,
+        0x2434, 0x2DA3, 0x3B2A, 0x0,
+      },
+      FP16_CSC_CFG1_PARAM_LEN,
+      {0xD527, 0x5A7D, 0XCC26, 0x586D, 0xCB6C, 0x585D, 0x0, 0x57D0,}
+  },
+};
+
 static uint8_t REFLECT_X = 0;
 static uint8_t REFLECT_Y = 0;
 static uint8_t ROTATE_90 = 0;
@@ -836,6 +861,70 @@ bool DRMPlane::SetCscConfig(drmModeAtomicReq *req, DRMCscType csc_type) {
   return true;
 }
 
+bool DRMPlane::SetFp16CscConfig(drmModeAtomicReq *req, int csc_type) {
+  if (csc_type > kFP16CscTypeMax) {
+    return false;
+  }
+  auto prop_id = prop_mgr_.GetPropertyId(DRMProperty::SDE_SSPP_FP16_CSC_V1);
+  if (!prop_id) {
+    return false;
+  }
+
+  if (csc_type == kFP16CscTypeMax) {
+    AddProperty(req, drm_plane_->plane_id, prop_id, 0, false /* cache */, tmp_prop_val_map_);
+  } else {
+    uint32_t fp16_csc_blob_id = 0;
+    drmModeCreatePropertyBlob(fd_, reinterpret_cast<void *>(&csc_fp16_convert[csc_type]),
+                              sizeof(drm_msm_fp16_csc), &fp16_csc_blob_id);
+    AddProperty(req, drm_plane_->plane_id, prop_id, fp16_csc_blob_id, false /* cache */,
+                tmp_prop_val_map_);
+  }
+
+  return true;
+}
+
+bool DRMPlane::SetFp16IgcConfig(drmModeAtomicReq *req, uint32_t igc_en) {
+  auto prop_id = prop_mgr_.GetPropertyId(DRMProperty::SDE_SSPP_FP16_IGC_V1);
+  if (!prop_id) {
+    return false;
+  }
+
+  AddProperty(req, drm_plane_->plane_id, prop_id, igc_en, false /* cache */, tmp_prop_val_map_);
+
+  return true;
+}
+
+bool DRMPlane::SetFp16UnmultConfig(drmModeAtomicReq *req, uint32_t unmult_en) {
+  auto prop_id = prop_mgr_.GetPropertyId(DRMProperty::SDE_SSPP_FP16_UNMULT_V1);
+  if (!prop_id) {
+    return false;
+  }
+
+  AddProperty(req, drm_plane_->plane_id, prop_id, unmult_en, false /* cache */, tmp_prop_val_map_);
+
+  return true;
+}
+
+bool DRMPlane::SetFp16GcConfig(drmModeAtomicReq *req, drm_msm_fp16_gc *fp16_gc_config) {
+  auto prop_id = prop_mgr_.GetPropertyId(DRMProperty::SDE_SSPP_FP16_GC_V1);
+  if (!prop_id) {
+    return false;
+  }
+
+
+  if (fp16_gc_config->mode == FP16_GC_MODE_INVALID) {
+    AddProperty(req, drm_plane_->plane_id, prop_id, 0, false /* cache */, tmp_prop_val_map_);
+  } else {
+    uint32_t fp16_gc_blob_id = 0;
+    drmModeCreatePropertyBlob(fd_, reinterpret_cast<void *>(fp16_gc_config),
+                              sizeof(drm_msm_fp16_gc), &fp16_gc_blob_id);
+    AddProperty(req, drm_plane_->plane_id, prop_id, fp16_gc_blob_id, false /* cache */,
+                tmp_prop_val_map_);
+  }
+
+  return true;
+}
+
 bool DRMPlane::SetScalerConfig(drmModeAtomicReq *req, uint64_t handle) {
   if (plane_type_info_.type != DRMPlaneType::VIG) {
     return false;
@@ -1140,6 +1229,28 @@ void DRMPlane::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
         pp_mgr_->SetPPFeature(req, obj_id, *data);
         UpdatePPLutFeatureInuse(data);
       }
+    } break;
+
+    case DRMOps::PLANE_SET_FP16_CSC_CONFIG: {
+      uint32_t config = va_arg(args, uint32_t);
+      SetFp16CscConfig(req, config);
+    } break;
+
+    case DRMOps::PLANE_SET_FP16_GC_CONFIG: {
+      drm_msm_fp16_gc *config = va_arg(args, drm_msm_fp16_gc *);
+      if (config) {
+        SetFp16GcConfig(req, config);
+      }
+    } break;
+
+    case DRMOps::PLANE_SET_FP16_IGC_CONFIG: {
+      uint32_t config = va_arg(args, uint32_t);
+      SetFp16IgcConfig(req, config);
+    } break;
+
+    case DRMOps::PLANE_SET_FP16_UNMULT_CONFIG: {
+      uint32_t config = va_arg(args, uint32_t);
+      SetFp16UnmultConfig(req, config);
     } break;
 
     default:

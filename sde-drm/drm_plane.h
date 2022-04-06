@@ -89,6 +89,10 @@ class DRMPlane {
   void ResetPlanesLUT(drmModeAtomicReq *req);
   void GetIndex(uint8_t *index) { *index = plane_type_info_.pipe_idx; }
   void GetRect(uint8_t *rect) { *rect = plane_type_info_.master_plane_id ? 1 : 0; }
+  bool SetFp16CscConfig(drmModeAtomicReq *req, int csc_type);
+  bool SetFp16IgcConfig(drmModeAtomicReq *req, uint32_t igc_en);
+  bool SetFp16UnmultConfig(drmModeAtomicReq *req, uint32_t unmult_en);
+  bool SetFp16GcConfig(drmModeAtomicReq *req, drm_msm_fp16_gc *fp16_gc_config);
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
