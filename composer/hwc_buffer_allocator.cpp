@@ -184,6 +184,9 @@ int HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
   allocator_->allocate(descriptor, 1,
                        [&](const auto &_error, const auto &_stride, const auto &_buffers) {
+                         if (_error != Error::NONE) {
+                           return;
+                         }
                          hidl_err = _error;
                          raw_handle = _buffers[0];
                        });
