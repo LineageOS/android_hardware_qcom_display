@@ -320,8 +320,8 @@ struct DisplayConfigGroupInfo {
 
   bool operator==(const DisplayConfigGroupInfo& info) const {
     return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) &&
-            (h_total == info.h_total) && (v_total == info.v_total) && (x_dpi == info.x_dpi) &&
-            (y_dpi == info.y_dpi) && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
+            (x_dpi == info.x_dpi) && (y_dpi == info.y_dpi) && (is_yuv == info.is_yuv) &&
+            (smart_panel == info.smart_panel));
   }
 };
 
