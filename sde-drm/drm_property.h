@@ -224,7 +224,6 @@ enum struct DRMProperty {
   DYN_TRANSFER_TIME, // Setter
   TRANSFER_TIME,     // Getter
   JITTER_CONFIG,
-  LLC_CACHE_STATE,
   EARLY_FENCE_LINE,
   DNSC_BLR,
   WB_USAGE_TYPE,

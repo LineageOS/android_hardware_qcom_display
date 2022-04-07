@@ -101,12 +101,12 @@ class HWVirtualDRM : public HWDeviceDRM {
 
  private:
   void ConfigureWbConnectorFbId(uint32_t fb_id);
-  void ConfigureWbConnectorDestRect();
+  void ConfigureWbConnectorDestRect(bool reset = false);
   void ConfigureWbConnectorSecureMode(bool secure);
   void InitializeConfigs();
   DisplayError SetWbConfigs(const HWDisplayAttributes &display_attributes);
   void GetModeIndex(const HWDisplayAttributes &display_attributes, int *mode_index);
-  void ConfigureDNSC(const HWDNSCInfo& dnsc_cfg);
+  void ConfigureDNSC(HWLayersInfo *hw_layers_info);
 #ifdef FEATURE_DNSC_BLUR
   struct sde_drm_dnsc_blur_cfg dnsc_cfg_ = {};
 #endif
