@@ -22,6 +22,42 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 /*! @file layer_buffer.h
   @brief File for layer buffer structure.
 
@@ -310,6 +346,49 @@ enum BufferLayout {
   kLinear,    //!< Linear data
   kUBWC,      //!< UBWC aligned data
   kTPTiled    //!< Tightly Packed data
+};
+
+/*! @brief This structure defines a rectanglular area inside a display layer.
+
+  @sa LayerRectArray
+*/
+struct LayerRect {
+  float left   = 0.0f;   //!< Left-most pixel coordinate.
+  float top    = 0.0f;   //!< Top-most pixel coordinate.
+  float right  = 0.0f;   //!< Right-most pixel coordinate.
+  float bottom = 0.0f;   //!< Bottom-most pixel coordinate.
+
+  LayerRect() = default;
+
+  LayerRect(float l, float t, float r, float b) : left(l), top(t), right(r), bottom(b) { }
+
+  bool operator==(const LayerRect& rect) const {
+    return left == rect.left && right == rect.right && top == rect.top && bottom == rect.bottom;
+  }
+
+  bool operator!=(const LayerRect& rect) const {
+    return !operator==(rect);
+  }
+};
+
+/*! @brief This enum represents the Tappoints for CWB that are supported by the hardware. */
+enum CwbTapPoint {
+  kLmTapPoint,      // This is set by client to use Layer Mixer output for CWB.
+  kDsppTapPoint,    // This is set by client to use DSPP output for CWB.
+  kDemuraTapPoint,  // This is set by client to use Demura output for CWB.
+};
+
+/*! @brief This structure defines the configuration variables needed to perform CWB.
+
+  @sa LayerStack
+*/
+struct CwbConfig {
+  bool pu_as_cwb_roi = false;                        //!< Whether to include the PU ROI generated
+                                                     //!< from app layers in CWB ROI.
+  LayerRect cwb_roi = {};                            //!< Client specified ROI rect for CWB.
+  LayerRect cwb_full_rect = {};                      //!< Same as Output buffer Rect (unaligned).
+  CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;  //!< Client specified tap point for CWB.
+  void *dither_info = nullptr;                       //!< Pointer to the cwb dither setting.
 };
 
 class LayerBufferObject {

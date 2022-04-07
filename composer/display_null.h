@@ -108,6 +108,7 @@ class DisplayNull : public DisplayInterface {
   virtual void FlushConcurrentWriteback() {}
   virtual void ScreenRefresh() { }
   virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
+  virtual bool HandleCwbTeardown() { return false; }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))
@@ -184,6 +185,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(ForceToneMapUpdate(LayerStack *layer_stack))
   MAKE_NO_OP(UpdateTransferTime(uint32_t transfer_time))
   MAKE_NO_OP(SetJitterConfig(uint32_t, float, uint32_t))
+  MAKE_NO_OP(CaptureCwb(const LayerBuffer &, const CwbConfig &));
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

@@ -285,8 +285,6 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
     MarkLayersForClientComposition();
   }
 
-  SetCwbState();
-
   uint32_t refresh_rate = 0;
   display_intf_->GetRefreshRate(&refresh_rate);
   current_refresh_rate_ = refresh_rate;
@@ -334,9 +332,8 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
 
   bool skip_commit = false;
   {
-    std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
     skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
-                  !pending_refresh_ && !vsync_source && (cwb_state_.cwb_client == kCWBClientNone)
+                  !pending_refresh_ && !vsync_source && (cwb_buffer_map_.size() == 0)
                   && !needs_validation;
   }  // releasing the cwb state lock
   pending_refresh_ = false;
@@ -779,25 +776,18 @@ void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_
 }
 
 void HWCDisplayBuiltIn::HandleFrameCapture() {
-  if (readback_configured_ && output_buffer_.release_fence) {
-    frame_capture_status_ = Fence::Wait(output_buffer_.release_fence);
+  DisplayError ret = kErrorNone;
+  {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
+    cwb_capture_status_ = kErrorNone;
+    cwb_cv_.wait(lock);
+    ret = cwb_capture_status_;
   }
 
-  std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  DLOGV_IF(kTagQDCM, "Frame captured successfully for cwb_client %d on cwb_tap_point %d",
-           cwb_state_.cwb_client, cwb_config_.tap_point);
-
+  frame_capture_status_ = ret;
   frame_capture_buffer_queued_ = false;
-  readback_buffer_queued_ = false;
-  cwb_config_ = {};
-  readback_configured_ = false;
-  output_buffer_ = {};
-  cwb_state_.cwb_client = kCWBClientNone;
 
-  DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d "
-           "readback_buffer_queued_ %d cwb_tap_point %d readback_configured_ %d "
-           "cwb_client %d", frame_capture_buffer_queued_, readback_buffer_queued_,
-           cwb_config_.tap_point, readback_configured_, cwb_state_.cwb_client);
+  DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d",frame_capture_buffer_queued_);
 }
 
 int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
@@ -844,14 +834,6 @@ int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffe
 
 int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
                                          const CwbConfig &cwb_config) {
-  {
-    std::lock_guard<std::mutex> lock(cwb_state_lock_);
-    if (cwb_state_.cwb_client != kCWBClientNone) {
-      DLOGE("CWB is in use with client = %d", cwb_state_.cwb_client);
-      return -1;
-    }
-  }  // releasing the cwb state lock
-
   // Note: This function is called in context of a binder thread and a lock is already held
   if (output_buffer_info.alloc_buffer_info.fd < 0) {
     DLOGE("Invalid fd %d", output_buffer_info.alloc_buffer_info.fd);
@@ -1456,29 +1438,12 @@ bool HWCDisplayBuiltIn::NeedsLargeCompPerfHint() {
 
 HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
   DTRACE_SCOPED();
-  // Block on output buffer fence if client is internal.
-  // External clients will wait on their thread.
-  if (layer_stack_.output_buffer != nullptr && (cwb_state_.cwb_client != kCWBClientExternal)) {
-    auto &fence = layer_stack_.output_buffer->release_fence;
-    display_intf_->GetOutputBufferAcquireFence(&fence);
-  }
-
   HandleFrameOutput();
   PostCommitStitchLayers();
 
-  {
-    std::lock_guard<std::mutex> lock(cwb_state_lock_);
-    if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
-      ResetCwbState();
-      display_intf_->FlushConcurrentWriteback();
-    } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {  // cwb teardown frame.
-      cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
-      cwb_state_.cwb_disp_id = -1;
-      cwb_state_.cwb_status = CWBStatus::kCWBPostTeardown;
-      DLOGV_IF(kTagClient, "CWB display id = %d , cwb status = %d", cwb_state_.cwb_disp_id,
-               cwb_state_.cwb_status);
-    }
-  }  // releasing the cwb state lock
+  if (flush_ && layer_stack_.output_buffer == nullptr) {
+    display_intf_->FlushConcurrentWriteback();
+  }
 
   auto status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 /*  display_intf_->GetConfig(&fixed_info);

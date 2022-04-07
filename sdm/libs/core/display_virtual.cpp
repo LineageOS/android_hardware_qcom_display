@@ -143,7 +143,7 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   if (!display_comp_ctx_) {
     error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes,
                                            hw_panel_info, mixer_attributes, fb_config,
-                                           &display_comp_ctx_, &cached_qos_data_);
+                                           &display_comp_ctx_, &cached_qos_data_, this);
   } else {
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                               mixer_attributes, fb_config,

@@ -127,23 +127,6 @@ enum CWBClient {
   kCWBClientComposer,   // Client to HWC i.e. SurfaceFlinger
 };
 
-enum CWBStatus {
-  kCWBAvailable,     // Available to accept new CWB request
-  kCWBConfigure,     // CWB is Configured in the current frame
-  kCWBTeardown,      // CWB tear down in the current frame. Frame's Retire fence would be cached.
-                     // New CWB requests coming in are rejected until this retire fence signals.
-  kCWBPostTeardown,  // CWB teardown done in previous frame.
-};
-
-struct CwbState {
-  hwc2_display_t cwb_disp_id = -1;                          // display id on which cwb is either
-                                                            // requested, active or tearing down.
-  CWBClient cwb_client = kCWBClientNone;                    // the client actively performing cwb.
-  CWBStatus cwb_status = CWBStatus::kCWBAvailable;          // current cwb statuss
-  shared_ptr<Fence> teardown_frame_retire_fence = nullptr;  // cache cwb disable frame retire fence
-                                                            // to reject requests until it signals.
-};
-
 struct TransientRefreshRateInfo {
   uint32_t transient_vsync_period;
   int64_t vsync_applied_time;
@@ -526,6 +509,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id);
   virtual DisplayError HandleEvent(DisplayEvent event);
   virtual DisplayError HandleQsyncState(const QsyncEventData &qsync_data);
+  virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
                                 shared_ptr<Fence> &retire_fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -573,8 +557,6 @@ class HWCDisplay : public DisplayEventHandler {
   void SetDrawMethod();
 
   // CWB related methods
-  void SetCwbState();
-  void ResetCwbState();
   void HandleFrameOutput();
   void HandleFrameDump();
   virtual void HandleFrameCapture(){};
@@ -645,16 +627,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool animating_ = false;
   DisplayDrawMethod draw_method_ = kDrawDefault;
 
-  // CWB state & configuration
-  CwbConfig cwb_config_ = {};
-  static CwbState cwb_state_;
-  static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_state_
-
-  // Readback buffer configuration
-  LayerBuffer output_buffer_ = {};
-  bool readback_buffer_queued_ = false;
-  bool readback_configured_ = false;
-
   // Members for N frame dump to file
   bool dump_output_to_file_ = false;
   uint32_t dump_frame_count_ = 0;
@@ -662,6 +634,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool dump_input_layers_ = false;
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;  // points to base address of output_buffer_info_
+  CwbConfig output_buffer_cwb_config_ = {};
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
@@ -672,6 +645,10 @@ class HWCDisplay : public DisplayEventHandler {
   shared_ptr<Fence> client_acquire_fence_ = nullptr;
   int32_t client_dataspace_ = 0;
   hwc_region_t client_damage_region_ = {};
+  std::map<uint64_t, CWBClient> cwb_buffer_map_ = {};
+  std::mutex cwb_mutex_;
+  std::condition_variable cwb_cv_;
+  DisplayError cwb_capture_status_ = kErrorNone;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);

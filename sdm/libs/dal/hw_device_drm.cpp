@@ -564,6 +564,7 @@ DisplayError HWDeviceDRM::Init() {
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
   InitializeConfigs();
+  GetCWBCapabilities();
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
@@ -574,8 +575,6 @@ DisplayError HWDeviceDRM::Init() {
 
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr(new HWColorManagerDrm());
   hw_color_mgr_ = std::move(hw_color_mgr);
-
-  GetCWBCapabilities();
 
   return kErrorNone;
 }
@@ -830,6 +829,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
                  connector_info_.modes[index].sub_modes[sub_mode_index].panel_mode_caps;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
+  hw_panel_info_.has_cwb_crop = has_cwb_crop_;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   if (hw_panel_info_.dynamic_fps) {
     uint32_t min_fps = current_mode.vrefresh;

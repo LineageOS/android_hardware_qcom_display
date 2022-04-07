@@ -451,6 +451,9 @@ class DisplayEventHandler {
   /*! @brief Event handler for sending status of Qsync */
   virtual DisplayError HandleQsyncState(const QsyncEventData &event_data) { return kErrorNone; }
 
+  /*! @brief Event handler to notify CWB Done */
+  virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer) { }
+
  protected:
   virtual ~DisplayEventHandler() { }
 };
@@ -1297,6 +1300,22 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError UpdateTransferTime(uint32_t transfer_time) = 0;
+
+  /*! @brief Method to handle CWB requests on the display
+
+    @param[in] output_buffer \link LayerBuffer \endlink
+
+    @param[in] config \link CwbConfig \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError CaptureCwb(const LayerBuffer &output_buffer, const CwbConfig &config) = 0;
+
+  /*! @brief Method to handle CWB teardown on the display
+
+    @return \link DisplayError \endlink
+  */
+  virtual bool HandleCwbTeardown() = 0;
 
  protected:
   virtual ~DisplayInterface() { }

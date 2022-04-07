@@ -494,6 +494,7 @@ struct HWPanelInfo {
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
   uint32_t supported_colorspaces = 0;  // supported_colorspaces for DP displays.
   uint32_t qsync_fps = 0;              // Min qsync fps
+  bool has_cwb_crop = false;           // CWB Crop support
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -1005,6 +1006,14 @@ class FrameBufferObject : public LayerBufferObject {
 /* Downscale Blur horizontal/vertical filter flags */
 #define DNSC_BLUR_GAUS_FILTER           (1 << 0)
 #define DNSC_BLUR_PCMN_FILTER           (1 << 1)
+
+enum CwbClient {
+  kCwbClientNone,
+  kCwbClientExternal,
+  kCwbClientDemura,
+  kCwbClientIdleFallback,
+  kCwbClientMax,
+};
 
 }  // namespace sdm
 
