@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
 * met:
@@ -33,6 +35,8 @@
 #include <stdio.h>
 
 #include <mutex>
+#include <bitset>
+#include <map>
 
 using std::mutex;
 
@@ -45,6 +49,22 @@ struct UsageHints {
     uint64_t hints;
   };
 };
+
+enum VmType {
+  kVmTypePrimary,
+  kVmTypeTrusted,
+  kVmTypeCpPixel,
+  kVmTypeMax,
+};
+
+enum VmPermission {
+  kVmPermissionRead,
+  kVmPermissionWrite,
+  kVmPermissionExecute,
+  kVmPermissionMax,
+};
+
+typedef std::map<VmType, std::bitset<kVmPermissionMax>> VmParams;
 
 class MemBuf {
  public:
@@ -69,22 +89,22 @@ class MemBuf {
   */
   virtual void ReturnHeap(int heap_fd) = 0;
 
-  /*! @brief Export the buffer fd from one VM to other VM. The buffer must not be mmap'ed by any
-      process prior to invoking this function. The buffer must also be a cached buffer from a
-      non-secure ION heap
+  /*! @brief Export the buffer fd from primary VM to trusted VM. The buffer must not be mmap'ed by
+      any process prior to invoking this function. The buffer must also be a cached buffer from a
+      non-secure contiguous heap
 
-    @param[in] buf_fd - Allocated ion buffer fd to be exported
+    @param[in] buf_fd - Allocated dma/ion buffer fd to be exported
     @param[out] export_fd - An fd that corresponds to the buffer that was exported. This fd
     must be kept open until it is no longer required to export the memory to another VM.
 
     @param[out] memparcel_hdl -The handle associated with the memparcel that was created by
-    granting access to the buffer fd for the dst VM
+    granting access to the buffer fd for the trusted VM
 
     @return 0 on success otherwise errno
   */
   virtual int Export(int buf_fd, int *export_fd, int64_t *memparcel_hdl) = 0;
 
-  /*! @brief Allocate and transfer a chunk of memory from src VM to dst VM
+  /*! @brief Allocate and transfer a chunk of memory from primary VM to secondary VM
 
     @param[in] memparcel_hdl - The handle that corresponds to the memparcel we are importing.
     @param[out] import_fd - file descriptor of the buffer that the dst VM can use to
@@ -93,6 +113,33 @@ class MemBuf {
     @return 0 on success otherwise errno
   */
   virtual int Import(int64_t memparcel_hdl, int *import_fd) = 0;
+
+  /*! @brief Export the buffer fd from one VM to other VM. The buffer must not be mmap'ed by any
+      process prior to invoking this function.
+
+    @param[in] buf_fd - Allocated buffer fd to be exported
+    @param[in] vm_param - List of vm type where the buffer to be assigned and its corresponding
+                           permission bits.
+    @param[in] share - Allocated buffer to be lend or shared to other VM
+
+    @param[out] memparcel_hdl -The handle associated with the memparcel that was created by
+    granting access to the buffer fd for the dst VM
+
+    @return 0 on success otherwise errno
+  */
+  virtual int Export(int buf_fd, const VmParams &vm_params, bool share, int64_t *memparcel_hdl) = 0;
+
+  /*! @brief Allocate and transfer a chunk of memory from src VM to dst VM
+
+    @param[in] memparcel_hdl - The handle that corresponds to the memparcel we are importing.
+    @param[in] vm_params - List of vm type where the buffer to be assigned and its corresponding
+                           permission. It should be the same parameter passed while exporting.
+    @param[out] import_fd - file descriptor of the buffer that the dst VM can use to
+    access the buffer. This fd must be closed to release the memory.
+
+    @return 0 on success otherwise errno
+  */
+  virtual int Import(int64_t memparcel_hdl, const VmParams &vm_params, int *import_fd) = 0;
 
   virtual ~MemBuf() { }
 
