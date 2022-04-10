@@ -365,7 +365,12 @@ void DRMPlaneManager::Init() {
     return;
   }
 
+  const uint32_t yield_on_count = 5;
   for (uint32_t i = 0; i < resource->count_planes; i++) {
+    if (!(i % yield_on_count)) {
+      sched_yield();
+    }
+
     // The enumeration order itself is the priority from high to low
     unique_ptr<DRMPlane> plane(new DRMPlane(fd_, i));
     drmModePlane *libdrm_plane = drmModeGetPlane(fd_, resource->planes[i]);
