@@ -72,6 +72,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <mutex>
 
 #include "strategy.h"
 #include "resource_default.h"
@@ -122,11 +123,11 @@ class CompManager {
                                  const std::vector<PrimariesTransfer> &colormodes_cs);
   DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space);
   void HandleSecureEvent(Handle display_ctx, SecureEvent secure_event);
-  void SetSafeMode(bool enable) { safe_mode_ = enable; }
-  bool IsSafeMode() { return safe_mode_; }
+  void SetSafeMode(bool enable);
+  bool IsSafeMode();
   void GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
-  DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
+  DppsControlInterface* GetDppsControlIntf();
   bool CheckResourceState(Handle display_ctx, bool *res_exhausted, HWDisplayAttributes attr);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
@@ -135,14 +136,10 @@ class CompManager {
   DisplayError ReserveDemuraFetchResources(const uint32_t &display_id,
                                            const int8_t &preferred_rect);
   DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl);
-  void SetDemuraStatus(bool status) { demura_enabled_ = status; }
-  bool GetDemuraStatus() { return demura_enabled_; }
-  void SetDemuraStatusForDisplay(const int32_t &display_id, bool status) {
-    display_demura_status_[display_id] = status;
-  }
-  bool GetDemuraStatusForDisplay(const int32_t &display_id) {
-    return display_demura_status_[display_id];
-  }
+  void SetDemuraStatus(bool status);
+  bool GetDemuraStatus();
+  void SetDemuraStatusForDisplay(const int32_t &display_id, bool status);
+  bool GetDemuraStatusForDisplay(const int32_t &display_id);
   DisplayError SetMaxSDEClk(Handle display_ctx, uint32_t clk);
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
@@ -179,7 +176,7 @@ class CompManager {
     uint32_t dest_scaler_blocks_used = 0;
   };
 
-  Locker locker_;
+  std::recursive_mutex comp_mgr_mutex_;
   ResourceInterface *resource_intf_ = NULL;
   std::set<int32_t> registered_displays_;  // List of registered displays
   std::set<int32_t> configured_displays_;  // List of sucessfully configured displays
