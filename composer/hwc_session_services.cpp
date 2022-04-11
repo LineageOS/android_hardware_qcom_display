@@ -1377,14 +1377,21 @@ int HWCSession::DisplayConfigImpl::CreateVirtualDisplay(uint32_t width, uint32_t
   }
 
   hwc2_display_t active_builtin_disp_id = hwc_session_->GetActiveBuiltinDisplay();
+  hwc2_display_t virtual_id;
   auto status = hwc_session_->CreateVirtualDisplayObj(width, height, &format,
-                                                      &hwc_session_->virtual_id_);
+                                                      &virtual_id);
   if (status == HWC2::Error::None) {
     DLOGI("[async] Created virtual display id:%" PRIu64 ", res: %dx%d",
-          hwc_session_->virtual_id_, width, height);
+          virtual_id, width, height);
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
-      hwc_session_->WaitForResources(true, active_builtin_disp_id, hwc_session_->virtual_id_);
+      hwc_session_->WaitForResources(true, active_builtin_disp_id, virtual_id);
     }
+
+    VirtualDisplayData vds_data;
+    vds_data.width = width;
+    vds_data.height = height;
+    vds_data.format = format;
+    hwc_session_->virtual_id_map_.insert(std::make_pair(virtual_id, vds_data));
   } else {
     DLOGE("Failed to create virtual display: %s", to_string(status).c_str());
   }

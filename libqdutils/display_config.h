@@ -90,6 +90,7 @@ enum {
     // Additional displays only for vendor client (e.g. pp) reference
     DISPLAY_BUILTIN_2 = 3,
     DISPLAY_EXTERNAL_2 = 4,
+    DISPLAY_VIRTUAL_2 = 5,
 };
 
 // External Display states - used in setSecondaryDisplayStatus()

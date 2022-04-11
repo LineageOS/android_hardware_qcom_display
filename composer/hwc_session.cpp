@@ -257,6 +257,7 @@ int HWCSession::Init() {
 
   PostInit();
 
+  GetVirtualDisplayList();
   DLOGI("Initializing HWCSession...done!");
   return 0;
 }
@@ -448,6 +449,9 @@ int HWCSession::GetDisplayIndex(int dpy) {
     case qdutils::DISPLAY_VIRTUAL:
       map_info = map_info_virtual_.size() ? &map_info_virtual_[0] : nullptr;
       break;
+    case qdutils::DISPLAY_VIRTUAL_2:
+      map_info = (map_info_virtual_.size() > 1) ? &map_info_virtual_[1] : nullptr;
+      break;
     case qdutils::DISPLAY_BUILTIN_2:
       map_info = map_info_builtin_.size() ? &map_info_builtin_[0] : nullptr;
       break;
@@ -519,11 +523,6 @@ int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_
     return 0;
   }
 
-  if (async_vds_creation_ && virtual_id_ != HWCCallbacks::kNumDisplays) {
-    *out_display_id = virtual_id_;
-    return HWC2_ERROR_NONE;
-  }
-
   auto status = CreateVirtualDisplayObj(width, height, format, out_display_id);
   if (status == HWC2::Error::None) {
     DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d", *out_display_id, width, height);
@@ -549,24 +548,23 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_display_t display) {
       break;
     }
   }
-  virtual_id_ = HWCCallbacks::kNumDisplays;
+
+  auto it = virtual_id_map_.find(display);
+  if (it != virtual_id_map_.end()) {
+    virtual_id_map_.erase(it);
+  }
 
   return HWC2_ERROR_NONE;
 }
 
-int32_t HWCSession::GetVirtualDisplayId() {
-  HWDisplaysInfo hw_displays_info = {};
-  core_intf_->GetDisplaysStatus(&hw_displays_info);
-  for (auto &iter : hw_displays_info) {
-    auto &info = iter.second;
-    if (info.display_type != kVirtual) {
-      continue;
+int32_t HWCSession::GetVirtualDisplayId(HWDisplayInfo& info) {
+  for (auto& map_info : map_info_virtual_) {
+    if (map_info.sdm_id == info.display_id) {
+      return -1;
     }
-
-    return info.display_id;
   }
 
-  return -1;
+  return info.display_id;
 }
 
 void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
@@ -1134,7 +1132,15 @@ int32_t HWCSession::SetDisplayElapseTime(hwc2_display_t display, uint64_t time) 
 
 int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer,
                                     const shared_ptr<Fence> &release_fence) {
-  if (INT32(display) != GetDisplayIndex(qdutils::DISPLAY_VIRTUAL)) {
+  bool found = false;
+  for (auto disp : {qdutils::DISPLAY_VIRTUAL, qdutils::DISPLAY_VIRTUAL_2}) {
+    if (INT32(display) == GetDisplayIndex(disp)) {
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
@@ -1299,8 +1305,34 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   return HWC2_ERROR_NONE;
 }
 
+void HWCSession::GetVirtualDisplayList() {
+  HWDisplaysInfo hw_displays_info = {};
+  core_intf_->GetDisplaysStatus(&hw_displays_info);
+
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.display_type != kVirtual) {
+      continue;
+    }
+
+    virtual_display_list_.push_back(info);
+  }
+}
+
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
                                                 hwc2_display_t *out_display_id) {
+  // Get virtual display from cache if already created
+  for (auto& vds_map : virtual_id_map_) {
+    if (vds_map.second.width == width &&
+        vds_map.second.height == height &&
+        vds_map.second.format == *format &&
+        !vds_map.second.in_use) {
+      vds_map.second.in_use = true;
+      *out_display_id = vds_map.first;
+      return HWC2::Error::None;
+    }
+  }
+
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   hwc2_display_t client_id = HWCCallbacks::kNumDisplays;
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
@@ -1327,7 +1359,6 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
   }
 
   // Lock confined to this scope
-  int status = -EINVAL;
   for (auto &map_info : map_info_virtual_) {
     client_id = map_info.client_id;
     {
@@ -1337,12 +1368,23 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
         continue;
       }
 
-      int32_t display_id = GetVirtualDisplayId();
-      status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                               client_id, display_id, width, height,
-                                               format, set_min_lum_, set_max_lum_, &hwc_display);
-      // TODO(user): validate width and height support
-      if (status) {
+      int32_t display_id = -1;
+      int status = -EINVAL;
+      for (auto &vdl : virtual_display_list_) {
+        display_id = GetVirtualDisplayId(vdl);
+        if (display_id == -1) {
+          continue;
+        }
+
+        status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                                 client_id, display_id, width, height,
+                                                 format, set_min_lum_, set_max_lum_, &hwc_display);
+        if (!status) {
+          break;
+        }
+      }
+
+      if (display_id == -1 || status) {
         return HWC2::Error::NoResources;
       }
 
@@ -1351,17 +1393,25 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
         is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
       }
 
-      DLOGI("Created virtual display id:%" PRIu64 " with res: %dx%d", client_id, width, height);
+      DLOGI("Created virtual display client id:%" PRIu64 ", display_id: %d with res: %dx%d",
+             client_id, display_id, width, height);
 
       *out_display_id = client_id;
       map_info.disp_type = kVirtual;
       map_info.sdm_id = display_id;
       map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
-      break;
+
+      VirtualDisplayData vds_data;
+      vds_data.width = width;
+      vds_data.height = height;
+      vds_data.format = *format;
+      virtual_id_map_.insert(std::make_pair(client_id, vds_data));
+
+      return HWC2::Error::None;
     }
   }
 
-  return HWC2::Error::None;
+  return HWC2::Error::NoResources;
 }
 
 bool HWCSession::IsPluggableDisplayConnected() {
@@ -1374,12 +1424,13 @@ bool HWCSession::IsPluggableDisplayConnected() {
 }
 
 bool HWCSession::IsVirtualDisplayConnected() {
+  bool connected = true;
+
   for (auto &map_info : map_info_virtual_) {
-    if (hwc_display_[map_info.client_id]) {
-      return true;
-    }
+    connected &= !!hwc_display_[map_info.client_id];
   }
-  return false;
+
+  return connected;
 }
 
 // Qclient methods
