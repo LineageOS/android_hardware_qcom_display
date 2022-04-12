@@ -380,6 +380,9 @@ DisplayError ResourceDefault::PreCommit(Handle display_ctx) {
   return kErrorNone;
 }
 
+void ResourceDefault::HandleSkipValidate(Handle display_ctx) {
+}
+
 DisplayError ResourceDefault::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
