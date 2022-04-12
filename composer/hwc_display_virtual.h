@@ -104,7 +104,7 @@ class HWCDisplayVirtual : public HWCDisplay {
  private:
   bool dump_output_layer_ = false;
   bool commit_done_ = true;
-  std::thread notify_concurrency_fps_;
+  std::vector<std::thread> notify_concurrency_fps_;
 };
 
 }  // namespace sdm
