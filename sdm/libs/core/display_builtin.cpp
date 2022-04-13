@@ -67,6 +67,7 @@
 #include <utils/utils.h>
 #include <utils/formats.h>
 #include <core/buffer_allocator.h>
+#include <core/core_interface.h>
 #include <sys/mman.h>
 #include <iomanip>
 #include <algorithm>
@@ -2504,12 +2505,27 @@ void DisplayBuiltIn::InitCWBBuffer() {
     return;
   }
 
+  HWDisplaysInfo hw_displays_info = {};
+  bool is_wb_ubwc_supported = false;
+  hw_info_intf_->GetDisplaysStatus(&hw_displays_info);
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.display_type == kVirtual && info.is_wb_ubwc_supported) {
+      is_wb_ubwc_supported = true;
+      break;
+    }
+  }
+
   BufferInfo output_buffer_info;
   // Initialize CWB buffer with display resolution to get full size buffer
   // as mixer or fb can init with custom values based on property
   output_buffer_info.buffer_config.width = display_attributes_.x_pixels;
   output_buffer_info.buffer_config.height = display_attributes_.y_pixels;
-  output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
+  if (is_wb_ubwc_supported) {
+    output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
+  } else {
+    output_buffer_info.buffer_config.format = kFormatRGB888;
+  }
   output_buffer_info.buffer_config.buffer_count = 1;
   if (buffer_allocator_->AllocateBuffer(&output_buffer_info) != 0) {
     DLOGE("Buffer allocation failed");
