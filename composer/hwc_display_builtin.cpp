@@ -1618,6 +1618,9 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
 }
 
 void HWCDisplayBuiltIn::ReqPerfHintRelease() {
+  if (!cpu_hint_) {
+    return;
+  }
   cpu_hint_->ReqHintRelease();
 }
 
