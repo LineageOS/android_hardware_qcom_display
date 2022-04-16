@@ -1572,7 +1572,14 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
   if (IsCameraCustomFormat(format, info.usage) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetCameraFormatPlaneInfo(
         format, info.width, info.height, plane_count, plane_info);
-    if (result != 0) {
+    if (result == 0) {
+      if (hnd != nullptr && ycbcr != nullptr) {
+        CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, *plane_count, plane_info, ycbcr);
+        if (format == HAL_PIXEL_FORMAT_NV21_ZSL) {
+          std::swap(ycbcr->cb, ycbcr->cr);
+        }
+      }
+    } else {
       ALOGE(
           "%s: Failed to get the plane info through camera library. width: %d, height: %d,"
           "format: %d, Error code: %d",
