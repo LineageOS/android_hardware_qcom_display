@@ -208,6 +208,8 @@ void HWVirtualDRM::ConfigureDNSC(HWLayersInfo *hw_layers_info) {
     for (int i = 0; i < DNSC_BLUR_COEF_NUM && i < dnsc.gaussian_data.coef_vert.size(); i++) {
       dnsc_cfg_.coef_vert[i] = dnsc.gaussian_data.coef_vert[i];
     }
+
+    topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DNSC_BLUR);
   }
 
   uint32_t conn_id = token_.conn_id;
@@ -216,8 +218,6 @@ void HWVirtualDRM::ConfigureDNSC(HWLayersInfo *hw_layers_info) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_DNSC_BLR, conn_id, &dnsc_cfg_);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_WB_USAGE_TYPE, conn_id, usage_mode);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FRAME_TRIGGER, conn_id, trigger_mode);
-
-  topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DNSC_BLUR);
 #endif
 }
 
