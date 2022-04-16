@@ -185,6 +185,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
               SyncTask<LayerStitchTaskCode>::TaskContext *task_context);
 
   const int kPerfHintLargeCompCycle = 0x00001097;
+  const int kPerfHintDisplayOff = 0x00001040;
+  const int kPerfHintDisplayOn = 0x00001041;
+  const int kPerfHintDisplayDoze = 0x00001053;
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
 
