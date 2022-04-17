@@ -393,7 +393,7 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
     flags |= private_handle_t::PRIV_FLAGS_CAMERA_WRITE;
   }
 
-  if (prod_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
+  if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
     flags |= private_handle_t::PRIV_FLAGS_CAMERA_READ;
   }
 
@@ -401,7 +401,7 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
     flags |= private_handle_t::PRIV_FLAGS_HW_COMPOSER;
   }
 
-  if (prod_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) {
+  if (cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) {
     flags |= private_handle_t::PRIV_FLAGS_HW_TEXTURE;
   }
 
