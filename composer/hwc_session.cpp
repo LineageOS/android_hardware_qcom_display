@@ -943,11 +943,6 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
 }
 
 void HWCSession::PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence) {
-  // Check if hwc's refresh trigger is getting exercised.
-  if (callbacks_.NeedsRefresh(display)) {
-    hwc_display_[display]->SetPendingRefresh();
-    callbacks_.ResetRefresh(display);
-  }
   PerformIdleStatusCallback(display);
 
   if (clients_waiting_for_commit_[display].any()) {
@@ -980,10 +975,15 @@ void HWCSession::HandlePendingRefresh() {
     return;
   }
 
+  bool refresh_triggered = false;
+
   for (size_t i = 0; i < pending_refresh_.size(); i++) {
     if (pending_refresh_.test(i)) {
-      callbacks_.Refresh(i);
-      break;
+      hwc_display_[i]->SetPendingRefresh();
+      if(!refresh_triggered) {
+        callbacks_.Refresh(i);
+        refresh_triggered = true;
+      }
     }
   }
 
@@ -4389,6 +4389,11 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     hwc_display_[display]->ProcessActiveConfigChange();
     hwc_display_[display]->IsMultiDisplay((active_displays_.size() > 1) ? true : false);
+    // Check if hwc's refresh trigger is getting exercised.
+    if (callbacks_.NeedsRefresh(display)) {
+      hwc_display_[display]->SetPendingRefresh();
+      callbacks_.ResetRefresh(display);
+    }
     status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
   }
