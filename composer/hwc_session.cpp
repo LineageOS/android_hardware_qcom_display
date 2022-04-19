@@ -1731,6 +1731,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetDsiClk(input_parcel);
       break;
 
+    case qService::IQService::SET_JITTER_CONFIG:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetJitterConfig(input_parcel);
+      break;
+
     case qService::IQService::GET_DSI_CLK:
       if (!input_parcel || !output_parcel) {
         DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
@@ -1856,12 +1864,33 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     }
     break;
 
+    case qService::IQService::UPDATE_TRANSFER_TIME: {
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = UpdateTransferTime(input_parcel);
+    } break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
   }
 
   return status;
+}
+
+android::status_t HWCSession::UpdateTransferTime(const android::Parcel *input_parcel) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+    return -ENODEV;
+  }
+
+  uint32_t transfer_time = UINT32(input_parcel->readInt32());
+  return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::UPDATE_TRANSFER_TIME,
+                                                    transfer_time);
 }
 
 android::status_t HWCSession::getComposerStatus() {
@@ -2507,6 +2536,20 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
     pstr = pstr+strlen(token);
 
   return pstr;
+}
+
+android::status_t HWCSession::SetJitterConfig(const android::Parcel *input_parcel) {
+  uint32_t jitter_type = UINT32(input_parcel->readInt32());
+  float jitter_val = input_parcel->readFloat();
+  uint32_t jitter_time = UINT32(input_parcel->readInt32());
+
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+    return -ENODEV;
+  }
+
+  return hwc_display_[HWC_DISPLAY_PRIMARY]->SetJitterConfig(jitter_type, jitter_val, jitter_time);
 }
 
 android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
@@ -3649,6 +3692,7 @@ android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) 
       DLOGE("Qsync mode not supported %d", mode);
       return -EINVAL;
   }
+  hwc_display_qsync_[HWC_DISPLAY_PRIMARY] = qsync_mode;
   return CallDisplayFunction(HWC_DISPLAY_PRIMARY, &HWCDisplay::SetQSyncMode, qsync_mode);
 }
 
@@ -3963,6 +4007,22 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
   }
 
   {
+    // disable idle time out for video mode
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    hwc_display_[target_display]->SetIdleTimeoutMs(0, 0);
+
+    // disable qsync
+    hwc_display_[target_display]->SetQSyncMode(kQSyncModeNone);
+  }
+
+  callbacks_.Refresh(target_display);
+  int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+  if (ret != 0) {
+    DLOGE("WaitForCommitDone failed with error = %d", ret);
+    return -EINVAL;
+  }
+
+  {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart,
@@ -4016,6 +4076,8 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
 
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    hwc_display_[target_display]->SetIdleTimeoutMs(idle_time_active_ms_, idle_time_inactive_ms_);
+    hwc_display_[target_display]->SetQSyncMode(hwc_display_qsync_[target_display]);
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd,
                                                           &needs_refresh) != kErrorNone) {

@@ -149,7 +149,11 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       cmd_bl.disp_type = backlight_params->is_primary ? kDisplayTypePrimary :
                          kDisplayTypeSecondary1;
       DLOGI("Send brightness level %f, disp_type %d to SVM", cmd_bl.brightness, cmd_bl.disp_type);
-      return qrtr_client_intf_->SendCommand(cmd);
+      ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
+      if (ret != 0) {
+        DLOGE("SendCommand %d failed with %d", cmd.id, ret);
+        return ret;
+      }
     }
   } break;
   case kIpcParamDisplayConfigs: {
@@ -173,7 +177,11 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
             cmd_disp_configs.h_total, cmd_disp_configs.v_total,
             cmd_disp_configs.fps, cmd_disp_configs.smart_panel ? "cmdmode" : "videomode",
             cmd_disp_configs.disp_type);
-      return qrtr_client_intf_->SendCommand(cmd);
+      ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
+      if (ret != 0) {
+        DLOGE("SendCommand %d failed with %d", cmd.id, ret);
+        return ret;
+      }
     }
   } break;
   case kIpcParamProperties: {
@@ -195,7 +203,11 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
               cmd_prop_configs.props.property_list[i].prop_name,
               cmd_prop_configs.props.property_list[i].value);
       }
-      return qrtr_client_intf_->SendCommand(cmd);
+      ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
+      if (ret != 0) {
+        DLOGE("SendCommand %d failed with %d", cmd.id, ret);
+        return ret;
+      }
     }
   } break;
 
@@ -214,7 +226,11 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
               panel_boot_params->panel_boot_string.c_str(),
               sizeof(cmd_set_panel_boot_param.panel_boot_string));
       DLOGI("Sending boot params %s", cmd_set_panel_boot_param.panel_boot_string);
-      return qrtr_client_intf_->SendCommand(cmd);
+      ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
+      if (ret != 0) {
+        DLOGE("SendCommand %d failed with %d", cmd.id, ret);
+        return ret;
+      }
     }
   } break;
 
@@ -289,9 +305,9 @@ int IPCImpl::ProcessExportBuffers(const GenericPayload &in, GenericPayload *out)
     DLOGI("Sending demura calib: mem_hdl %ld, size %d hfc: mem_hdl %ld, size %d panel_id %lu",
            demura_mem_info.calib_mem_hdl, demura_mem_info.calib_mem_size,
            demura_mem_info.hfc_mem_hdl, demura_mem_info.hfc_mem_size, demura_mem_info.panel_id);
-    ret = qrtr_client_intf_->SendCommand(cmd);
+    ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
     if (ret != 0) {
-      DLOGE("Error SendCommand : %d", ret);
+      DLOGE("SendCommand %d failed with %d", cmd.id, ret);
       return ret;
     }
     buf_out_params->exported_fds = exported_fds;
@@ -396,7 +412,12 @@ int IPCImpl::ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out
   return ret;
 }
 
-int IPCImpl::OnResponse(Response *rsp) {
+int IPCImpl::OnResponse(void *rsp_buf, size_t rsp_size) {
+  if (rsp_size != sizeof(Response)) {
+    DLOGE("Mismatch in response size!! %d-%d", rsp_size, sizeof(Response));
+    return -EINVAL;
+  }
+  Response *rsp = reinterpret_cast<Response *>(rsp_buf);
   switch(rsp->id) {
   case kCmdSetBacklight: {
     if (rsp->status != 0) {

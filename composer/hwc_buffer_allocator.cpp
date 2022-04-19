@@ -35,6 +35,7 @@
 #include <core/buffer_allocator.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <gr_utils.h>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_debugger.h"
@@ -379,10 +380,9 @@ int HWCBufferAllocator::GetBufferGeometry(void *buf, int32_t &slice_width, int32
 int HWCBufferAllocator::GetCustomWidthAndHeight(const native_handle_t *handle, int *width,
                                                 int *height) {
   void *hnd = const_cast<native_handle_t *>(handle);
-  private_handle_t *priv_handle = static_cast<private_handle_t *>(hnd);
 
-  *width = priv_handle->width;
-  *height = priv_handle->height;
+  gralloc::GetMetaDataValue(hnd, QTI_ALIGNED_WIDTH_IN_PIXELS, width);
+  gralloc::GetMetaDataValue(hnd, QTI_ALIGNED_HEIGHT_IN_PIXELS, height);
 
   auto err = GetGrallocInstance();
   if (err != 0) {
@@ -601,6 +601,13 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       break;
     case kFormatBlob:
       *target = static_cast<int>(PixelFormat::BLOB);
+      break;
+    case kFormatRGBA16161616F:
+      *target = HAL_PIXEL_FORMAT_RGBA_FP16;
+      break;
+    case kFormatRGBA16161616FUbwc:
+      *target = HAL_PIXEL_FORMAT_RGBA_FP16;
+      *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     default:
       DLOGW("Unsupported format = 0x%x", format);

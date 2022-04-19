@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ *  Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted (subject to the limitations in the
+ *  disclaimer below) provided that the following conditions are met:
+ *
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *
+ *      * Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer in the documentation and/or other materials provided
+ *        with the distribution.
+ *
+ *      * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *        contributors may be used to endorse or promote products derived
+ *        from this software without specific prior written permission.
+ *
+ *  NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ *  GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ *  HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ *   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ *  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ *  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
@@ -55,6 +91,7 @@
 #include <utils/utils.h>
 #include <utils/fence.h>
 #include <private/hw_info_interface.h>
+#include <dirent.h>
 
 #include <sstream>
 #include <ctime>
@@ -268,17 +305,30 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
     case kFormatYCrCb420PlanarStride16:
       *drm_format = DRM_FORMAT_YVU420;
       break;
+    case kFormatRGBA16161616F:
+      *drm_format = DRM_FORMAT_ABGR16161616F;
+      break;
+    case kFormatRGBA16161616FUbwc:
+      *drm_format = DRM_FORMAT_ABGR16161616F;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
     default:
       DLOGW("Unsupported format %s", GetFormatString(format));
   }
 }
 
 FrameBufferObject::FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
-                             uint32_t width, uint32_t height)
-  :fb_id_(fb_id), format_(format), width_(width), height_(height) {
-}
+                             uint32_t width, uint32_t height, bool shallow)
+  :fb_id_(fb_id), format_(format), width_(width), height_(height),
+  shallow_(shallow) {}
 
 FrameBufferObject::~FrameBufferObject() {
+  // Don't call RemoveFbId in case its a shallow copy from other display
+  if (shallow_) {
+    DLOGI("FBID: %d is a shallow copy", fb_id_);
+    return;
+  }
+
   DRMMaster *master;
   DRMMaster::GetInstance(&master);
   int ret = master->RemoveFbId(fb_id_);
@@ -771,6 +821,10 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
+  hw_panel_info_.transfer_time_us_min = (connector_info_.modes[index].transfer_time_us_min)
+                                            ? connector_info_.modes[index].transfer_time_us_min
+                                            : 1;
+  hw_panel_info_.transfer_time_us_max = connector_info_.modes[index].transfer_time_us_max;
   hw_panel_info_.allowed_mode_switch = connector_info_.modes[index].allowed_mode_switch;
   hw_panel_info_.panel_mode_caps =
                  connector_info_.modes[index].sub_modes[sub_mode_index].panel_mode_caps;
@@ -798,16 +852,19 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
     hw_panel_info_.max_fps = current_mode.vrefresh;
   }
 
-  uint32_t min_transfer_time_us = hw_panel_info_.transfer_time_us;
+  uint32_t transfer_time_us_min = hw_panel_info_.transfer_time_us;
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
     if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay)) {
-      if (min_transfer_time_us > connector_info_.modes[mode_index].transfer_time_us)  {
-        min_transfer_time_us = connector_info_.modes[mode_index].transfer_time_us;
+      if (transfer_time_us_min > connector_info_.modes[mode_index].transfer_time_us) {
+        transfer_time_us_min = connector_info_.modes[mode_index].transfer_time_us;
       }
     }
   }
-  hw_panel_info_.min_transfer_time_us = min_transfer_time_us;
+
+  if (hw_panel_info_.transfer_time_us_min <= 1) {
+    hw_panel_info_.transfer_time_us_min = transfer_time_us_min;
+  }
 
   if (connector_info_.qsync_fps > 0) {
     // For command mode panel, driver will set connector property qsync_fps
@@ -875,7 +932,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
            hw_panel_info_.split_info.left_split, hw_panel_info_.split_info.right_split);
   DLOGI_IF(kTagDriverConfig, "Mode Transfer time = %d us", hw_panel_info_.transfer_time_us);
   DLOGI_IF(kTagDriverConfig, "Panel Minimum Transfer time = %d us",
-    hw_panel_info_.min_transfer_time_us);
+           hw_panel_info_.transfer_time_us_min);
+  DLOGI_IF(kTagDriverConfig, "Panel Maximum Transfer time = %d us",
+           hw_panel_info_.transfer_time_us_max);
   DLOGI_IF(kTagDriverConfig, "Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
 }
 
@@ -1406,6 +1465,18 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
 
+          sde_drm::DRMFp16CscType fp16_csc_type = sde_drm::DRMFp16CscType::kFP16CscTypeMax;
+          int fp16_igc_en = 0;
+          int fp16_unmult_en = 0;
+          drm_msm_fp16_gc fp16_gc_config = {.flags = 0, .mode = FP16_GC_MODE_INVALID};
+
+          SelectFp16Config(layer.input_buffer, &fp16_igc_en, &fp16_unmult_en, &fp16_csc_type,
+                           &fp16_gc_config, layer.blending);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_CSC_CONFIG, pipe_id, fp16_csc_type);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_IGC_CONFIG, pipe_id, fp16_igc_en);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_GC_CONFIG, pipe_id, &fp16_gc_config);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_UNMULT_CONFIG, pipe_id, fp16_unmult_en);
+
           // Account for PMA block activation directly at translation time to preserve layer
           // blending definition and avoid issues when a layer structure is reused.
           DRMBlendType blending = DRMBlendType::UNDEFINED;
@@ -1414,7 +1485,13 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
             layer_blend = kBlendingCoverage;
             DLOGI_IF(kTagDriverConfig, "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
           }
-          SetBlending(layer_blend, &blending);
+
+          // If blending type is premultiplied alpha and the FP16 unmult is enabled,
+          // prevent performing alpha unmultiply twice
+          if (!fp16_unmult_en) {
+            SetBlending(layer_blend, &blending);
+          }
+
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
 
           DRMRect src = {};
@@ -1572,6 +1649,16 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_DYN_BIT_CLK, token_.conn_id, bit_clk_rate_);
   }
 
+  if (transfer_time_updated_) {
+    // Skip updating the driver if driver is the one providing new transfer time
+    if (connector_info_.modes[current_mode_index_].transfer_time_us != transfer_time_updated_) {
+      UpdateTransferTime(transfer_time_updated_);
+    } else {
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TRANSFER_TIME, token_.conn_id,
+                                transfer_time_updated_);
+    }
+  }
+
   if (first_cycle_) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TOPOLOGY_CONTROL, token_.conn_id,
                               topology_control_);
@@ -1694,6 +1781,7 @@ DisplayError HWDeviceDRM::Validate(HWLayersInfo *hw_layers_info) {
     panel_mode_changed_ = 0;
     seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
+    transfer_time_updated_ = 0;
     err = kErrorHardware;
   }
 
@@ -1795,6 +1883,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     panel_mode_changed_ = 0;
     seamless_mode_switch_ = false;
     panel_compression_changed_ = 0;
+    transfer_time_updated_ = 0;
     return kErrorHardware;
   }
 
@@ -1835,6 +1924,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     connector_info_.modes[current_mode_index_].curr_bit_clk_rate = bit_clk_rate_;
 
     bit_clk_rate_ = 0;
+  }
+
+  if (transfer_time_updated_) {
+    transfer_time_updated_ = 0;
+    synchronous_commit_ = false;
   }
 
   if (panel_mode_changed_ & DRM_MODE_FLAG_CMD_MODE_PANEL) {
@@ -1940,6 +2034,43 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
       break;
     default:
       break;
+  }
+}
+
+void HWDeviceDRM::SelectFp16Config(const LayerBuffer &input_buffer, int *igc_en, int *unmult_en,
+                                   sde_drm::DRMFp16CscType *csc_type, drm_msm_fp16_gc *gc,
+                                   LayerBlending blend) {
+  if (csc_type == NULL || gc == NULL || igc_en == NULL || unmult_en == NULL) {
+    // FP16 block will be disabled by default for invalid params
+    DLOGE("Invalid params");
+    return;
+  }
+
+  *csc_type = sde_drm::DRMFp16CscType::kFP16CscTypeMax;
+  *unmult_en = 0;
+  *igc_en = 0;
+  gc->flags = 0;
+  gc->mode = FP16_GC_MODE_INVALID;
+
+  if (!Is16BitFormat(input_buffer.format)) {
+    return;
+  }
+
+  // FP16 block should only be configured for the expected use cases.
+  // All other cases will be disabled by default.
+  if ((input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT709_5) &&
+      (input_buffer.color_metadata.range == Range_Extended)) {
+    *csc_type = sde_drm::DRMFp16CscType::kFP16CscSrgb2Bt2020;
+    gc->mode = FP16_GC_MODE_PQ;
+    if (input_buffer.color_metadata.transfer == Transfer_sRGB) {
+      *igc_en = 1;
+    } else if (input_buffer.color_metadata.transfer == Transfer_Linear) {
+      *igc_en = 0;
+    }
+
+    if (blend == kBlendingPremultiplied) {
+      *unmult_en = 1;
+    }
   }
 }
 
@@ -2282,103 +2413,64 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
 }
 
 DisplayError HWDeviceDRM::DumpDebugData() {
-  string dir_path = "/data/vendor/display/hw_recovery/";
+  string out_dir_path = "/data/vendor/display/hw_recovery/";
+  string devcd_dir_path = "/sys/class/devcoredump/";
   string device_str = device_name_;
+  string devcd_path;
+  string driver_name;
 
   // Attempt to make hw_recovery dir, it may exist
-  if (mkdir(dir_path.c_str(), 0777) != 0 && errno != EEXIST) {
-    DLOGW("Failed to create %s directory errno = %d, desc = %s", dir_path.c_str(), errno,
+  if (mkdir(out_dir_path.c_str(), 0777) != 0 && errno != EEXIST) {
+    DLOGW("Failed to create %s directory errno = %d, desc = %s", out_dir_path.c_str(), errno,
           strerror(errno));
     return kErrorPermission;
   }
   // If it does exist, ensure permissions are fine
-  if (errno == EEXIST && chmod(dir_path.c_str(), 0777) != 0) {
-    DLOGW("Failed to change permissions on %s directory", dir_path.c_str());
+  if (errno == EEXIST && chmod(out_dir_path.c_str(), 0777) != 0) {
+    DLOGW("Failed to change permissions on %s directory", out_dir_path.c_str());
     return kErrorPermission;
   }
 
-  string filename = dir_path+device_str+"_HWR_"+to_string(debug_dump_count_);
-  ofstream dst(filename);
+  string filename = out_dir_path + device_str + "_HWR_" + to_string(debug_dump_count_);
+  ofstream dst;
   debug_dump_count_++;
+  fstream src;
+  char buffer[3*1024 + 1];
+  auto dir = opendir(devcd_dir_path.c_str());
 
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/dump");
-    if (src.fail()) {
-      DLOGW("Unable to open dump debugfs node");
-     } else {
-      dst << "---- Event Logs ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
+  // Find the devcd node corresponding to display driver
+  while (auto i = readdir(dir)) {
+    if (string(i->d_name).find("devcd") != string::npos) {
+      devcd_path = devcd_dir_path + i->d_name + "/failing_device/uevent";
+      src.open(devcd_path, fstream::in);
       if (src.fail()) {
-        DLOGW("Unable to read dump debugfs node");
+        continue;
+      } else {
+        src >> driver_name;
+        src.close();
+        if (driver_name == "DRIVER=msm_drm") {
+          closedir(dir);
+          devcd_path = devcd_dir_path + i->d_name + "/data";
+          src.rdbuf()->pubsetbuf(buffer, sizeof(buffer));
+          src.open(devcd_path, fstream::in);
+          dst.open(filename);
+          dst << "---- Event Logs ----" << std::endl;
+          dst << src.rdbuf() << std::endl;
+          if (src.fail()) {
+            DLOGW("Unable to read devcoredump node");
+            return kErrorUndefined;
+          }
+          src.close();
+          dst.close();
+          DLOGI("Wrote hw_recovery file %s", filename.c_str());
+
+          return kErrorNone;
+        }
       }
-      src.close();
     }
   }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_reg debugfs node");
-    } else {
-      dst << "---- All Registers ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_reg debugfs node");
-      }
-      src.close();
-    }
-  }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_dbgbus debugfs node");
-    } else {
-      dst << "---- Debug Bus ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_dbgbus debugfs node");
-      }
-      src.close();
-    }
-  }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_vbif_dbgbus debugfs node");
-    } else {
-      dst << "---- VBIF Debug Bus ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_vbif_dbgbus debugfs node");
-      }
-      src.close();
-    }
-  }
-
-  {
-    ifstream src;
-    src.open("/sys/kernel/debug/dri/0/debug/recovery_dsi_dbgbus");
-    if (src.fail()) {
-      DLOGW("Unable to open recovery_dsi_dbgbus debugfs node");
-    } else {
-      dst << "---- DSI Debug Bus ----" << std::endl;
-      dst << src.rdbuf() << std::endl;
-      if (src.fail()) {
-        DLOGW("Unable to read recovery_dsi_dbgbus debugfs node");
-      }
-    src.close();
-    }
-  }
-
-  dst.close();
-  DLOGI("Wrote hw_recovery file %s", filename.c_str());
-
+  closedir(dir);
+  DLOGW("Unable to find devcoredump data node");
   return kErrorNone;
 }
 
@@ -2608,6 +2700,22 @@ DisplayError HWDeviceDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
 
 DisplayError HWDeviceDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return kErrorNotSupported;
+}
+
+DisplayError HWDeviceDRM::UpdateTransferTime(uint32_t transfer_time) {
+  connector_info_.modes[current_mode_index_].transfer_time_us = transfer_time;
+  PopulateHWPanelInfo();
+  transfer_time_updated_ = transfer_time;
+  synchronous_commit_ = true;
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_JITTER_CONFIG, token_.conn_id, jitter_type, value,
+                            time);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_TRANSFER_TIME, token_.conn_id,
+                            &transfer_time_updated_);
+  return kErrorNone;
 }
 
 void HWDeviceDRM::DumpHWLayers(HWLayersInfo *hw_layers_info) {

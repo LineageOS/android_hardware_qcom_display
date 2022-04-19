@@ -22,6 +22,42 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef __HW_INFO_TYPES_H__
 #define __HW_INFO_TYPES_H__
 
@@ -448,12 +484,13 @@ struct HWPanelInfo {
   float blackness_level = 0.0f;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
-  uint32_t transfer_time_us = 0;       // transfer time in micro seconds to panel's active region
-  uint32_t min_transfer_time_us = 1;   // minimum transfer time across all modes
-  uint32_t allowed_mode_switch = 0;    // Allowed mode switch bit mask
-  uint32_t panel_mode_caps = 0;        // Video/Command mode capability bit mask
-  bool qsync_support = false;          // Specifies panel supports qsync feature or not.
-  bool dyn_bitclk_support = false;     // Bit clk can be updated to avoid RF interference.
+  uint32_t transfer_time_us = 0;      // transfer time in micro seconds to panel's active region
+  uint32_t transfer_time_us_min = 0;  // min transfer time in micro seconds to panel's active region
+  uint32_t transfer_time_us_max = 0;  // max transfer time in micro seconds to panel's active region
+  uint32_t allowed_mode_switch = 0;   // Allowed mode switch bit mask
+  uint32_t panel_mode_caps = 0;       // Video/Command mode capability bit mask
+  bool qsync_support = false;         // Specifies panel supports qsync feature or not.
+  bool dyn_bitclk_support = false;    // Bit clk can be updated to avoid RF interference.
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
   uint32_t supported_colorspaces = 0;  // supported_colorspaces for DP displays.
   uint32_t qsync_fps = 0;              // Min qsync fps
@@ -474,6 +511,8 @@ struct HWPanelInfo {
             (left_roi_count != panel_info.left_roi_count) ||
             (right_roi_count != panel_info.right_roi_count) ||
             (transfer_time_us != panel_info.transfer_time_us) ||
+            (transfer_time_us_min != panel_info.transfer_time_us_min) ||
+            (transfer_time_us_max != panel_info.transfer_time_us_max) ||
             (allowed_mode_switch != panel_info.allowed_mode_switch) ||
             (panel_mode_caps != panel_info.panel_mode_caps) ||
             (qsync_support != panel_info.qsync_support) ||
@@ -766,6 +805,54 @@ enum UpdateType {
   kUpdateMax,
 };
 
+struct HWDNSCPCMNData {
+  uint32_t phase_init_h;
+  uint32_t phase_step_h;
+  uint32_t phase_init_v;
+  uint32_t phase_step_v;
+};
+
+struct HWDNSCGaussianData {
+  uint32_t norm_h;
+  uint32_t ratio_h;
+  uint32_t norm_v;
+  uint32_t ratio_v;
+  vector<uint32_t> coef_hori;
+  vector<uint32_t> coef_vert;
+};
+
+struct HWDNSCDitherConfig {
+  uint64_t dither_flags;
+  uint32_t temporal_en;
+  uint32_t c0_bitdepth;
+  uint32_t c1_bitdepth;
+  uint32_t c2_bitdepth;
+  uint32_t c3_bitdepth;
+  vector<uint32_t> dither_matrix;
+};
+
+struct HWDNSCInfo {
+  bool enabled = false;
+
+  uint32_t early_fence_line;
+  uint32_t cache_state;
+
+  uint32_t flags;
+  uint32_t num_blocks;
+
+  uint32_t src_width;
+  uint32_t src_height;
+  uint32_t dst_width;
+  uint32_t dst_height;
+
+  uint32_t flags_h;
+  uint32_t flags_v;
+
+  HWDNSCPCMNData pcmn_data = {};
+  HWDNSCGaussianData gaussian_data = {};
+  HWDNSCDitherConfig dither_data = {};
+};
+
 struct HWLayersInfo {
   uint32_t app_layer_count = 0;      // Total number of app layers. Must not be 0.
   int32_t gpu_target_index = -1;     // GPU target layer index. -1 if not present.
@@ -821,6 +908,8 @@ struct HWLayersInfo {
   bool cwb_present = false;  // Indicates there is cwb layer or not
   bool lower_fps = false;  // This field hints to lower the fps in case of idle fallback
   bool enable_self_refresh = false;  // This field hints to enable self refresh when idle timeout
+  bool iwe_enabled = false;
+  HWDNSCInfo dnsc_cfg = {};
 };
 
 struct DispLayerStack {
@@ -895,7 +984,7 @@ struct Resolution {
 class FrameBufferObject : public LayerBufferObject {
  public:
   explicit FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
-                             uint32_t width, uint32_t height);
+                             uint32_t width, uint32_t height, bool shallow = false);
   ~FrameBufferObject();
   uint32_t GetFbId();
   bool IsEqual(LayerBufferFormat format, uint32_t width, uint32_t height);
@@ -905,7 +994,17 @@ class FrameBufferObject : public LayerBufferObject {
   LayerBufferFormat format_;
   uint32_t width_;
   uint32_t height_;
+  bool shallow_;
 };
+
+/* Downscale Blur flags */
+#define DNSC_BLUR_EN                    (1 << 0)
+#define DNSC_BLUR_RND_8B_EN             (1 << 1)
+#define DNSC_BLUR_DITHER_EN             (1 << 2)
+
+/* Downscale Blur horizontal/vertical filter flags */
+#define DNSC_BLUR_GAUS_FILTER           (1 << 0)
+#define DNSC_BLUR_PCMN_FILTER           (1 << 1)
 
 }  // namespace sdm
 

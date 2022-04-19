@@ -208,6 +208,11 @@ DisplayError DisplayBuiltIn::Init() {
   enable_qsync_idle_ = hw_panel_info_.qsync_support && (value == 1);
   if (enable_qsync_idle_) {
     DLOGI("Enabling qsync on idling");
+
+    if (hw_panel_info_.transfer_time_us_min) {
+      DLOGI("Setting transfer time to min: %d", hw_panel_info_.transfer_time_us_min);
+      UpdateTransferTime(hw_panel_info_.transfer_time_us_min);
+    }
   }
 
   value = 0;
@@ -225,8 +230,12 @@ DisplayError DisplayBuiltIn::Init() {
         "Enabled", display_id_, display_type_);
 
   value = 0;
-  DebugHandler::Get()->GetProperty(ENABLE_CWB_IDLE_FALLBACK, &value);
-  enable_cwb_idle_fallback_ = (value == 1);
+  DebugHandler::Get()->GetProperty(DISABLE_CWB_IDLE_FALLBACK, &value);
+  disable_cwb_idle_fallback_ = (value == 1);
+
+#ifdef TRUSTED_VM
+  disable_cwb_idle_fallback_ = 1;
+#endif
 
   NoiseInit();
   InitCWBBuffer();
@@ -291,6 +300,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
     }
   }
   error = ChangeFps();
+  lower_fps_ = disp_layer_stack_.info.lower_fps;
 
   return kErrorNotValidated;
 }
@@ -387,7 +397,7 @@ void DisplayBuiltIn::UpdateQsyncMode() {
   }
 
   QSyncMode mode = kQSyncModeNone;
-  if (handle_idle_timeout_ && enable_qsync_idle_) {
+  if (lower_fps_ && enable_qsync_idle_) {
     // Override to continuous mode upon idling.
     mode = kQSyncModeContinuous;
     DLOGV_IF(kTagDisplay, "Qsync entering continuous mode");
@@ -770,6 +780,7 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
   handle_idle_timeout_ = false;
 
   pending_commit_ = false;
+  lower_fps_ = false;
 
   return kErrorNone;
 }
@@ -868,6 +879,7 @@ void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) 
   ClientLock lock(disp_mutex_);
   comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
   validated_ = false;
+  handle_idle_timeout_ = false;
 }
 
 DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
@@ -1488,6 +1500,8 @@ std::string DisplayBuiltIn::Dump() {
   os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
      << " cur:" << display_attributes_.fps;
   os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
+  os << " Min TransferTime: " << hw_panel_info_.transfer_time_us_min << "us";
+  os << " Max TransferTime: " << hw_panel_info_.transfer_time_us_max << "us";
   os << " AllowedModeSwitch: " << hw_panel_info_.allowed_mode_switch;
   os << " PanelModeCaps: ";
   snprintf(capabilities, sizeof(capabilities), "0x%x", hw_panel_info_.panel_mode_caps);
@@ -1758,12 +1772,13 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   ClientLock lock(disp_mutex_);
 
   if (!hw_panel_info_.qsync_support || first_cycle_) {
-    DLOGE("Failed: qsync_support: %d first_cycle %d", hw_panel_info_.qsync_support,
+    DLOGW("Failed: qsync_support: %d first_cycle %d", hw_panel_info_.qsync_support,
           first_cycle_);
     return kErrorNotSupported;
   }
 
-  if (qsync_mode_ == qsync_mode) {
+  // force clear qsync mode if set by idle timeout.
+  if (qsync_mode_ !=  kQSyncModeNone && qsync_mode_ == qsync_mode) {
     DLOGW("Qsync mode already set as requested mode: qsync_mode_=%d", qsync_mode_);
     return kErrorNone;
   }
@@ -1772,7 +1787,16 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   needs_avr_update_ = true;
   validated_ = false;
   event_handler_->Refresh();
-  DLOGI("Qsync mode set to %d successfully", qsync_mode_);
+
+  if (qsync_mode_ == kQSyncModeNone) {
+    DLOGI("Qsync mode set to %d successfully, setting transfer time to min: %d", qsync_mode_,
+          hw_panel_info_.transfer_time_us_min);
+    UpdateTransferTime(hw_panel_info_.transfer_time_us_min);
+  } else {
+    DLOGI("Qsync mode set to %d successfully, setting transfer time to max: %d", qsync_mode_,
+          hw_panel_info_.transfer_time_us_max);
+    UpdateTransferTime(hw_panel_info_.transfer_time_us_max);
+  }
 
   return kErrorNone;
 }
@@ -1800,6 +1824,22 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
 
   *bitclk_rates = hw_panel_info_.bitclk_rates;
   return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  ClientLock lock(disp_mutex_);
+  if (!active_) {
+    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    return kErrorNone;
+  }
+
+  if (jitter_type > 2 || (value > 10.0f || value < 0.0f)) {
+    return kErrorNotSupported;
+  }
+
+  DLOGV("Setting jitter configuration; jitter_type: %d, jitter_val: %lf, jitter_time: %d",
+        jitter_type, value, time);
+  return hw_intf_->SetJitterConfig(jitter_type, value, time);
 }
 
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
@@ -1978,6 +2018,46 @@ DisplayError DisplayBuiltIn::HandleDemuraLayer(LayerStack *layer_stack) {
              display_id_, display_type_);
   }
   return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::UpdateTransferTime(uint32_t transfer_time) {
+  DisplayError error = kErrorNone;
+  {
+    ClientLock lock(disp_mutex_);
+
+    if (!active_) {
+      DLOGW("Invalid display state = %d. Panel must be on.", state_);
+      return kErrorNotSupported;
+    }
+
+    if (transfer_time == hw_panel_info_.transfer_time_us) {
+      DLOGW("Same transfer time requested. Current = %d, Requested = %d",
+            hw_panel_info_.transfer_time_us, transfer_time);
+      return kErrorNone;
+    } else if (transfer_time > hw_panel_info_.transfer_time_us_max ||
+               transfer_time < hw_panel_info_.transfer_time_us_min) {
+      DLOGW(
+          "Invalid transfer time requested or panel info missing valid range. Min = %d, Max = %d, "
+          "Requested = %d, Current = %d",
+          hw_panel_info_.transfer_time_us_min, hw_panel_info_.transfer_time_us_max, transfer_time,
+          hw_panel_info_.transfer_time_us);
+      return kErrorParameters;
+    }
+
+    error = hw_intf_->UpdateTransferTime(transfer_time);
+    if (error != kErrorNone) {
+      DLOGW("Retaining the older transfer time.");
+      return error;
+    }
+
+    DLOGV_IF(kTagDisplay, "Updated transfer time to %d", transfer_time);
+
+    DisplayBase::ReconfigureDisplay();
+  }
+
+  event_handler_->Refresh();
+
+  return error;
 }
 
 DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
@@ -2476,22 +2556,20 @@ void DisplayIPCVmCallbackImpl::OnServerExit() {
 // LCOV_EXCL_STOP
 
 void DisplayBuiltIn::InitCWBBuffer() {
-  if (hw_panel_info_.mode != kModeVideo || !hw_resource_info_.has_concurrent_writeback) {
+  if (hw_panel_info_.mode != kModeVideo || !hw_resource_info_.has_concurrent_writeback
+      || !hw_panel_info_.is_primary_panel) {
     return;
   }
 
-  if (!enable_cwb_idle_fallback_) {
+  if (disable_cwb_idle_fallback_) {
     return;
   }
 
   BufferInfo output_buffer_info;
-  CwbConfig cwb_config = {};
-  cwb_config.tap_point = CwbTapPoint::kLmTapPoint;
-  if (GetCwbBufferResolution(&cwb_config, &output_buffer_info.buffer_config.width,
-                             &output_buffer_info.buffer_config.height)) {
-    DLOGE("Buffer Resolution setting failed.");
-    return;
-  }
+  // Initialize CWB buffer with display resolution to get full size buffer
+  // as mixer or fb can init with custom values based on property
+  output_buffer_info.buffer_config.width = display_attributes_.x_pixels;
+  output_buffer_info.buffer_config.height = display_attributes_.y_pixels;
 
   output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
   output_buffer_info.buffer_config.buffer_count = 1;
@@ -2509,15 +2587,16 @@ void DisplayBuiltIn::InitCWBBuffer() {
   buffer.width = output_buffer_info.alloc_buffer_info.aligned_width;
   buffer.height = output_buffer_info.alloc_buffer_info.aligned_height;
   buffer.format = output_buffer_info.alloc_buffer_info.format;
-  buffer.unaligned_width = mixer_attributes_.width;
-  buffer.unaligned_height = mixer_attributes_.height;
+  buffer.unaligned_width = output_buffer_info.buffer_config.width;
+  buffer.unaligned_height = output_buffer_info.buffer_config.height;
 
   cwb_layer_.composition = kCompositionCWBTarget;
   cwb_layer_.input_buffer = buffer;
   cwb_layer_.input_buffer.buffer_id = reinterpret_cast<uint64_t>(output_buffer_info.private_data);
-
-  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  cwb_layer_.src_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
+                         FLOAT(cwb_layer_.input_buffer.unaligned_height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
+                         FLOAT(cwb_layer_.input_buffer.unaligned_height)};
 
   cwb_layer_.flags.is_cwb = 1;
 
@@ -2525,12 +2604,17 @@ void DisplayBuiltIn::InitCWBBuffer() {
 }
 
 void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
-  if (!enable_cwb_idle_fallback_) {
+  if (!hw_panel_info_.is_primary_panel || disable_cwb_idle_fallback_) {
     return;
   }
 
-  cwb_layer_.src_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-  cwb_layer_.dst_rect = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+  uint32_t new_mixer_width = fb_config_.x_pixels;
+  uint32_t new_mixer_height = fb_config_.y_pixels;
+  NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height);
+  // Set cwb src_rect same as mixer resolution since LM tappoint
+  // and dest_rect equal to fb resolution as strategy scales HWLayer dest rect based on fb
+  cwb_layer_.src_rect = {0, 0, FLOAT(new_mixer_width), FLOAT(new_mixer_height)};
+  cwb_layer_.dst_rect = {0, 0, FLOAT(fb_config_.x_pixels), FLOAT(fb_config_.y_pixels)};
   cwb_layer_.composition = kCompositionCWBTarget;
   layer_stack->layers.push_back(&cwb_layer_);
 }

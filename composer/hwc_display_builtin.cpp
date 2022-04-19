@@ -29,6 +29,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <cutils/properties.h>
 #include <sync/sync.h>
 #include <utils/constants.h>
@@ -606,6 +642,10 @@ int HWCDisplayBuiltIn::Perform(uint32_t operation, ...) {
       rect = va_arg(args, LayerRect*);
       solid_fill_rect_ = *rect;
       break;
+    case UPDATE_TRANSFER_TIME:
+      val = va_arg(args, int32_t);
+      UpdateTransferTime(UINT32(val));
+      break;
     default:
       DLOGW("Invalid operation %d", operation);
       va_end(args);
@@ -895,6 +935,19 @@ DisplayError HWCDisplayBuiltIn::SetHWDetailedEnhancerConfig(void *params) {
         }
       }
 
+      switch (de_tuning_cfg_data->params.content_type) {
+        case kDeContentTypeVideo:
+          de_data.content_type = kContentTypeVideo;
+          break;
+        case kDeContentTypeGraphics:
+          de_data.content_type = kContentTypeGraphics;
+          break;
+        case kDeContentTypeUnknown:
+        default:
+          de_data.content_type = kContentTypeUnknown;
+          break;
+      }
+
       if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeBlend) {
         de_data.override_flags |= kOverrideDEBlend;
         de_data.de_blend = de_tuning_cfg_data->params.de_blend;
@@ -1018,6 +1071,18 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
   return error;
 }
 
+DisplayError HWCDisplayBuiltIn::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  DisplayError error = display_intf_->SetJitterConfig(jitter_type, value, time);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set jitter configuration.");
+    return error;
+  }
+
+  callbacks_->Refresh(id_);
+
+  return kErrorNone;
+}
+
 DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   DisablePartialUpdateOneFrame();
   DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
@@ -1127,6 +1192,15 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
 
   DLOGI("Buffer w: h: %d %d", sdm_layer->input_buffer.unaligned_width, sdm_layer->input_buffer.unaligned_height);
   return HWC2::Error::None;
+}
+
+DisplayError HWCDisplayBuiltIn::UpdateTransferTime(uint32_t transfer_time) {
+  DisplayError error = display_intf_->UpdateTransferTime(transfer_time);
+  if (error != kErrorNone) {
+    DLOGE(" failed: Transfer time: %" PRIu32 " Error: %d", transfer_time, error);
+    return error;
+  }
+  return kErrorNone;
 }
 
 bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {

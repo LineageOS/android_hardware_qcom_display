@@ -1,6 +1,8 @@
 /*
 *Copyright (c) 2020, The Linux Foundation. All rights reserved.
 *
+*Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
 * met:
@@ -32,8 +34,6 @@
 
 #include<string>
 
-#include "vm_interface.h"
-
 namespace sdm {
 
 #define QRTR_CLIENT_LIB_NAME "libqrtrclient.so"
@@ -58,7 +58,7 @@ class QRTRCallbackInterface {
  public:
   virtual void OnServerReady() = 0;
   virtual void OnServerExit() = 0;
-  virtual int OnResponse(Response *rsp) = 0;
+  virtual int OnResponse(void *rsp, size_t cmd_size) = 0;
 
  protected:
   virtual ~QRTRCallbackInterface() {};
@@ -66,7 +66,7 @@ class QRTRCallbackInterface {
 
 class QRTRClientInterface {
  public:
-  virtual int SendCommand(const Command &cmd) = 0;
+  virtual int SendCommand(void *cmd, size_t cmd_size) = 0;
  protected:
   virtual ~QRTRClientInterface() {};
 };

@@ -161,8 +161,7 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
   if (buf == nullptr) {
     return HWC2::Error::BadParameter;
   }
-  const private_handle_t *output_handle =
-      static_cast<const private_handle_t *>(buf);
+  const native_handle_t *output_handle = static_cast<const native_handle_t *>(buf);
 
   if (output_handle) {
     int output_handle_format, output_handle_flags = 0;

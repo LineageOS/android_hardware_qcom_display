@@ -47,7 +47,6 @@ using android::hardware::graphics::common::V1_1::BufferUsage;
 using vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
 using IQtiMapperExtensions_v1_2 =
     vendor::qti::hardware::display::mapperextensions::V1_2::IQtiMapperExtensions;
-using private_handle_t = qtigralloc::private_handle_t;
 
 namespace sdm {
 

@@ -27,6 +27,42 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <fcntl.h>
 #include <display/drm/sde_drm.h>
 #include <utils/debug.h>
@@ -131,6 +167,10 @@ void HWPeripheralDRM::PopulateBitClkRates() {
   DLOGI("bit_clk_rates Size %zu", bitclk_rates_.size());
 }
 
+DisplayError HWPeripheralDRM::SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) {
+  return HWDeviceDRM::SetJitterConfig(jitter_type, value, time);
+}
+
 DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   if (last_power_mode_ == DRMPowerMode::DOZE_SUSPEND || last_power_mode_ == DRMPowerMode::OFF) {
     return kErrorNotSupported;
@@ -191,6 +231,12 @@ DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode
   hw_panel_info_.bitclk_rates = bitclk_rates_;
 
   return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::UpdateTransferTime(uint32_t transfer_time) {
+  DisplayError error = HWDeviceDRM::UpdateTransferTime(transfer_time);
+
+  return error;
 }
 
 DisplayError HWPeripheralDRM::Validate(HWLayersInfo *hw_layers_info) {
@@ -373,6 +419,9 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
 
   if (feature_id == sde_drm::kFeatureLtmHistCtrl)
     ltm_hist_en_ = value;
+
+  if (feature_id == sde_drm::kFeatureAbaHistCtrl)
+    aba_hist_en_ = value;
 
   if (object_type == DRM_MODE_OBJECT_CRTC) {
     obj_id = token_.crtc_id;
@@ -903,6 +952,9 @@ void HWPeripheralDRM::SetVMReqState() {
     if (ltm_hist_en_)
       drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
                                 sde_drm::kFeatureLtmHistCtrl, 0);
+    if (aba_hist_en_)
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                sde_drm::kFeatureAbaHistCtrl, 0);
   } else if (tui_state_ == kTUIStateEnd) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                               sde_drm::DRMVMRequestState::ACQUIRE);
@@ -910,6 +962,9 @@ void HWPeripheralDRM::SetVMReqState() {
     if (ltm_hist_en_)
       drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
                                 sde_drm::kFeatureLtmHistCtrl, 1);
+    if (aba_hist_en_)
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                sde_drm::kFeatureAbaHistCtrl, 1);
   } else if (tui_state_ == kTUIStateNone) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                               sde_drm::DRMVMRequestState::NONE);

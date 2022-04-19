@@ -158,6 +158,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDisplayDppsAdROI(void *payload) override;
   DisplayError SetQSyncMode(QSyncMode qsync_mode) override;
   DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) override;
+  DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) override;
   DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) override;
   DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) override;
   DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) override;
@@ -184,6 +185,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   uint32_t CalculateMetaDataRefreshRate();
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate, uint32_t max_refresh_rate,
                                uint32_t min_refresh_rate);
+  DisplayError UpdateTransferTime(uint32_t transfer_time) override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -291,8 +293,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   int hfc_buffer_fd_ = -1;
   uint32_t hfc_buffer_size_ = 0;
   DisplayIPCVmCallbackImpl *vm_cb_intf_ = nullptr;
-  bool enable_cwb_idle_fallback_ = false;
   Layer cwb_layer_ = {};
+  bool lower_fps_ = false;
 };
 
 }  // namespace sdm

@@ -563,6 +563,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
   android::status_t RefreshScreen(const android::Parcel *input_parcel);
   android::status_t SetAd4RoiConfig(const android::Parcel *input_parcel);
+  android::status_t SetJitterConfig(const android::Parcel *input_parcel);
   android::status_t SetDsiClk(const android::Parcel *input_parcel);
   android::status_t GetDsiClk(const android::Parcel *input_parcel, android::Parcel *output_parcel);
   android::status_t GetSupportedDsiClk(const android::Parcel *input_parcel,
@@ -572,6 +573,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t setColorSamplingEnabled(const android::Parcel *input_parcel);
   android::status_t HandleTUITransition(int disp_id, int event);
   android::status_t GetDisplayPortId(uint32_t display, int *port_id);
+  android::status_t UpdateTransferTime(const android::Parcel *input_parcel);
 
   // Internal methods
   void HandleSecureSession();
@@ -599,6 +601,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
+  QSyncMode  hwc_display_qsync_[HWCCallbacks::kNumDisplays] = {QSyncMode::kQSyncModeNone};
+  uint32_t idle_time_active_ms_ = 0;
+  uint32_t idle_time_inactive_ms_ = 0;
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
   HWCVirtualDisplayFactory virtual_display_factory_;

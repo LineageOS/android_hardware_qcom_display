@@ -32,7 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/mapperextensions/1.2/IQtiMapperExtensions.h>
+#include <vendor/qti/hardware/display/mapperextensions/1.3/IQtiMapperExtensions.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -58,8 +58,9 @@ using gralloc::BufferManager;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::PlaneLayout;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::YCbCrLayout;
-using ::vendor::qti::hardware::display::mapperextensions::V1_2::IQtiMapperExtensions;
+using ::vendor::qti::hardware::display::mapperextensions::V1_3::IQtiMapperExtensions;
 using IMapperExtensions_1_0_Error = ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
+using MetadataType = ::android::hardware::graphics::mapper::V4_0::IMapper::MetadataType;
 
 class QtiMapperExtensions : public IQtiMapperExtensions {
  public:
@@ -95,6 +96,7 @@ class QtiMapperExtensions : public IQtiMapperExtensions {
   Return<Error> copyMetaData(void *src, void *dst) override;
   Return<Error> setMetadataBlob(const hidl_vec<uint8_t> &src, void *dst) override;
   Return<void> getMetadataBlob(void *src, getMetadataBlob_cb _hidl_cb) override;
+  Return<Error> getMetaDataValue(void *src, const MetadataType &type, void *in) override;
 
  private:
   BufferManager *buf_mgr_ = nullptr;

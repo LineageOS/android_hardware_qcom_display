@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef __DRM_INTERFACE_H__
 #define __DRM_INTERFACE_H__
 
@@ -175,6 +211,30 @@ enum struct DRMOps {
    *      DRMPPFeatureInfo * - PP feature data pointer
    */
   PLANE_SET_POST_PROC,
+  /*
+   * Op: Sets FP16 CSC config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - csc type
+   */
+  PLANE_SET_FP16_CSC_CONFIG,
+  /*
+   * Op: Sets FP16 CSC config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - enable
+   */
+  PLANE_SET_FP16_IGC_CONFIG,
+  /*
+   * Op: Sets FP16 UNMULT config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - enable
+   */
+  PLANE_SET_FP16_UNMULT_CONFIG,
+  /*
+   * Op: Sets FP16 GC config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      drm_msm_fp16_gc* - GC config
+   */
+  PLANE_SET_FP16_GC_CONFIG,
   /*
    * Op: Resets property cache of all planes that are assigned to given CRTC
    * Arg: uint32_t - CRTC ID
@@ -473,6 +533,45 @@ enum struct DRMOps {
    * Arg: drmModeAtomicReq - Atomic request
    */
   RESET_PANEL_FEATURES,
+  /*
+   * Op: Set new transfer time value for the current mode
+   * Arg: uint32_t - New transfer time to be used
+   */
+  CONNECTOR_SET_TRANSFER_TIME,
+  /*
+   * Op: Get new transfer time value for the current mode from driver
+   * Arg: int * - Pointer to an integer that will hold the returned transfer time
+   */
+  CONNECTOR_GET_TRANSFER_TIME,
+  /*
+   * Op: Configures watchdog TE Jitter
+   * Arg: uint32_t - Jitter Type (0:2)
+   *      float    - Max jitter in percentage (0:10%)
+   *      uint32_t - Time in ms for long term jitter
+   */
+  CONNECTOR_SET_JITTER_CONFIG,
+  /*
+   * Op: set LLC cache state
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Enable-1, Disable-0
+   */
+  CONNECTOR_CACHE_STATE,
+  /*
+   * Op: set line number for early fence signaling
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - line number
+   */
+  CONNECTOR_EARLY_FENCE_LINE,
+  /*
+   * Op: downscale blur properties
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  CONNECTOR_DNSC_BLR,
+  /*
+   * Op: WB usage type (wfd/cwb/iwe)
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  CONNECTOR_WB_USAGE_TYPE,
 };
 
 enum struct DRMRotation {
@@ -526,6 +625,12 @@ struct DRMRect {
   uint32_t top;     // Top-most pixel coordinate.
   uint32_t right;   // Right-most pixel coordinate.
   uint32_t bottom;  // Bottom-most pixel coordinate.
+};
+
+struct DRMJitterConfig {
+  uint32_t type;    // Jitter type.
+  uint32_t value;   // Jitter value in percentage.
+  uint32_t time;    // Jitter time in ms.
 };
 
 enum struct DRMCWbCaptureMode {
@@ -725,6 +830,8 @@ struct DRMModeInfo {
   bool roi_merge;
   uint64_t default_bit_clk_rate;
   uint32_t transfer_time_us;
+  uint32_t transfer_time_us_min;
+  uint32_t transfer_time_us_max;
   uint32_t allowed_mode_switch;
   uint32_t cur_panel_mode;
   uint32_t has_cwb_crop;
@@ -998,6 +1105,7 @@ enum struct DRMTopologyControl {
   RESERVE_CLEAR = 1 << 1,
   DSPP          = 1 << 2,
   DEST_SCALER   = 1 << 3,
+  DNSC_BLUR     = 1 << 6,
 };
 
 struct DRMSolidfillStage {
@@ -1051,6 +1159,25 @@ enum struct DRMCompressionMode {
   NONE = 0,
   DSC_ENABLED,
   DSC_DISABLED,
+};
+
+enum struct DRMWBUsageType {
+  WB_USAGE_WFD,
+  WB_USAGE_CWB,
+  WB_USAGE_OFFLINE_WB,
+};
+
+enum DRMFp16CscType {
+  kFP16CscSrgb2Dcip3 = 0,
+  kFP16CscSrgb2Bt2020,
+  kFP16CscTypeMax,
+};
+
+struct DRMFp16Config {
+  uint32_t igc_en;
+  uint32_t unmult_en;
+  uint32_t csc_idx;
+  drm_msm_fp16_gc gc;
 };
 
 /* DRM Atomic Request Property Set.

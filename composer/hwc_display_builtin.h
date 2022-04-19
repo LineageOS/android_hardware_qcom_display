@@ -73,6 +73,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
     SET_QDCM_SOLID_FILL_INFO,
     UNSET_QDCM_SOLID_FILL_INFO,
     SET_QDCM_SOLID_FILL_RECT,
+    UPDATE_TRANSFER_TIME,
   };
 
   static int Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -106,6 +107,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
                                           uint32_t v_end, uint32_t factor_in, uint32_t factor_out);
+  virtual DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time);
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
@@ -146,6 +148,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetAlternateDisplayConfig(bool set);
   virtual HWC2::Error SetDimmingEnable(int int_enabled);
   virtual HWC2::Error SetDimmingMinBl(int min_bl);
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

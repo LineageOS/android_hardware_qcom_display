@@ -50,7 +50,7 @@ using android::hardware::graphics::common::V1_2::PixelFormat;
 
 namespace sdm {
 
-DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_metadata);
+DisplayError SetCSC(const native_handle_t *pvt_handle, ColorMetaData *color_metadata);
 bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary);
 bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer);
 bool GetRange(const int32_t &dataspace, ColorRange *color_range);
@@ -72,6 +72,7 @@ class HWCLayer {
   ~HWCLayer();
   uint32_t GetZ() const { return z_; }
   hwc2_layer_t GetId() const { return id_; }
+  std::string GetName() const { return name_; }
   LayerTypes GetType() const { return type_; }
   Layer *GetSDMLayer() { return layer_; }
   void ResetPerFrameData();
@@ -129,6 +130,7 @@ class HWCLayer {
   LayerTypes type_ = kLayerUnknown;
   uint32_t z_ = 0;
   const hwc2_layer_t id_;
+  std::string name_;
   const hwc2_display_t display_id_;
   static std::atomic<hwc2_layer_t> next_id_;
   shared_ptr<Fence> release_fence_;
@@ -160,9 +162,9 @@ class HWCLayer {
   void SetRect(const hwc_frect_t &source, LayerRect *target);
   uint32_t GetUint32Color(const hwc_color_t &source);
   void GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec);
-  DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
+  DisplayError SetMetaData(const native_handle_t *pvt_handle, Layer *layer);
   uint32_t RoundToStandardFPS(float fps);
-  void ValidateAndSetCSC(const private_handle_t *handle);
+  void ValidateAndSetCSC(const native_handle_t *handle);
   void SetDirtyRegions(hwc_region_t surface_damage);
 };
 

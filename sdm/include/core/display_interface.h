@@ -164,6 +164,18 @@ enum ContentQuality {
   kContentQualityMax,
 };
 
+
+/*! @brief This enum represents the type of the content.
+
+  @sa DisplayInterface::SetDetailEnhancerData
+*/
+enum DeContentType {
+  kContentTypeUnknown,
+  kContentTypeVideo,
+  kContentTypeGraphics,
+  kContentTypeMax,
+};
+
 /*! @brief This enum represents the display port.
 
   @sa DisplayInterface::GetDisplayPort
@@ -354,6 +366,7 @@ struct DisplayDetailEnhancerData {
   ScalingFilterConfig filter_config = kFilterEdgeDirected;
                                       // Y/RGB filter configuration
   uint32_t de_blend = 0;              // DE Unsharp Mask blend between High and Low frequencies
+  DeContentType content_type = kContentTypeUnknown;  // Specifies content type
 };
 
 /*! @brief This enum represents the supported display features that needs to be queried
@@ -1051,6 +1064,16 @@ class DisplayInterface {
   */
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
 
+  /*! @brief Method to set Jitter configuration.
+
+    @param[in] jitter_type Jitter type; 0 - None, 1 - Instantaneous jitter, 2 - Long term jitter.
+    @param[in] value Max jitter value in percentage (0-10%).
+    @param[in] time Jitter time (for LTJ).
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetJitterConfig(uint32_t jitter_type, float value, uint32_t time) = 0;
+
   /*! @brief Method to get the current DSI clock rate
 
     @param[out] bit_clk_rate DSI bit clock rate in HZ
@@ -1266,6 +1289,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) = 0;
+
+  /*! @brief Method to set a new transfer time
+
+    @param[in] transfer_time to set
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError UpdateTransferTime(uint32_t transfer_time) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

@@ -760,7 +760,20 @@ void DisplayBase::EnableLlccDuringAodMode(LayerStack *layer_stack) {
     disp_layer_stack_.info.enable_self_refresh = true;
     hw_intf_->EnableSelfRefresh();
 
-    uint32_t size_ff = 1;  // gpu target layer always present
+    uint32_t size_ff = 0;
+    std::vector<Layer *> &layers = layer_stack->layers;
+    for (auto &layer : layers) {
+      if (layer->composition == kCompositionGPUTarget) {
+        size_ff++;
+      } else if (layer->composition == kCompositionStitchTarget) {
+        size_ff++;
+      } else if (layer->composition == kCompositionDemura) {
+        size_ff++;
+      } else if (layer->composition == kCompositionCWBTarget) {
+        size_ff++;
+      }
+    }
+
     uint32_t app_layer_count = UINT32(layer_stack->layers.size()) - size_ff;
     // Switch to Single-layer/GPU comp during Doze/Doze-suspend mode with video mode panel.
     // Avoid GPU comp, if there is only one app layer.
@@ -1345,6 +1358,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
   if (layer_stack->request_flags.trigger_refresh) {
+    if (!disable_cwb_idle_fallback_ && disp_layer_stack_.info.output_buffer) {
+      cwb_fence_wait_ = true;
+    }
     layer_stack->output_buffer = nullptr;
   }
 
@@ -1439,7 +1455,13 @@ DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
-  DisplayError error = PerformCommit(hw_layers_info);
+
+  DisplayError error = comp_manager_->PreCommit(display_comp_ctx_);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = PerformCommit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("Commit IOCTL failed %d", error);
     CleanupOnError();
@@ -1450,6 +1472,16 @@ DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
       return flush_err;
     }
   }
+
+  // TODO(user): Workaround for messenger app flicker issue in CWB idle fallback,
+  // to be removed when issue is fixed.
+  if (cwb_fence_wait_ && hw_layers_info->output_buffer &&
+      (hw_layers_info->output_buffer->release_fence != nullptr)) {
+    if (Fence::Wait(hw_layers_info->output_buffer->release_fence) != kErrorNone) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    }
+  }
+  cwb_fence_wait_ = false;
 
   error = PostCommit(hw_layers_info);
   if (error != kErrorNone) {
@@ -1960,6 +1992,8 @@ std::string DisplayBase::Dump() {
   os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
      << " cur:" << display_attributes_.fps;
   os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
+  os << " Min TransferTime: " << hw_panel_info_.transfer_time_us_min << "us";
+  os << " Max TransferTime: " << hw_panel_info_.transfer_time_us_max << "us";
   os << " MaxBrightness:" << hw_panel_info_.panel_max_brightness;
   os << "\n Display WxH: " << display_attributes_.x_pixels << "x" << display_attributes_.y_pixels;
   os << " MixerWxH: " << mixer_attributes_.width << "x" << mixer_attributes_.height;
@@ -2834,7 +2868,12 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
   }
 
-  if (!custom_mixer_resolution_ && mixer_width == fb_width && mixer_height == fb_height) {
+  // Reconfigure mixer if display size is not equal to avoid quality loss in videoplayback
+  // usecase due to video upscaling to fit display after downscaling at LM
+  if (!custom_mixer_resolution_ && display_width == fb_width && display_height == fb_height
+      && mixer_width == fb_width && mixer_height == fb_height) {
+    DLOGV_IF(kTagDisplay, "Custom mixer resolution not enabled. Mixer size is same as"
+                          "framebuffer and display resolution. Reconfiguration not needed");
     return false;
   }
 
@@ -3363,14 +3402,18 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
     case HWRecoveryEvent::kCapture:
 #ifndef TRUSTED_VM
       if (!disable_hw_recovery_dump_ && !hw_recovery_logs_captured_) {
-        hw_intf_->DumpDebugData();
-        hw_recovery_logs_captured_ = true;
-        DLOGI("Captured debugfs data for display = %d", display_type_);
+        auto error = hw_intf_->DumpDebugData();
+        if (error == kErrorNone) {
+          hw_recovery_logs_captured_ = true;
+          DLOGI("Captured devcoredump data for display = %d", display_type_);
+        } else {
+          DLOGW("Failed to capture devcoredump data for display = %d", display_type_);
+        }
       } else if (!disable_hw_recovery_dump_) {
-        DLOGI("Multiple capture events without intermediate success event, skipping debugfs"
+        DLOGI("Multiple capture events without intermediate success event, skipping devcoredump "
               "capture for display = %d", display_type_);
       } else {
-        DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
+        DLOGI("Devcoredump data dumping is disabled for display = %d", display_type_);
       }
       hw_recovery_count_++;
       if (hw_recovery_count_ >= hw_recovery_threshold_) {
@@ -4069,15 +4112,10 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
   cwb_config_ = new CwbConfig;
   if (layer_stack->cwb_config == NULL) {
     cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
-    uint32_t buffer_width = 0, buffer_height = 0;
-    error = GetCwbBufferResolution(cwb_config_, &buffer_width, &buffer_height);
-    if (error != kErrorNone) {
-      DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
-      return error;
-    }
 
     // Setting full frame ROI
-    DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(mixer_attributes_.width),
+                                           FLOAT(mixer_attributes_.height));
     cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
   }
 

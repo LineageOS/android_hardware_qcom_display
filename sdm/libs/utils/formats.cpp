@@ -44,6 +44,7 @@ bool IsUBWCFormat(LayerBufferFormat format) {
   case kFormatRGBX1010102Ubwc:
   case kFormatYCbCr420TP10Ubwc:
   case kFormatYCbCr420P010Ubwc:
+  case kFormatRGBA16161616FUbwc:
     return true;
   default:
     return false;
@@ -66,6 +67,16 @@ bool Is10BitFormat(LayerBufferFormat format) {
   case kFormatYCbCr420TP10Ubwc:
   case kFormatYCbCr420P010Ubwc:
   case kFormatYCbCr420P010Venus:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool Is16BitFormat(LayerBufferFormat format) {
+  switch (format) {
+  case kFormatRGBA16161616F:
+  case kFormatRGBA16161616FUbwc:
     return true;
   default:
     return false;
@@ -154,6 +165,8 @@ const char *GetFormatString(const LayerBufferFormat &format) {
   case kFormatYCbCr420P010Venus:        return "Y_CBCR_420_P010_VENUS";
   case kFormatYCbCr420TP10Tile:         return "Y_CBCR_420_TP10_TILED";
   case kFormatYCbCr420P010Tile:         return "Y_CBCR_420_P010_TILED";
+  case kFormatRGBA16161616F:            return "RGBA16161616F";
+  case kFormatRGBA16161616FUbwc:        return "RGBA16161616F_UBWC";
   default:                              return "UNKNOWN";
   }
 }
@@ -324,5 +337,8 @@ bool IsWideColor(const ColorPrimaries &primary) {
   }
 }
 
-}  // namespace sdm
+bool IsExtendedRange(LayerBuffer buffer) {
+  return (Is16BitFormat(buffer.format) && buffer.color_metadata.range == Range_Extended);
+}
 
+}  // namespace sdm

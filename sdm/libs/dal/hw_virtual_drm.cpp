@@ -27,6 +27,42 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <stdio.h>
 #include <ctype.h>
 #include <drm_logger.h>
@@ -64,12 +100,14 @@ void HWVirtualDRM::ConfigureWbConnectorFbId(uint32_t fb_id) {
   return;
 }
 
-void HWVirtualDRM::ConfigureWbConnectorDestRect() {
+void HWVirtualDRM::ConfigureWbConnectorDestRect(bool reset) {
   DRMRect dst = {};
-  dst.left = 0;
-  dst.bottom = display_attributes_[current_mode_index_].y_pixels;
-  dst.top = 0;
-  dst.right = display_attributes_[current_mode_index_].x_pixels;
+
+  if (!reset) {
+    dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+    dst.right = display_attributes_[current_mode_index_].x_pixels;
+  }
+
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, token_.conn_id, dst);
   return;
 }
@@ -128,6 +166,61 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
   return kErrorNone;
 }
 
+void HWVirtualDRM::ConfigureDNSC(HWLayersInfo *hw_layers_info) {
+#ifdef FEATURE_DNSC_BLUR
+  sde_drm::DRMFrameTriggerMode trigger_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_DEFAULT;
+  sde_drm::DRMWBUsageType usage_mode = sde_drm::DRMWBUsageType::WB_USAGE_WFD;
+
+  if (hw_layers_info->iwe_enabled) {
+    trigger_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_POSTED_START;
+    usage_mode = sde_drm::DRMWBUsageType::WB_USAGE_OFFLINE_WB;
+  }
+
+  HWDNSCInfo& dnsc = hw_layers_info->dnsc_cfg;
+  dnsc_cfg_ = {};
+
+  if (dnsc.enabled) {
+    dnsc_cfg_.flags = dnsc.flags;
+    dnsc_cfg_.num_blocks = dnsc.num_blocks;
+
+    dnsc_cfg_.src_width = dnsc.src_width;
+    dnsc_cfg_.src_height = dnsc.src_height;
+    dnsc_cfg_.dst_width = dnsc.dst_width;
+    dnsc_cfg_.dst_height = dnsc.dst_height;
+
+    dnsc_cfg_.flags_h = dnsc.flags_h;
+    dnsc_cfg_.flags_v = dnsc.flags_v;
+
+    dnsc_cfg_.phase_init_h = dnsc.pcmn_data.phase_init_h;
+    dnsc_cfg_.phase_step_h = dnsc.pcmn_data.phase_step_h;
+    dnsc_cfg_.phase_init_v = dnsc.pcmn_data.phase_init_v;
+    dnsc_cfg_.phase_step_v = dnsc.pcmn_data.phase_step_v;
+
+    dnsc_cfg_.norm_h = dnsc.gaussian_data.norm_h;
+    dnsc_cfg_.ratio_h = dnsc.gaussian_data.ratio_h;
+    dnsc_cfg_.norm_v = dnsc.gaussian_data.norm_v;
+    dnsc_cfg_.ratio_v = dnsc.gaussian_data.ratio_v;
+
+    for (int i = 0; i < DNSC_BLUR_COEF_NUM && i < dnsc.gaussian_data.coef_hori.size(); i++) {
+      dnsc_cfg_.coef_hori[i] = dnsc.gaussian_data.coef_hori[i];
+    }
+
+    for (int i = 0; i < DNSC_BLUR_COEF_NUM && i < dnsc.gaussian_data.coef_vert.size(); i++) {
+      dnsc_cfg_.coef_vert[i] = dnsc.gaussian_data.coef_vert[i];
+    }
+  }
+
+  uint32_t conn_id = token_.conn_id;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_CACHE_STATE, conn_id, dnsc.cache_state);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_EARLY_FENCE_LINE, conn_id, dnsc.early_fence_line);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_DNSC_BLR, conn_id, &dnsc_cfg_);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_WB_USAGE_TYPE, conn_id, usage_mode);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FRAME_TRIGGER, conn_id, trigger_mode);
+
+  topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DNSC_BLUR);
+#endif
+}
+
 DisplayError HWVirtualDRM::Commit(HWLayersInfo *hw_layers_info) {
   LayerBuffer *output_buffer = hw_layers_info->output_buffer;
   DisplayError err = kErrorNone;
@@ -137,8 +230,9 @@ DisplayError HWVirtualDRM::Commit(HWLayersInfo *hw_layers_info) {
   uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
 
   ConfigureWbConnectorFbId(fb_id);
-  ConfigureWbConnectorDestRect();
   ConfigureWbConnectorSecureMode(output_buffer->flags.secure);
+  ConfigureDNSC(hw_layers_info);
+  ConfigureWbConnectorDestRect(hw_layers_info->iwe_enabled);
 
   err = HWDeviceDRM::AtomicCommit(hw_layers_info);
   if (err != kErrorNone) {
