@@ -244,6 +244,7 @@ DisplayError DisplayBase::Init() {
 
   SetupPanelFeatureFactory();
 
+  InitBorderLayers();
   // Assume unified draw is supported.
   unified_draw_supported_ = true;
 
@@ -256,6 +257,96 @@ CleanupOnError:
   }
 
   return error;
+}
+
+DisplayError DisplayBase::InitBorderLayers() {
+  // Feature is limited to primary.
+  if (!hw_panel_info_.is_primary_panel) {
+    return kErrorNone;
+  }
+
+  windowed_display_ = Debug::GetWindowRect(true /*is_primary_*/ , &window_rect_.left,
+                                           &window_rect_.top, &window_rect_.right,
+                                           &window_rect_.bottom) == 0;
+  if (!windowed_display_) {
+    return kErrorNone;
+  }
+
+  int value = 0;
+  Debug::GetProperty(ENABLE_WINDOW_RECT_MASK, &value);
+  enable_win_rect_mask_ = (value == 1);
+  if (!enable_win_rect_mask_) {
+    DLOGI("Window rect enabled without RC on %d-%d", display_id_, display_type_);
+    return kErrorNone;
+  }
+
+  DLOGI("Generating border layers for %d-%d", display_id_, display_type_);
+
+  std::vector<LayerRect> border_rects = GetBorderRects();
+  for (auto &rect : border_rects) {
+    DLOGI("Rect: %f %f %f %f", rect.left, rect.top, rect.right, rect.bottom);
+  }
+
+  GenerateBorderLayers(border_rects);
+
+  return kErrorNone;
+}
+
+std::vector<LayerRect> DisplayBase::GetBorderRects() {
+  // Window rect can result 4 regions(max) to be blacked out.
+  // Horizontal strip at top and bottom, pillar-box on each side.
+  float display_width = FLOAT(display_attributes_.x_pixels);
+  float display_height = FLOAT(display_attributes_.y_pixels);
+  LayerRect win_rect = window_rect_;
+  std::vector<LayerRect> border_rects;
+  if (win_rect.left) {
+    LayerRect rect = {0, 0, win_rect.left, display_height};
+    border_rects.push_back(rect);
+  }
+
+  if (win_rect.right) {
+    LayerRect rect = {display_width - win_rect.right, 0, display_width, display_height};
+    border_rects.push_back(rect);
+  }
+
+  if (win_rect.top) {
+    LayerRect rect = {0, 0, display_width, win_rect.top};
+    border_rects.push_back(rect);
+  }
+
+  if (win_rect.bottom) {
+    LayerRect rect = {0, display_height - win_rect.bottom, display_width, display_height};
+    border_rects.push_back(rect);
+  }
+
+  return border_rects;
+}
+
+void DisplayBase::GenerateBorderLayers(const std::vector<LayerRect> &border_rects) {
+  for (auto &border_rect : border_rects) {
+    Layer layer;
+    layer.src_rect = {0, 0, border_rect.right - border_rect.left,
+                       border_rect.bottom - border_rect.top};
+    layer.dst_rect = border_rect;
+    LayerBuffer &layer_buffer = layer.input_buffer;
+    layer_buffer.width = UINT32(layer.dst_rect.right - layer.dst_rect.left);
+    layer_buffer.height = UINT32(layer.dst_rect.bottom - layer.dst_rect.top);
+    layer_buffer.unaligned_width = layer_buffer.width;
+    layer_buffer.unaligned_height = layer_buffer.height;
+    layer_buffer.format = kFormatRGBA8888;
+    layer_buffer.flags.mask_layer = true;
+    layer.flags.solid_fill = 1;
+
+    // 32 bit ARGB
+    uint32_t a = UINT32(255) << 24;
+    uint32_t r = UINT32(0) << 16;
+    uint32_t g = UINT32(0) << 8;
+    uint32_t b = UINT32(0);
+    uint32_t color = a | r | g | b;
+    layer.solid_fill_color = color;
+
+    border_layers_.push_back(layer);
+  }
 }
 
 DisplayError DisplayBase::Deinit() {
@@ -1135,6 +1226,19 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
     return kErrorUndefined;
   }
   *layer_stack_ptr = layer_stack;
+
+  LayerStack rc_stack;
+  if (enable_win_rect_mask_) {
+    // ToDo: Append RC layers as well. Handle Rc + Window rect.
+    // Append border layers.
+    for (auto &layer : border_layers_) {
+      rc_stack.layers.push_back(&layer);
+    }
+
+    *layer_stack_ptr = &rc_stack;
+  }
+
+
   GenericPayload out;
   RCOutputConfig *rc_out_config = nullptr;
   ret = out.CreatePayload<RCOutputConfig>(rc_out_config);
