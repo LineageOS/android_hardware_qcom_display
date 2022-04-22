@@ -95,10 +95,14 @@ int HWCDisplayVirtual::Init() {
 }
 
 int HWCDisplayVirtual::Deinit() {
-  if (notify_concurrency_fps_.joinable()) {
-    notify_concurrency_fps_.join();
+  int ret = HWCDisplay::Deinit();
+   for (std::thread &notify_concurrency_fps : notify_concurrency_fps_) {
+    if (notify_concurrency_fps.joinable()) {
+      notify_concurrency_fps.join();
+    }
   }
-  return HWCDisplay::Deinit();
+  notify_concurrency_fps_.clear();
+  return ret;
 }
 
 bool HWCDisplayVirtual::NeedsGPUBypass() {
@@ -245,9 +249,10 @@ DisplayError HWCDisplayVirtual::NotifyFpsMitigation(const float fps,
                                                     DisplayConcurrencyType concurrency,
                                                     bool concurrency_begin) {
   commit_done_ = false;
-  notify_concurrency_fps_ = std::thread(&HWCDisplayVirtual::NotifyConcurrencyFps, this, fps,
+  std::thread notify_concurrency_fps = std::thread(&HWCDisplayVirtual::NotifyConcurrencyFps, this, fps,
                                         concurrency, concurrency_begin);
-  notify_concurrency_fps_.detach();
+  notify_concurrency_fps.detach();
+  notify_concurrency_fps_.push_back(std::move(notify_concurrency_fps));
   return kErrorNone;
 }
 
