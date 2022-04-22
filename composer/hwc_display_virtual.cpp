@@ -239,6 +239,10 @@ HWC2::Error HWCDisplayVirtual::SetColorMode(ColorMode mode) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayVirtual::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  return HWC2::Error::None;
+}
+
 void HWCDisplayVirtual::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType concurrency,
                                              bool concurrency_begin) {
   event_handler_->NotifyConcurrencyFps(fps, concurrency, concurrency_begin);
