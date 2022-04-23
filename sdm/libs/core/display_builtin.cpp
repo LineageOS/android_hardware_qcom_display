@@ -2616,12 +2616,18 @@ void DisplayBuiltIn::InitCWBBuffer() {
                          FLOAT(cwb_layer_.input_buffer.unaligned_height)};
 
   cwb_layer_.flags.is_cwb = 1;
-
+  cwb_buffer_initialized_ = true;
   return;
 }
 
 void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
-  if (!hw_panel_info_.is_primary_panel || disable_cwb_idle_fallback_) {
+  if (!cwb_buffer_initialized_) {
+    // If CWB buffer is not initialized, then it must be initialized for video mode
+    InitCWBBuffer();
+  }
+
+  if (!hw_panel_info_.is_primary_panel || disable_cwb_idle_fallback_ ||
+      !cwb_buffer_initialized_) {
     return;
   }
 
