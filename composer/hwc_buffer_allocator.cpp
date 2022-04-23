@@ -690,6 +690,10 @@ int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info, uin
     stride[i] = static_cast<uint32_t>(plane_layouts[i].stride_bytes);
   }
 
+  if (buf_info.format == kFormatYCrCb420PlanarStride16) {
+    std::swap(offset[1], offset[2]);
+  }
+
   if (flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED) {
     std::fill(offset, offset + 4, 0);
   }
