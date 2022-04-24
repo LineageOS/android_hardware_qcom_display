@@ -415,6 +415,18 @@ void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, const LayerBuffer &buf
     // In legacy path, clear fb_id map in each frame.
     layer->buffer_map->buffer_map.clear();
   } else {
+    if (layer->composition == kCompositionCWBTarget) {
+      layer->buffer_map->buffer_map.clear();
+      auto it2 = output_buffer_map_.find(handle_id);
+      if (it2 != output_buffer_map_.end()) {
+        FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it2->second.get());
+        if (fb_obj->IsEqual(buffer.format, buffer.width, buffer.height)) {
+          layer->buffer_map->buffer_map[handle_id] = output_buffer_map_[handle_id];
+          // Found fb_id for given handle_id key
+          return;
+        }
+      }
+    }
     auto it = layer->buffer_map->buffer_map.find(handle_id);
     if (it != layer->buffer_map->buffer_map.end()) {
       FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
