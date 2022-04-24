@@ -130,6 +130,9 @@ static uint8_t DRM_MODE_COLORIMETRY_BT2020_YCC         = 10;
 static uint8_t DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65     = 11;
 static uint8_t DRM_MODE_COLORIMETRY_DCI_P3_RGB_THEATER = 12;
 
+static uint8_t CACHE_STATE_DISABLED = 0;
+static uint8_t CACHE_STATE_ENABLED = 1;
+
 static void PopulatePowerModes(drmModePropertyRes *prop) {
   for (auto i = 0; i < prop->count_enums; i++) {
     string enum_name(prop->enums[i].name);
@@ -278,6 +281,21 @@ static int32_t GetColorspace(DRMColorspace drm_colorspace) {
       break;
   }
   return colorspace;
+}
+
+static void PopulateCacheStates(drmModePropertyRes *prop) {
+  static bool cache_states_populated = false;
+  if (!cache_states_populated) {
+    for (auto i = 0; i < prop->count_enums; i++) {
+      string enum_name(prop->enums[i].name);
+      if (enum_name == "cache_state_disabled") {
+        CACHE_STATE_DISABLED = prop->enums[i].value;
+      } else if (enum_name == "cache_state_enabled") {
+        CACHE_STATE_ENABLED = prop->enums[i].value;
+      }
+    }
+    cache_states_populated = true;
+  }
 }
 
 #define __CLASS__ "DRMConnectorManager"
@@ -611,7 +629,10 @@ void DRMConnector::ParseProperties() {
       PopulateFrameTriggerModes(info);
     } else if (prop_enum == DRMProperty::COLORSPACE) {
       PopulateSupportedColorspaces(info);
+    } else if (prop_enum == DRMProperty::CACHE_STATE) {
+      PopulateCacheStates(info);
     }
+
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
     drmModeFreeProperty(info);
@@ -1399,6 +1420,16 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       } else {
         DRM_LOGD("Connector %d: Setting wb_usage_mode %d", obj_id, wb_usage_mode);
       }
+    } break;
+
+    case DRMOps::CONNECTOR_SET_CACHE_STATE: {
+      int cache_state = va_arg(args, int);
+      uint32_t connector_cache_state = CACHE_STATE_DISABLED;
+      if (cache_state == (int)DRMCacheWBState::ENABLED) {
+        connector_cache_state = CACHE_STATE_ENABLED;
+      }
+      drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::CACHE_STATE),
+                  connector_cache_state);
     } break;
 
     default:

@@ -283,16 +283,15 @@ DisplayError HWPeripheralDRM::Commit(HWLayersInfo *hw_layers_info) {
   }
 
   idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
-
   // After commit, update the Self Refresh state
   if (self_refresh_state_ != kSelfRefreshNone) {
-    if (self_refresh_state_ == kSelfRefreshEnable) {
-      self_refresh_state_ = kSelfRefreshDisable;
-    } else {
+    if (self_refresh_state_ == kSelfRefreshReadAlloc) {
+      self_refresh_state_ = kSelfRefreshDisableReadAlloc;
+    } else if (self_refresh_state_ == kSelfRefreshDisableReadAlloc ||
+               self_refresh_state_ == kSelfRefreshWriteAlloc) {
       self_refresh_state_ = kSelfRefreshNone;
     }
   }
-
   return error;
 }
 
@@ -363,10 +362,13 @@ void HWPeripheralDRM::CacheDestScalarData() {
 
 void HWPeripheralDRM::SetSelfRefreshState() {
   if (self_refresh_state_ != kSelfRefreshNone) {
-    if (self_refresh_state_ == kSelfRefreshEnable) {
+    if (self_refresh_state_ == kSelfRefreshReadAlloc) {
       drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_CACHE_STATE, token_.crtc_id,
                                 sde_drm::DRMCacheState::ENABLED);
-    } else {
+    } else if (self_refresh_state_ == kSelfRefreshWriteAlloc) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CONNECTOR_SET_CACHE_STATE,
+                                cwb_config_.token.conn_id, sde_drm::DRMCacheWBState::ENABLED);
+    } else if (self_refresh_state_ == kSelfRefreshDisableReadAlloc) {
       drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_CACHE_STATE, token_.crtc_id,
                                 sde_drm::DRMCacheState::DISABLED);
     }
@@ -842,8 +844,10 @@ DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path)
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::EnableSelfRefresh() {
-  self_refresh_state_ = kSelfRefreshEnable;
+DisplayError HWPeripheralDRM::EnableSelfRefresh(SelfRefreshState self_refresh_state) {
+  if (self_refresh_state != kSelfRefreshNone) {
+    self_refresh_state_ = self_refresh_state;
+  }
   return kErrorNone;
 }
 

@@ -572,6 +572,12 @@ enum struct DRMOps {
    * Arg: drmModeAtomicReq - Atomic request
    */
   CONNECTOR_WB_USAGE_TYPE,
+  /*
+   * Op: Sets Cache state for Connector.
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Cache state
+   */
+  CONNECTOR_SET_CACHE_STATE,
 };
 
 enum struct DRMRotation {
@@ -1178,6 +1184,11 @@ struct DRMFp16Config {
   uint32_t unmult_en;
   uint32_t csc_idx;
   drm_msm_fp16_gc gc;
+};
+
+enum struct DRMCacheWBState {
+  DISABLED = 0,
+  ENABLED,
 };
 
 /* DRM Atomic Request Property Set.
