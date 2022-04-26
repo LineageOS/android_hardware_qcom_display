@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f43b0a8c_6a226cc2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 18796
+      },
+      "writtenOn": "2022-04-26T17:14:39Z",
+      "side": 1,
+      "message": "https://pastebin.com/CDBrbvEN build breaks",
+      "revId": "4eeaa00b09ce1bef370e34acc804b27b83ef324b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
