@@ -16,6 +16,23 @@
       "message": "https://github.com/MoetaYuko/proprietary_vendor_motorola/tree/lineage-19.0",
       "revId": "30e380e06722874a5c140ceaf4731c9907487357",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3b5d0938_a21b7918",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-04-26T07:48:51Z",
+      "side": 1,
+      "message": "bump, my device is not shippable with the old tag",
+      "revId": "30e380e06722874a5c140ceaf4731c9907487357",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
