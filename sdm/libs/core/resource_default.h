@@ -135,6 +135,7 @@ class ResourceDefault : public ResourceInterface {
   virtual bool HandleCwbTeardown(Handle display_ctx) {
     return false;
   }
+  virtual void HandleSkipValidate(Handle display_ctx);
 
  private:
   enum PipeOwner {

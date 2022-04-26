@@ -135,6 +135,7 @@ class ResourceInterface {
                                              DispLayerStack *disp_layer_stack) = 0;
   virtual DisplayError PreCommit(Handle display_ctx) = 0;
   virtual bool HandleCwbTeardown(Handle display_ctx) = 0;
+  virtual void HandleSkipValidate(Handle display_ctx) = 0;
 };
 
 }  // namespace sdm

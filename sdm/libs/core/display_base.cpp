@@ -2231,6 +2231,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionStitchTarget:  return "STITCH_TARGET";
   case kCompositionDemura:        return "DEMURA";
   case kCompositionCWBTarget:     return "CWB_TARGET";
+  case kCompositionIWE:           return "IWE";
   default:                        return "UNKNOWN";
   }
 }
