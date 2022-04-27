@@ -1107,32 +1107,6 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
     }
   }
 
-  if (!switch_mode_valid_) {
-    // in case there is no corresponding switch mode with same fps, try for a switch
-    // mode with lowest fps. This is to handle cases where there are multiple video mode fps
-    // but only one command mode for doze like 30 fps.
-    uint32_t refresh_rate = 0;
-    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((to_set.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (to_set.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (switch_mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
-        if (!refresh_rate || (refresh_rate > connector_info_.modes[mode_index].mode.vrefresh)) {
-          for (uint32_t submode_idx = 0; submode_idx <
-               connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
-            sde_drm::DRMSubModeInfo sub_mode =
-                     connector_info_.modes[mode_index].sub_modes[submode_idx];
-           if (sub_mode.panel_compression_mode == target_compression) {
-              switch_index = mode_index;
-              switch_mode_valid_ = true;
-              refresh_rate = connector_info_.modes[mode_index].mode.vrefresh;
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
   if (switch_mode_valid_) {
     if (mode_flag & DRM_MODE_FLAG_VID_MODE_PANEL) {
       video_mode_index_ = current_mode_index_;
