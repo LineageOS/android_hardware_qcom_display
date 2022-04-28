@@ -176,14 +176,6 @@ ifeq ($(TARGET_USES_QSPA),true)
     endif
 endif
 
-# Enable QMAA for neo based on TARGET_USES_QMAA_OVERRIDE_DISPLAY only.
-ifeq ($(TARGET_BOARD_PLATFORM),neo)
-    ifneq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
-        #QMAA Mode is enabled
-        TARGET_IS_HEADLESS := true
-    endif
-endif
-
 # Soong Namespace
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
