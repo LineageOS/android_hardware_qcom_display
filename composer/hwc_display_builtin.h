@@ -259,7 +259,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool qsync_reconfigured_ = false;
   // Members for Color sampling feature
   DisplayError HistogramEvent(int fd, uint32_t blob_id) override;
+#ifndef TARGET_HEADLESS
   histogram::HistogramCollector histogram;
+#endif
   std::mutex sampling_mutex;
   bool api_sampling_vote = false;
   bool vndservice_sampling_vote = false;
