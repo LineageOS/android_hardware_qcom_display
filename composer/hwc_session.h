@@ -517,6 +517,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   static const int kExternalConnectionTimeoutMs = 500;
   static const int kVmReleaseTimeoutMs = 100;
+  static const int kCommitDoneTimeoutMs = 100;
   static const int kVmReleaseRetry = 3;
   static const int kDenomNstoMs = 1000000;
   static const int kNumDrawCycles = 3;
