@@ -137,6 +137,7 @@ enum DetailEnhancerOverrideFlags {
   kOverrideDEThrHigh           = 0x100,   // Specifies user defined DE high threshold
   kOverrideDEFilterConfig      = 0x200,   // Specifies user defined scaling filter config
   kOverrideDEBlend             = 0x400,   // Specifies user defined DE blend.
+  kOverrideDELpfBlend          = 0x800,   // Specifies user defined DE LPF blend.
   kOverrideDEMax               = 0xFFFFFFFF,
 };
 
@@ -367,6 +368,10 @@ struct DisplayDetailEnhancerData {
                                       // Y/RGB filter configuration
   uint32_t de_blend = 0;              // DE Unsharp Mask blend between High and Low frequencies
   DeContentType content_type = kContentTypeUnknown;  // Specifies content type
+  bool de_lpf_en = false;
+  uint32_t de_lpf_h;                  // Weight for DE Unsharp Mask LPF-High
+  uint32_t de_lpf_m;                  // Weight for DE Unsharp Mask LPF-Mid
+  uint32_t de_lpf_l;                  // Weight for DE Unsharp Mask LPF-Low
 };
 
 /*! @brief This enum represents the supported display features that needs to be queried
