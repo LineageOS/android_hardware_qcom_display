@@ -34,7 +34,6 @@
 #include "resource_interface.h"
 #include "capabilities_interface.h"
 #include "dpps_control_interface.h"
-#include "cwb_manager_interface.h"
 
 namespace sdm {
 
@@ -87,10 +86,6 @@ class ExtensionInterface {
 
   virtual DisplayError CreateCapabilitiesExtn(CapabilitiesInterface **interface) = 0;
   virtual DisplayError DestroyCapabilitiesExtn(CapabilitiesInterface *interface) = 0;
-
-  virtual DisplayError CreateCwbManagerExtn(CwbCallback *callback,
-                                            CwbManagerInterface **interface) = 0;
-  virtual DisplayError DestroyCwbManagerExtn(CwbManagerInterface *interface) = 0;
 
  protected:
   virtual ~ExtensionInterface() { }

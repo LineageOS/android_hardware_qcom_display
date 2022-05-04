@@ -409,6 +409,29 @@ struct LayerStackFlags {
   };
 };
 
+/*! @brief This structure defines a rectanglular area inside a display layer.
+
+  @sa LayerRectArray
+*/
+struct LayerRect {
+  float left   = 0.0f;   //!< Left-most pixel coordinate.
+  float top    = 0.0f;   //!< Top-most pixel coordinate.
+  float right  = 0.0f;   //!< Right-most pixel coordinate.
+  float bottom = 0.0f;   //!< Bottom-most pixel coordinate.
+
+  LayerRect() = default;
+
+  LayerRect(float l, float t, float r, float b) : left(l), top(t), right(r), bottom(b) { }
+
+  bool operator==(const LayerRect& rect) const {
+    return left == rect.left && right == rect.right && top == rect.top && bottom == rect.bottom;
+  }
+
+  bool operator!=(const LayerRect& rect) const {
+    return !operator==(rect);
+  }
+};
+
 /*! @brief This structure defines an array of display layer rectangles.
 
   @sa LayerRect
@@ -538,6 +561,26 @@ struct PrimariesTransfer {
   bool operator==(const PrimariesTransfer& blend_cs) const {
     return ((primaries == blend_cs.primaries) && (transfer == blend_cs.transfer));
   }
+};
+
+/*! @brief This enum represents the Tappoints for CWB that are supported by the hardware. */
+enum CwbTapPoint {
+  kLmTapPoint,      // This is set by client to use Layer Mixer output for CWB.
+  kDsppTapPoint,    // This is set by client to use DSPP output for CWB.
+  kDemuraTapPoint,  // This is set by client to use Demura output for CWB.
+};
+
+/*! @brief This structure defines the configuration variables needed to perform CWB.
+
+  @sa LayerStack
+*/
+struct CwbConfig {
+  bool pu_as_cwb_roi = false;                        //!< Whether to include the PU ROI generated
+                                                     //!< from app layers in CWB ROI.
+  LayerRect cwb_roi = {};                            //!< Client specified ROI rect for CWB.
+  LayerRect cwb_full_rect = {};                      //!< Same as Output buffer Rect (unaligned).
+  CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;  //!< Client specified tap point for CWB.
+  void *dither_info = nullptr;                       //!< Pointer to the cwb dither setting.
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and

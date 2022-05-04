@@ -27,42 +27,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
-* Changes from Qualcomm Innovation Center are provided under the following license:
-*
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
 #include <cutils/properties.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
@@ -188,6 +152,7 @@ HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
     MarkLayersForClientComposition();
   }
 
+  SetCwbState();
   *exit_validate = false;
 
   return status;
@@ -210,10 +175,19 @@ HWC2::Error HWCDisplayPluggable::PostCommitLayerStack(shared_ptr<Fence> *out_ret
   auto status = HWC2::Error::None;
 
   HandleFrameOutput();
-
-  if (flush_ && layer_stack_.output_buffer == nullptr) {
-    display_intf_->FlushConcurrentWriteback();
-  }
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
+      ResetCwbState();
+      display_intf_->FlushConcurrentWriteback();
+    } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {  // cwb teardown frame.
+      cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
+      cwb_state_.cwb_disp_id = -1;
+      cwb_state_.cwb_status = CWBStatus::kCWBPostTeardown;
+      DLOGV_IF(kTagClient, "CWB display id = %d , cwb status = %d", cwb_state_.cwb_disp_id,
+               cwb_state_.cwb_status);
+    }
+  }  // releasing the cwb state lock
   status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 
   return status;

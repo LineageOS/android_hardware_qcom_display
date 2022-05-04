@@ -97,7 +97,7 @@ using std::lock_guard;
 
 typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
 
-class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
+class DisplayBase : public DisplayInterface {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
@@ -200,7 +200,6 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
-  virtual DisplayError CaptureCwb(const LayerBuffer &output_buffer, const CwbConfig &config);
   virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) {
     return kErrorNotSupported;
   }
@@ -267,9 +266,6 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack);
   virtual void EnableLlccDuringAodMode(LayerStack *layer_stack);
   virtual DisplayError UpdateTransferTime(uint32_t transfer_time) { return kErrorNotSupported; }
-  virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer);
-  virtual void Refresh();
-  virtual bool HandleCwbTeardown();
 
  protected:
   struct DisplayMutex {
@@ -353,7 +349,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   virtual DisplayError PostCommit(HWLayersInfo *hw_layers_info);
   bool IsPrimaryDisplayLocked();
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
-  void ConfigureCwbParams(LayerStack *layer_stack);
+  DisplayError ConfigureCwb(LayerStack *layer_stack);
   void ProcessPowerEvent();
   DisplayError SetHWDetailedEnhancerConfig(void *params);
   DisplayError NoiseInit();
@@ -481,7 +477,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   uint32_t mmrm_requested_clk_ = 0;
   static bool primary_active_;
   bool draw_method_set_ = false;
-  bool cwb_configured_ = false;
+  CwbConfig *cwb_config_ = NULL;
   bool transition_done_ = false;
   bool gpu_comp_frame_ = false;
   uint32_t retire_fence_offset_ = 0;

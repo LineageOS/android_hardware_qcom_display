@@ -79,14 +79,7 @@
 
 namespace sdm {
 
-class CompManagerEventHandler {
- public:
-  virtual ~CompManagerEventHandler() {}
-  virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer) = 0;
-  virtual void Refresh() = 0;
-};
-
-class CompManager : public CwbCallback {
+class CompManager {
  public:
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
                     BufferAllocator *buffer_allocator, SocketHandler *socket_handler);
@@ -96,7 +89,7 @@ class CompManager : public CwbCallback {
                                const HWPanelInfo &hw_panel_info,
                                const HWMixerAttributes &mixer_attributes,
                                const DisplayConfigVariableInfo &fb_config, Handle *display_ctx,
-                               HWQosData *qos_data, CompManagerEventHandler *event_handler);
+                               HWQosData *qos_data);
   DisplayError UnregisterDisplay(Handle display_ctx);
   DisplayError ReconfigureDisplay(Handle display_ctx, const HWDisplayAttributes &display_attributes,
                                   const HWPanelInfo &hw_panel_info,
@@ -156,10 +149,6 @@ class CompManager : public CwbCallback {
   DisplayError GetDefaultQosData(Handle display_ctx, HWQosData *qos_data);
   DisplayError HandleCwbFrequencyBoost(bool isRequest);
   DisplayError PreCommit(Handle display_ctx);
-  DisplayError CaptureCwb(Handle display_ctx, const LayerBuffer &buffer, const CwbConfig &config);
-  bool HandleCwbTeardown(Handle display_ctx);
-  virtual void NotifyCwbDone(int32_t display_id, int32_t status, const LayerBuffer& buffer);
-  virtual void TriggerRefresh(int32_t display_id);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -189,7 +178,6 @@ class CompManager : public CwbCallback {
 
   std::recursive_mutex comp_mgr_mutex_;
   ResourceInterface *resource_intf_ = NULL;
-  std::map<int32_t, CompManagerEventHandler*> callback_map_;
   std::set<int32_t> registered_displays_;  // List of registered displays
   std::set<int32_t> configured_displays_;  // List of sucessfully configured displays
   std::set<int32_t> powered_on_displays_;  // List of powered on displays.
@@ -200,7 +188,6 @@ class CompManager : public CwbCallback {
   BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
   CapabilitiesInterface *cap_intf_ = nullptr;
-  CwbManagerInterface *cwb_mgr_intf_ = nullptr;
   uint32_t max_sde_secondary_fetch_layers_ = 2;
   uint32_t max_sde_builtin_fetch_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
