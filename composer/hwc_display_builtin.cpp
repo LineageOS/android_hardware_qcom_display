@@ -305,7 +305,6 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
 }
 
 HWC2::Error HWCDisplayBuiltIn::CommitLayerStack() {
-  skip_commit_ = CanSkipCommit();
   return HWCDisplay::CommitLayerStack();
 }
 
@@ -1496,6 +1495,16 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
                                                uint32_t *out_num_types,
                                                uint32_t *out_num_requests, bool *needs_commit) {
   DTRACE_SCOPED();
+
+  if(!validate_only) {
+    skip_commit_ = CanSkipCommit();
+    if (skip_commit_) {
+      *needs_commit = false;
+      DLOGV_IF(kTagClient, "Skipping Refresh on display %" PRIu64 , id_);
+      auto status = PostCommitLayerStack(out_retire_fence);
+      return status;
+    }
+  }
 
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
