@@ -251,6 +251,10 @@ HWC2::Error HWCColorModeStc::SetColorTransform(const float *matrix,
 }
 
 HWC2::Error HWCColorModeStc::CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  if (current_color_mode_ == mode && current_render_intent_ == intent) {
+    return HWC2::Error::None;
+  }
+
   current_color_mode_ = mode;
   current_render_intent_ = intent;
   apply_mode_ = true;
