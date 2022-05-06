@@ -1447,7 +1447,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-#ifdef TRUSTED_VM
   // Register all hw events on first commit for trusted vm only as the hw acquire happens as a
   // part of first validate
   if (first_cycle_) {
@@ -1457,7 +1456,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
     hw_events_intf_->SetEventState(HWEvent::MMRM, true);
   }
-#endif
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
   if (layer_stack->request_flags.trigger_refresh) {

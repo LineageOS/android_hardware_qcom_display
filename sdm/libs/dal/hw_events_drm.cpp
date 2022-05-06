@@ -303,15 +303,6 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
   }
   DLOGI("disable_mmrm_ set to %d", disable_mmrm_);
 
-#ifndef TRUSTED_VM
-  SetEventState(HWEvent::PANEL_DEAD, true);
-  SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
-  SetEventState(HWEvent::HW_RECOVERY, true);
-  SetEventState(HWEvent::HISTOGRAM, true);
-  SetEventState(HWEvent::MMRM, true);
-  SetEventState(HWEvent::VM_RELEASE_EVENT, true);
-#endif
-
   return kErrorNone;
 }
 
