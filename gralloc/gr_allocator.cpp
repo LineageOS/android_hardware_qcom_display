@@ -70,6 +70,11 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
     return -ENOMEM;
   }
 
+  if (!alloc_data->size) {
+    ALOGE("%s: Failed to allocate buffer with size 0", __FUNCTION__);
+    return -ENOMEM;
+  }
+
   // After this point we should have the right heap set, there is no fallback
 
   alloc_intf->GetHeapInfo(usage, use_system_heap_for_sensors_, &alloc_data->heap_name,
