@@ -1,8 +1,6 @@
 /*
  * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -27,6 +25,10 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <QtiGralloc.h>
@@ -75,7 +77,7 @@ int HWCBufferAllocator::GetGrallocInstance() {
   android::sp<IQtiMapper> qti_mapper = IQtiMapper::castFrom(mapper_);
   qti_mapper->getMapperExtensions([&](auto _error, auto _extensions) {
     if (_error == Error::NONE)
-      mapper_ext_ = IQtiMapperExtensions_v1_2::castFrom(_extensions);
+      mapper_ext_ = IQtiMapperExtensions_v1_3::castFrom(_extensions);
   });
 
   if (mapper_ext_ == nullptr) {
@@ -802,6 +804,23 @@ void HWCBufferAllocator::SetBufferAccessControlInfo(std::bitset<kBufferPermMax> 
   buf_perm->read = permission.test(kBufferPermRead);
   buf_perm->write = permission.test(kBufferPermWrite);
   buf_perm->execute = permission.test(kBufferPermExecute);
+}
+
+int HWCBufferAllocator::GetCustomContentMetadata(void *buf, CustomContentMetadata *dest) {
+  int err = 0;
+
+  if (!buf || !dest || !mapper_ext_) {
+    err = -EINVAL;
+  } else {
+    auto map_err = mapper_ext_->getMetaDataValue(buf,
+                                                 qtigralloc::MetadataType_CustomContentMetadata,
+                                                 dest);
+    if (map_err != MapperExtError::NONE) {
+      err = -ENOTSUP;
+    }
+  }
+
+  return err;
 }
 
 }  // namespace sdm

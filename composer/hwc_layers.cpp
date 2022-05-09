@@ -4,8 +4,6 @@
  *
  * Copyright 2015 The Android Open Source Project
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +15,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*
@@ -1104,8 +1106,25 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
     return kErrorNone;
   }
 
+  int extended_md_set = qtigralloc::getMetadataState(handle, QTI_CUSTOM_CONTENT_METADATA);
+  if (extended_md_set > 0) {
+    std::shared_ptr<CustomContentMetadata> dv_md = std::make_shared<CustomContentMetadata>();
+    int err = buffer_allocator_->GetCustomContentMetadata(handle, dv_md.get());
+
+    if (!err) {
+      if (!layer_buffer->extended_content_metadata ||
+          dv_md->size != layer_buffer->extended_content_metadata->size ||
+          !SameConfig(layer_buffer->extended_content_metadata->metadataPayload,
+                      dv_md->metadataPayload, dv_md->size)) {
+        layer_buffer->extended_content_metadata = dv_md;
+        layer_->update_mask.set(kContentMetadata);
+      }
+    }
+  }
+
   VideoHistogramMetadata histogram = {};
-  if (gralloc::GetMetaDataValue(static_cast<native_handle_t *>(handle),
+  if (layer_->update_mask.test(kContentMetadata) == false &&
+      gralloc::GetMetaDataValue(static_cast<native_handle_t *>(handle),
                                 qtigralloc::MetadataType_VideoHistogramStats.value,
                                 &histogram) == gralloc::Error::NONE) {
     uint32_t bins = histogram.stat_len / sizeof(histogram.stats_info[0]);
@@ -1230,8 +1249,9 @@ void HWCLayer::ValidateAndSetCSC(const native_handle_t *handle) {
         layer_->update_mask.set(kMetadataUpdate);
       }
       if (new_metadata.dynamicMetaDataValid &&
-          !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
-                      new_metadata.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
+          ((new_metadata.dynamicMetaDataLen != layer_buffer->color_metadata.dynamicMetaDataLen) ||
+            !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
+                        new_metadata.dynamicMetaDataPayload, new_metadata.dynamicMetaDataLen))) {
         layer_buffer->color_metadata.dynamicMetaDataValid = true;
         layer_buffer->color_metadata.dynamicMetaDataLen = new_metadata.dynamicMetaDataLen;
         std::memcpy(layer_buffer->color_metadata.dynamicMetaDataPayload,
