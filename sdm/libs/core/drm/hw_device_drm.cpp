@@ -1172,13 +1172,15 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_po
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
   int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_on");
+  shared_ptr<Fence> release_fence = Fence::Create(INT(release_fence_fd), "release_power_on");
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_on");
-  sync_points->release_fence = Fence::Create(INT(release_fence_fd), "release_power_on");
+  sync_points->retire_fence = retire_fence;
+  sync_points->release_fence = release_fence;
   DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %d", INT(release_fence_fd));
   pending_power_state_ = kPowerStateNone;
 
@@ -1220,6 +1222,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   }
 
   int ret = NullCommit(false /* synchronous */, false /* retain_planes */);
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
   if (ret) {
     DLOGE("Failed with error: %d, dynamic_fps=%d, seamless_mode_switch_=%d, vrefresh_=%d,"
      "panel_mode_changed_=%d bit_clk_rate_=%d", ret, hw_panel_info_.dynamic_fps,
@@ -1236,7 +1239,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     }
   }
 
-  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
+  sync_points->retire_fence = retire_fence;
   pending_power_state_ = kPowerStateNone;
 
   last_power_mode_ = DRMPowerMode::OFF;
@@ -1267,13 +1270,15 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_point
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
   int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze");
+  shared_ptr<Fence> release_fence = Fence::Create(release_fence_fd, "release_doze");
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze");
-  sync_points->release_fence = Fence::Create(release_fence_fd, "release_doze");
+  sync_points->retire_fence = retire_fence;
+  sync_points->release_fence = release_fence;
   DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %d", INT(release_fence_fd));
 
   last_power_mode_ = DRMPowerMode::DOZE;
@@ -1306,13 +1311,15 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, SyncPoints *syn
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
   int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze_suspend");
+  shared_ptr<Fence> release_fence = Fence::Create(release_fence_fd, "release_doze_suspend");
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze_suspend");
-  sync_points->release_fence = Fence::Create(release_fence_fd, "release_doze_suspend");
+  sync_points->retire_fence = retire_fence;
+  sync_points->release_fence = release_fence;
   DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %d", INT(release_fence_fd));
 
   pending_power_state_ = kPowerStateNone;

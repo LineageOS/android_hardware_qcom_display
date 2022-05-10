@@ -324,12 +324,18 @@ DisplayError HWTVDRM::Commit(HWLayersInfo *hw_layers_info) {
   bool has_fence = SetupConcurrentWriteback(*hw_layers_info, false, &cwb_fence_fd);
 
   error = HWDeviceDRM::Commit(hw_layers_info);
+
+  shared_ptr<Fence> cwb_fence = nullptr;
+  if (has_fence) {
+    cwb_fence = Fence::Create(INT(cwb_fence_fd), "release_cwb");
+  }
+
   if (error != kErrorNone) {
     return error;
   }
 
-  if (has_fence) {
-    hw_layers_info->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd), "release_cwb");
+  if (cwb_fence) {
+    hw_layers_info->output_buffer->release_fence = cwb_fence;
   }
 
   PostCommitConcurrentWriteback(hw_layers_info->output_buffer);
