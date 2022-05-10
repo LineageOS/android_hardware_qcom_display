@@ -1002,6 +1002,9 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
+      if (dump_frame_count_ != 0) {
+        dump_pending_ = true;
+      }
       {
         std::lock_guard<std::mutex> lock(cwb_state_lock_);
         if (cwb_state_.cwb_disp_id == id_) {  // If CWB is requested or configured or
@@ -1053,7 +1056,33 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   // Update release fence.
   release_fence_ = release_fence;
   current_power_mode_ = mode;
+  if (dump_pending_ == true && mode != HWC2::PowerMode::Off) {
+    dump_pending_ = false;
+    if (dump_output_to_file_) {
+      const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
+      HWC2::Error err = SetReadbackBuffer(handle, nullptr, cwb_config_, kCWBClientFrameDump);
+      if (err != HWC2::Error::None) {
+          dump_output_to_file_ = false;
+          // Unmap and Free buffer
+          if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+            DLOGW("unmap failed with err %d", errno);
+          }
+          if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+            DLOGW("FreeBuffer failed");
+          }
+          readback_buffer_queued_ = false;
+          cwb_config_ = {};
+          readback_configured_ = false;
 
+          output_buffer_ = {};
+          output_buffer_info_ = {};
+          output_buffer_base_ = nullptr;
+          if (!dump_input_layers_) {
+            dump_frame_count_ = 0;
+          }
+      }
+    }
+  }
   // Close the release fences in synchronous power updates
   if (!async_power_mode_) {
     PostPowerMode();

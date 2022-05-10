@@ -663,6 +663,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool dump_input_layers_ = false;
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;  // points to base address of output_buffer_info_
+  bool dump_pending_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
