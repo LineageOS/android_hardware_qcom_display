@@ -54,16 +54,13 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
         !vendor_ext_lib_.Sym("perf_lock_rel_offload",
                              reinterpret_cast<void **>(&fn_perf_lock_rel_offload_)) ||
         !vendor_ext_lib_.Sym("perf_hint",
-                             reinterpret_cast<void **>(&fn_perf_hint_)) ||
-        !vendor_ext_lib_.Sym("perf_event",
-                             reinterpret_cast<void **>(&fn_perf_event_))) {
+                             reinterpret_cast<void **>(&fn_perf_hint_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
     }
     DLOGI("Successfully Loaded Vendor Extension Library symbols");
     enabled_ = (fn_perf_hint_acq_rel_offload_ != NULL &&
-                fn_perf_lock_rel_offload_ != NULL && fn_perf_hint_ != NULL &&
-                fn_perf_event_ != NULL);
+                fn_perf_lock_rel_offload_ != NULL && fn_perf_hint_ != NULL);
   } else {
     DLOGW("Failed to open %s : %s", path, vendor_ext_lib_.Error());
   }
@@ -150,13 +147,6 @@ int CPUHint::ReqHint(PerfHintThreadType type, int tid) {
 
   worker.detach();
   return 0;
-}
-
-void CPUHint::ReqEvent(int event) {
-  if(enabled_ && event > 0) {
-      DLOGV_IF(kTagCpuHint, "Sending event/hint (0x%08x) to Perf HAL.", event);
-      fn_perf_event_(event, nullptr, 0, nullptr);
-  }
 }
 
 }  // namespace sdm

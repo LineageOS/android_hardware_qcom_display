@@ -392,24 +392,6 @@ HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown)
   if (status != HWC2::Error::None) {
     return status;
   }
-  DLOGV_IF(kTagClient, "Setting Power State as \'%s\' for %d-%d", (mode == HWC2::PowerMode::On)?
-           "ON": (mode == HWC2::PowerMode::Off)? "OFF": (mode == HWC2::PowerMode::Doze)? "DOZE":
-           "DOZE_SUSPEND", sdm_id_, type_);
-  switch (mode) {
-    case HWC2::PowerMode::Doze:
-    case HWC2::PowerMode::DozeSuspend:
-      // Perf hal doesn't differentiate b/w doze and doze-suspend, so send doze hint for both.
-      cpu_hint_->ReqEvent(kPerfHintDisplayDoze);
-      break;
-    case HWC2::PowerMode::On:
-      cpu_hint_->ReqEvent(kPerfHintDisplayOn);
-      break;
-    case HWC2::PowerMode::Off:
-      cpu_hint_->ReqEvent(kPerfHintDisplayOff);
-      break;
-    default:
-      break;
-  }
 
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
