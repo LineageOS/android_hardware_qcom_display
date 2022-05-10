@@ -161,6 +161,13 @@ case "$target" in
         ;;
     esac
     ;;
+    "neo")
+    case "$soc_hwid" in
+        554)
+        setprop vendor.display.enable_null_display 1
+        ;;
+    esac
+    ;;
     "holi")
     # Set property for holi
     setprop vendor.display.target.version 2
