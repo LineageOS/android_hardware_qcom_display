@@ -428,6 +428,7 @@ class DisplayBase : public DisplayInterface {
   PanelFeatureFactoryIntf *pf_factory_ = nullptr;
   PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   bool first_cycle_ = true;
+  bool registered_hw_events_ = false;
   bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.
   bool validated_ = false;  // display validation status based on sideband events driver events etc.
   shared_ptr<Fence> retire_fence_ = nullptr;
