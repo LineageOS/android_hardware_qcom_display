@@ -118,6 +118,10 @@ case "$target" in
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_qsync_idle 1
         ;;
+    esac
+    ;;
+    "parrot")
+    case "$soc_hwid" in
         537)
         # Set property for Parrot
         setprop vendor.gralloc.use_dma_buf_heaps 1
