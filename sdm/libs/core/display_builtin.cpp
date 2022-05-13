@@ -58,9 +58,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SDM_VIRTUAL_DRIVER
-#include <cutils/properties.h>
-#endif
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/rect.h>
@@ -509,11 +506,6 @@ DisplayError DisplayBuiltIn::SetupDemura() {
   if (!comp_manager_->GetDemuraStatus()) {
     comp_manager_->FreeDemuraFetchResources(display_id_);
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
-
-    // stop demura service as feature is not enabled
-#ifndef SDM_VIRTUAL_DRIVER
-    property_set("ctl.stop", "vendor.qti.hardware.display.demura");
-#endif
     return kErrorNone;
   }
 
