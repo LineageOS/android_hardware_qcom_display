@@ -620,8 +620,16 @@ HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
     return HWC2::Error::BadParameter;
   }
 
+  uint8_t kMaxPlaneAlpha = 255;
   //  Conversion of float alpha in range 0.0 to 1.0 similar to the HWC Adapter
-  uint8_t plane_alpha = static_cast<uint8_t>(std::round(255.0f * alpha));
+  uint8_t plane_alpha = static_cast<uint8_t>(std::round(float(kMaxPlaneAlpha) * alpha));
+
+  //  if alpha lies in the range (0.998, 1), plane_alpha becomes 255 when rounded off,
+  //  while alpha < 1. HWC knows layer as opaque and marks punch hole for that layer in fbt,
+  //  while SF knows it as non-opaque and doesn't create punch hole.
+  if ((plane_alpha == kMaxPlaneAlpha) && (alpha < 1.0f)) {
+    plane_alpha = (kMaxPlaneAlpha - 1);
+  }
 
   if (layer_->plane_alpha != plane_alpha) {
     geometry_changes_ |= kPlaneAlpha;
