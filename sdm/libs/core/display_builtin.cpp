@@ -988,6 +988,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   if (err == kErrorNone) {
     level_remainder_ = level_remainder;
     pending_brightness_ = false;
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
   } else if (err == kErrorDeferred) {
