@@ -1964,6 +1964,10 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
     return false;
   }
 
+  if (disp_layer_stack_.info.iwe_target_index != -1) {
+    return false;
+  }
+
   disp_layer_stack_.info.left_frame_roi.clear();
   disp_layer_stack_.info.right_frame_roi.clear();
   disp_layer_stack_.info.dest_scale_info_map.clear();
