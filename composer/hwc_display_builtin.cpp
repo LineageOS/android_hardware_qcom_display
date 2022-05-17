@@ -878,15 +878,18 @@ DisplayError HWCDisplayBuiltIn::SetHWDetailedEnhancerConfig(void *params) {
     } else {
       de_data.override_flags = kOverrideDEEnable;
       de_data.enable = 1;
-
+#ifdef DISP_DE_LPF_BLEND
       DLOGV_IF(kTagQDCM, "Enable DE: flags %u, sharp_factor %d, thr_quiet %d, thr_dieout %d, "
-        "thr_low %d, thr_high %d, clip %d, quality %d, content_type %d, de_blend %d",
+        "thr_low %d, thr_high %d, clip %d, quality %d, content_type %d, de_blend %d, "
+        "de_lpf_h %d, de_lpf_m %d, de_lpf_l %d",
         de_tuning_cfg_data->params.flags, de_tuning_cfg_data->params.sharp_factor,
         de_tuning_cfg_data->params.thr_quiet, de_tuning_cfg_data->params.thr_dieout,
         de_tuning_cfg_data->params.thr_low, de_tuning_cfg_data->params.thr_high,
         de_tuning_cfg_data->params.clip, de_tuning_cfg_data->params.quality,
-        de_tuning_cfg_data->params.content_type, de_tuning_cfg_data->params.de_blend);
-
+        de_tuning_cfg_data->params.content_type, de_tuning_cfg_data->params.de_blend,
+        de_tuning_cfg_data->params.de_lpf_h, de_tuning_cfg_data->params.de_lpf_m,
+        de_tuning_cfg_data->params.de_lpf_l);
+#endif
       if (de_tuning_cfg_data->params.flags & kDeTuningFlagSharpFactor) {
         de_data.override_flags |= kOverrideDESharpen1;
         de_data.sharp_factor = de_tuning_cfg_data->params.sharp_factor;
@@ -952,6 +955,15 @@ DisplayError HWCDisplayBuiltIn::SetHWDetailedEnhancerConfig(void *params) {
         de_data.override_flags |= kOverrideDEBlend;
         de_data.de_blend = de_tuning_cfg_data->params.de_blend;
       }
+#ifdef DISP_DE_LPF_BLEND
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeLpfBlend) {
+        de_data.override_flags |= kOverrideDELpfBlend;
+        de_data.de_lpf_en = true;
+        de_data.de_lpf_h = de_tuning_cfg_data->params.de_lpf_h;
+        de_data.de_lpf_m = de_tuning_cfg_data->params.de_lpf_m;
+        de_data.de_lpf_l = de_tuning_cfg_data->params.de_lpf_l;
+      }
+#endif
     }
     err = SetDetailEnhancerConfig(de_data);
     if (err) {
@@ -1183,14 +1195,12 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
 
   if (fb_width != sdm_layer->input_buffer.unaligned_width ||
       fb_height != sdm_layer->input_buffer.unaligned_height) {
-      DLOGI("fb_w: %d fb_h: %d", fb_width, fb_height);
     if (SetFrameBufferConfig(sdm_layer->input_buffer.unaligned_width,
                              sdm_layer->input_buffer.unaligned_height)) {
       return HWC2::Error::BadParameter;
     }
   }
 
-  DLOGI("Buffer w: h: %d %d", sdm_layer->input_buffer.unaligned_width, sdm_layer->input_buffer.unaligned_height);
   return HWC2::Error::None;
 }
 
@@ -1612,6 +1622,10 @@ HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
 }
 
 void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
+  if (!cpu_hint_) {
+    return;
+  }
+
   int tid = gettid();
 
   if (release) {

@@ -853,6 +853,15 @@ struct HWDNSCInfo {
   HWDNSCDitherConfig dither_data = {};
 };
 
+enum SelfRefreshState {
+  kSelfRefreshNone,
+  kSelfRefreshReadAlloc,   // Indicates to writeback in LLCC when fetching from DDR
+                           // Used during GPU based idle fallback
+  kSelfRefreshWriteAlloc,  // Indicates to writeback in LLCC when sending to DDR
+                           // Used during CWB based idle fallback
+  kSelfRefreshDisableReadAlloc,     // Indicates to disable self refresh
+};
+
 struct HWLayersInfo {
   uint32_t app_layer_count = 0;      // Total number of app layers. Must not be 0.
   int32_t gpu_target_index = -1;     // GPU target layer index. -1 if not present.
@@ -907,9 +916,9 @@ struct HWLayersInfo {
   bool demura_present = false;  // Indicates there is demura layer or not
   bool cwb_present = false;  // Indicates there is cwb layer or not
   bool lower_fps = false;  // This field hints to lower the fps in case of idle fallback
-  bool enable_self_refresh = false;  // This field hints to enable self refresh when idle timeout
   bool iwe_enabled = false;
   HWDNSCInfo dnsc_cfg = {};
+  SelfRefreshState self_refresh_state = kSelfRefreshNone;
 };
 
 struct DispLayerStack {

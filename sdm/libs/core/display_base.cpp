@@ -249,6 +249,7 @@ DisplayError DisplayBase::Init() {
 
   SetupPanelFeatureFactory();
 
+  InitBorderLayers();
   // Assume unified draw is supported.
   unified_draw_supported_ = true;
 
@@ -261,6 +262,96 @@ CleanupOnError:
   }
 
   return error;
+}
+
+DisplayError DisplayBase::InitBorderLayers() {
+  // Feature is limited to primary.
+  if (!hw_panel_info_.is_primary_panel) {
+    return kErrorNone;
+  }
+
+  windowed_display_ = Debug::GetWindowRect(true /*is_primary_*/ , &window_rect_.left,
+                                           &window_rect_.top, &window_rect_.right,
+                                           &window_rect_.bottom) == 0;
+  if (!windowed_display_) {
+    return kErrorNone;
+  }
+
+  int value = 0;
+  Debug::GetProperty(ENABLE_WINDOW_RECT_MASK, &value);
+  enable_win_rect_mask_ = (value == 1);
+  if (!enable_win_rect_mask_) {
+    DLOGI("Window rect enabled without RC on %d-%d", display_id_, display_type_);
+    return kErrorNone;
+  }
+
+  DLOGI("Generating border layers for %d-%d", display_id_, display_type_);
+
+  std::vector<LayerRect> border_rects = GetBorderRects();
+  for (auto &rect : border_rects) {
+    DLOGI("Rect: %f %f %f %f", rect.left, rect.top, rect.right, rect.bottom);
+  }
+
+  GenerateBorderLayers(border_rects);
+
+  return kErrorNone;
+}
+
+std::vector<LayerRect> DisplayBase::GetBorderRects() {
+  // Window rect can result 4 regions(max) to be blacked out.
+  // Horizontal strip at top and bottom, pillar-box on each side.
+  float display_width = FLOAT(display_attributes_.x_pixels);
+  float display_height = FLOAT(display_attributes_.y_pixels);
+  LayerRect win_rect = window_rect_;
+  std::vector<LayerRect> border_rects;
+  if (win_rect.left) {
+    LayerRect rect = {0, 0, win_rect.left, display_height};
+    border_rects.push_back(rect);
+  }
+
+  if (win_rect.right) {
+    LayerRect rect = {display_width - win_rect.right, 0, display_width, display_height};
+    border_rects.push_back(rect);
+  }
+
+  if (win_rect.top) {
+    LayerRect rect = {0, 0, display_width, win_rect.top};
+    border_rects.push_back(rect);
+  }
+
+  if (win_rect.bottom) {
+    LayerRect rect = {0, display_height - win_rect.bottom, display_width, display_height};
+    border_rects.push_back(rect);
+  }
+
+  return border_rects;
+}
+
+void DisplayBase::GenerateBorderLayers(const std::vector<LayerRect> &border_rects) {
+  for (auto &border_rect : border_rects) {
+    Layer layer;
+    layer.src_rect = {0, 0, border_rect.right - border_rect.left,
+                       border_rect.bottom - border_rect.top};
+    layer.dst_rect = border_rect;
+    LayerBuffer &layer_buffer = layer.input_buffer;
+    layer_buffer.width = UINT32(layer.dst_rect.right - layer.dst_rect.left);
+    layer_buffer.height = UINT32(layer.dst_rect.bottom - layer.dst_rect.top);
+    layer_buffer.unaligned_width = layer_buffer.width;
+    layer_buffer.unaligned_height = layer_buffer.height;
+    layer_buffer.format = kFormatRGBA8888;
+    layer_buffer.flags.mask_layer = true;
+    layer.flags.solid_fill = 1;
+
+    // 32 bit ARGB
+    uint32_t a = UINT32(255) << 24;
+    uint32_t r = UINT32(0) << 16;
+    uint32_t g = UINT32(0) << 8;
+    uint32_t b = UINT32(0);
+    uint32_t color = a | r | g | b;
+    layer.solid_fill_color = color;
+
+    border_layers_.push_back(layer);
+  }
 }
 
 DisplayError DisplayBase::Deinit() {
@@ -757,8 +848,8 @@ void DisplayBase::EnableLlccDuringAodMode(LayerStack *layer_stack) {
       (hw_panel_info_.mode == kModeVideo)) {
     // Set CACHE_STATE property as part of Doze/Doze-suspend commit or subsequent commits
     // with video mode panel.
-    disp_layer_stack_.info.enable_self_refresh = true;
-    hw_intf_->EnableSelfRefresh();
+    disp_layer_stack_.info.self_refresh_state = kSelfRefreshReadAlloc;
+    hw_intf_->EnableSelfRefresh(disp_layer_stack_.info.self_refresh_state);
 
     uint32_t size_ff = 0;
     std::vector<Layer *> &layers = layer_stack->layers;
@@ -882,9 +973,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     }
   }
 
-  if (disp_layer_stack_.info.enable_self_refresh) {
-    hw_intf_->EnableSelfRefresh();
-  }
+  hw_intf_->EnableSelfRefresh(disp_layer_stack_.info.self_refresh_state);
+  disp_layer_stack_.info.self_refresh_state = kSelfRefreshNone;
 
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
 
@@ -1175,6 +1265,19 @@ DisplayError DisplayBase::PrepareRC(LayerStack *layer_stack) {
     return kErrorUndefined;
   }
   *layer_stack_ptr = layer_stack;
+
+  LayerStack rc_stack;
+  if (enable_win_rect_mask_) {
+    // ToDo: Append RC layers as well. Handle Rc + Window rect.
+    // Append border layers.
+    for (auto &layer : border_layers_) {
+      rc_stack.layers.push_back(&layer);
+    }
+
+    *layer_stack_ptr = &rc_stack;
+  }
+
+
   GenericPayload out;
   RCOutputConfig *rc_out_config = nullptr;
   ret = out.CreatePayload<RCOutputConfig>(rc_out_config);
@@ -1344,7 +1447,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-#ifdef TRUSTED_VM
   // Register all hw events on first commit for trusted vm only as the hw acquire happens as a
   // part of first validate
   if (first_cycle_) {
@@ -1354,7 +1456,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
     hw_events_intf_->SetEventState(HWEvent::MMRM, true);
   }
-#endif
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
   if (layer_stack->request_flags.trigger_refresh) {
@@ -2184,6 +2285,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionStitchTarget:  return "STITCH_TARGET";
   case kCompositionDemura:        return "DEMURA";
   case kCompositionCWBTarget:     return "CWB_TARGET";
+  case kCompositionIWE:           return "IWE";
   default:                        return "UNKNOWN";
   }
 }
@@ -3916,13 +4018,18 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
       de_data.override_flags = kOverrideDEEnable;
       de_data.enable = 1;
 
+#ifdef DISP_DE_LPF_BLEND
       DLOGV_IF(kTagQDCM, "Enable DE: flags %u, sharp_factor %d, thr_quiet %d, thr_dieout %d, "
-        "thr_low %d, thr_high %d, clip %d, quality %d, content_type %d, de_blend %d",
+        "thr_low %d, thr_high %d, clip %d, quality %d, content_type %d, de_blend %d, "
+        "de_lpf_h %d, de_lpf_m %d, de_lpf_l %d",
         de_tuning_cfg_data->params.flags, de_tuning_cfg_data->params.sharp_factor,
         de_tuning_cfg_data->params.thr_quiet, de_tuning_cfg_data->params.thr_dieout,
         de_tuning_cfg_data->params.thr_low, de_tuning_cfg_data->params.thr_high,
         de_tuning_cfg_data->params.clip, de_tuning_cfg_data->params.quality,
-        de_tuning_cfg_data->params.content_type, de_tuning_cfg_data->params.de_blend);
+        de_tuning_cfg_data->params.content_type, de_tuning_cfg_data->params.de_blend,
+        de_tuning_cfg_data->params.de_lpf_h, de_tuning_cfg_data->params.de_lpf_m,
+        de_tuning_cfg_data->params.de_lpf_l);
+#endif
 
       if (de_tuning_cfg_data->params.flags & kDeTuningFlagSharpFactor) {
         de_data.override_flags |= kOverrideDESharpen1;
@@ -3976,6 +4083,15 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
         de_data.override_flags |= kOverrideDEBlend;
         de_data.de_blend = de_tuning_cfg_data->params.de_blend;
       }
+#ifdef DISP_DE_LPF_BLEND
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeLpfBlend) {
+        de_data.override_flags |= kOverrideDELpfBlend;
+        de_data.de_lpf_en = true;
+        de_data.de_lpf_h = de_tuning_cfg_data->params.de_lpf_h;
+        de_data.de_lpf_m = de_tuning_cfg_data->params.de_lpf_m;
+        de_data.de_lpf_l = de_tuning_cfg_data->params.de_lpf_l;
+      }
+#endif
     }
 
     err = comp_manager_->SetDetailEnhancerData(display_comp_ctx_, de_data);
@@ -4010,14 +4126,14 @@ DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
   return err;
 }
 
-DisplayError DisplayBase::SetDimmingConfig(void *payload, size_t size) {
+DisplayError DisplayBase::SetPPConfig(void *payload, size_t size) {
   ClientLock lock(disp_mutex_);
 
-  DisplayError err = hw_intf_->SetDimmingConfig(payload, size);
+  DisplayError err = hw_intf_->SetPPConfig(payload, size);
   if (err) {
-    DLOGE("Failed to set dimming config %d", err);
+    DLOGE("Failed to set PP Event %d", err);
   } else {
-    DLOGI_IF(kTagDisplay, "Dimimng config is set successfully");
+    DLOGI_IF(kTagDisplay, "PP Event is set successfully");
     event_handler_->Refresh();
   }
   return err;
@@ -4035,6 +4151,7 @@ DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
   }
 
   *bl_ctrl = int_enabled? true : false;
+  info.object_type = DRM_MODE_OBJECT_CONNECTOR;
   info.id = sde_drm::kFeatureDimmingDynCtrl;
   info.type = sde_drm::kPropRange;
   info.version = 0;
@@ -4044,7 +4161,7 @@ DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
 
   DLOGV_IF(kTagDisplay, "Display %d-%d set dimming enable %d", display_id_,
     display_type_, int_enabled);
-  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+  return SetPPConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
@@ -4059,6 +4176,7 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
   }
 
   *bl = min_bl;
+  info.object_type = DRM_MODE_OBJECT_CONNECTOR;
   info.id = sde_drm::kFeatureDimmingMinBl;
   info.type = sde_drm::kPropRange;
   info.version = 0;
@@ -4068,7 +4186,7 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
 
   DLOGV_IF(kTagDisplay, "Display %d-%d set dimming min_bl %d", display_id_,
     display_type_, min_bl);
-  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+  return SetPPConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 /* this func is called by DC dimming feature only after PCC updates */

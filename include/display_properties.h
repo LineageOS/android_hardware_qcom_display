@@ -170,6 +170,7 @@
 #define DISABLE_ROUNDED_CORNER_THREAD        DISPLAY_PROP("disable_rounded_corner_thread")
 // SPR
 #define ENABLE_SPR                           DISPLAY_PROP("enable_spr")
+#define ENABLE_SPR_BYPASS                    DISPLAY_PROP("enable_spr_bypass")
 #define ENABLE_MEMORY_MAPPING                DISPLAY_PROP("enable_memory_mapping")
 
 // Panel Feature Demura Properties
@@ -178,6 +179,10 @@
 #define DISABLE_DEMURA_SECONDARY             DISPLAY_PROP("disable_demura_secondary")
 #define DISABLE_DEMURA_PANEL_REPLACEMENT     DISPLAY_PROP("disable_demura_panel_replacement")
 #define DISABLE_DEMURA_OPT_SINGLELM          DISPLAY_PROP("disable_demura_opt_singlelm")
+#define DEMURA_PRIMARY_PANEL_OVERRIDE_LOW    DISPLAY_PROP("demura_primary_panel_override_low")
+#define DEMURA_PRIMARY_PANEL_OVERRIDE_HIGH    DISPLAY_PROP("demura_primary_panel_override_high")
+#define DEMURA_SECONDARY_PANEL_OVERRIDE_LOW    DISPLAY_PROP("demura_secondary_panel_override_low")
+#define DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH    DISPLAY_PROP("demura_secondary_panel_override_high")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
@@ -221,6 +226,7 @@
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
 #define WINDOW_RECT_PROP_SECONDARY           DISPLAY_PROP("window_rect_secondary")
+#define ENABLE_WINDOW_RECT_MASK              DISPLAY_PROP("enable_window_rect_mask")
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_SCALING_LAYERS          DISPLAY_PROP("disable_idle_scaling_layers")

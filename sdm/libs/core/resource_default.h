@@ -132,6 +132,10 @@ class ResourceDefault : public ResourceInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError PreCommit(Handle display_ctx);
+  virtual bool HandleCwbTeardown(Handle display_ctx) {
+    return false;
+  }
+  virtual void HandleSkipValidate(Handle display_ctx);
 
  private:
   enum PipeOwner {

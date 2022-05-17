@@ -385,6 +385,10 @@ DisplayError CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_la
   // Select a composition strategy, and try to allocate resources for it.
   resource_intf_->Start(display_comp_ctx->display_resource_ctx, disp_layer_stack->stack);
 
+  if (error == kErrorNone || error == kErrorNeedsLutRegen) {
+    resource_intf_->HandleSkipValidate(display_comp_ctx->display_resource_ctx);
+  }
+
   return error;
 }
 

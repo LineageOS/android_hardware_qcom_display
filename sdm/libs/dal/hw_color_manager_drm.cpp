@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ *  Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted (subject to the limitations in the
+ *  disclaimer below) provided that the following conditions are met:
+ *
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *
+ *      * Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer in the documentation and/or other materials provided
+ *        with the distribution.
+ *
+ *      * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *        contributors may be used to endorse or promote products derived
+ *        from this software without specific prior written permission.
+ *
+ *  NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ *  GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ *  HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ *   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ *  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ *  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #define __CLASS__ "HWColorManagerDRM"
 
 #include <array>
@@ -58,6 +94,9 @@ static const uint32_t kPAContrastMask = (1 << 15);
 #ifdef DRM_MSM_SIXZONE
 static const uint32_t kSixZoneP0Mask = 0x0FFF;
 static const uint32_t kSixZoneP1Mask = 0x0FFF0FFF;
+#ifdef SIXZONE_SV_ENABLE
+static const uint32_t kSixZoneP2Mask = 0x0FFF0FFF;
+#endif
 static const uint32_t kSixZoneHueMask = (1 << 16);
 static const uint32_t kSixZoneSatMask = (1 << 17);
 static const uint32_t kSixZoneValMask = (1 << 18);
@@ -92,8 +131,8 @@ static const DrmPPFeatureMap g_dspp_map = {
   {kGlobalColorFeatureIgc,      {kFeatureIgc}},
   {kGlobalColorFeaturePgc,      {kFeaturePgc}},
   {kMixerColorFeatureGc,        {kFeatureMixerGc}},
-  {kGlobalColorFeaturePaV2,     {kFeaturePAHsic,
-                                 kFeaturePASixZone,
+  {kGlobalColorFeaturePaV2,     {kFeaturePASixZone,
+                                 kFeaturePAHsic,
                                  kFeaturePAMemColSkin,
                                  kFeaturePAMemColSky,
                                  kFeaturePAMemColFoliage,
@@ -168,8 +207,14 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
     case kFeatureMixerGc:
         version = PPFeatureVersion::kSDEPgcV17;
       break;
-    case kFeaturePAHsic:
     case kFeaturePASixZone:
+      if (feature.version == 1) {
+        version = PPFeatureVersion::kSDEPaV17;
+      } else if (feature.version == 2) {
+        version = PPFeatureVersion::kSDEPaV2;
+      }
+      break;
+    case kFeaturePAHsic:
     case kFeaturePAMemColSkin:
     case kFeaturePAMemColSky:
     case kFeaturePAMemColFoliage:
@@ -663,16 +708,28 @@ DisplayError HWColorManagerDrm::GetDrmPASixZone(const PPFeatureInfo &in_data,
     if (sde_pa->mode & kSixZoneValMask) {
       mdp_sixzone->flags |= SIXZONE_VAL_ENABLE;
     }
+#ifdef SIXZONE_SV_ENABLE
+    if (sde_pa->six_zone_sv_enable) {
+      mdp_sixzone->flags |= SIXZONE_SV_ENABLE;
+    }
+#endif
 
     mdp_sixzone->threshold = sde_pa->six_zone_thresh;
     mdp_sixzone->adjust_p0 = sde_pa->six_zone_adj_p0;
     mdp_sixzone->adjust_p1 = sde_pa->six_zone_adj_p1;
     mdp_sixzone->sat_hold = sde_pa->six_zone_sat_hold;
     mdp_sixzone->val_hold = sde_pa->six_zone_val_hold;
+#ifdef SIXZONE_SV_ENABLE
+    mdp_sixzone->sat_adjust_p0 = sde_pa->six_zone_sat_adj_p0;
+    mdp_sixzone->sat_adjust_p1 = sde_pa->six_zone_sat_adj_p1;
+#endif
 
     for (int i = 0; i < SIXZONE_LUT_SIZE; i++) {
       mdp_sixzone->curve[i].p0 = sde_pa->six_zone_curve_p0[i] & kSixZoneP0Mask;
       mdp_sixzone->curve[i].p1 = sde_pa->six_zone_curve_p1[i] & kSixZoneP1Mask;
+#ifdef SIXZONE_SV_ENABLE
+      mdp_sixzone->curve_p2[i] = sde_pa->six_zone_curve_p2[i] & kSixZoneP2Mask;
+#endif
     }
     out_data->payload = mdp_sixzone;
     out_data->payload_size = sizeof(struct drm_msm_sixzone);

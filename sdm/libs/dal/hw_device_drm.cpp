@@ -415,6 +415,18 @@ void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, const LayerBuffer &buf
     // In legacy path, clear fb_id map in each frame.
     layer->buffer_map->buffer_map.clear();
   } else {
+    if (layer->composition == kCompositionCWBTarget) {
+      layer->buffer_map->buffer_map.clear();
+      auto it2 = output_buffer_map_.find(handle_id);
+      if (it2 != output_buffer_map_.end()) {
+        FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it2->second.get());
+        if (fb_obj->IsEqual(buffer.format, buffer.width, buffer.height)) {
+          layer->buffer_map->buffer_map[handle_id] = output_buffer_map_[handle_id];
+          // Found fb_id for given handle_id key
+          return;
+        }
+      }
+    }
     auto it = layer->buffer_map->buffer_map.find(handle_id);
     if (it != layer->buffer_map->buffer_map.end()) {
       FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
@@ -1223,6 +1235,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   }
 
   ResetROI();
+  ClearSolidfillStages();
   int64_t retire_fence_fd = -1;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   if (!IsSeamlessTransition()) {
@@ -3173,14 +3186,25 @@ DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::SetDimmingConfig(void *payload, size_t size) {
+DisplayError HWDeviceDRM::SetPPConfig(void *payload, size_t size) {
   if (!payload || size != sizeof(DRMPPFeatureInfo)) {
     DLOGE("Invalid input params on display %d-%d payload %pK, size %zd expect size %zd",
           display_id_, disp_type_, payload, size, sizeof(DRMPPFeatureInfo));
       return kErrorParameters;
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
+  struct DRMPPFeatureInfo *info = reinterpret_cast<struct DRMPPFeatureInfo *> (payload);
+
+  if (info->object_type == DRM_MODE_OBJECT_CONNECTOR && token_.conn_id) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
+  } else if (info->object_type == DRM_MODE_OBJECT_CRTC && token_.crtc_id) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, payload);
+  } else {
+    DLOGE("Invalid feature input, obj_type: 0x%x , feature_id: %d, event_type: 0x%x",
+          info->object_type, info->id, info->event_type);
+    return kErrorParameters;
+  }
+
   return kErrorNone;
 }
 }  // namespace sdm
