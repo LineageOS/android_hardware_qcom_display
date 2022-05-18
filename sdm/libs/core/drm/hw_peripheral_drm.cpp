@@ -603,6 +603,10 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
 DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
 
+  if (delay_first_commit_) {
+    delay_first_commit_ = false;
+  }
+
   DisplayError err = HWDeviceDRM::PowerOff(teardown);
   if (err != kErrorNone) {
     return err;
