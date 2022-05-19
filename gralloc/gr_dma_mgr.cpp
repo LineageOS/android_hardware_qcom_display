@@ -328,6 +328,7 @@ int DmaManager::SetBufferPermission(int fd, BufferPermission *buf_perm, int64_t 
     return -EINVAL;
   }
   VmParams vm_params = {};
+  bool shared = false;
   if (buf_perm[BUFFER_CLIENT_TRUSTED_VM].permission != 0) {
     std::bitset<kVmPermissionMax> vm_perm = {0};
     GetVMPermission(buf_perm[BUFFER_CLIENT_TRUSTED_VM], &vm_perm);
@@ -338,9 +339,14 @@ int DmaManager::SetBufferPermission(int fd, BufferPermission *buf_perm, int64_t 
     std::bitset<kVmPermissionMax> vm_perm = {0};
     GetVMPermission(buf_perm[BUFFER_CLIENT_DPU], &vm_perm);
     vm_params.emplace(kVmTypeCpPixel, vm_perm);
+  } else {
+    std::bitset<kVmPermissionMax> vm_perm = {0};
+    GetVMPermission(buf_perm[BUFFER_CLIENT_UNTRUSTED_VM], &vm_perm);
+    vm_params.emplace(kVmTypePrimary, vm_perm);
+    shared = true;
   }
   if (!vm_params.empty()) {
-    ret = mem_buf_->Export(fd, vm_params, false, mem_hdl);
+    ret = mem_buf_->Export(fd, vm_params, shared, mem_hdl);
     ALOGI("fd %d mem_hdl %lld ret %d", fd, *mem_hdl, ret);
   }
   return ret;
