@@ -242,9 +242,10 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
     }
     if (mode_string.empty() &&
        (current_color_mode_ == ColorMode::DISPLAY_P3 ||
-       current_color_mode_ == ColorMode::DISPLAY_BT2020) &&
+       current_color_mode_ == ColorMode::DISPLAY_BT2020 ||
+       current_color_mode_ == ColorMode::NATIVE) &&
        curr_dynamic_range_ == kHdrType) {
-      // fall back to display_p3/display_bt2020 SDR mode if there is no HDR mode
+      // fall back to display_p3/display_bt2020/native SDR mode if there is no HDR mode
       mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
     }
 
@@ -262,6 +263,9 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
     RestoreColorTransform();
     DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d range = %d name = %s",
              current_color_mode_, current_render_intent_, curr_dynamic_range_, mode_string.c_str());
+  } else {
+    DLOGE("Failed to apply mode = %d intent = %d range = %d name = %s",
+          current_color_mode_, current_render_intent_, curr_dynamic_range_, mode_string.c_str());
   }
 
   return error;
