@@ -1461,7 +1461,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     // Register for panel dead since notification is sent at any time
     hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
 
-    if (draw_method_ != kDrawDefault) {
+    if (draw_method_ != kDrawDefault && !hw_panel_info_.is_primary_panel) {
       DLOGI("Registering for power events");
       hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
     }
@@ -3976,6 +3976,10 @@ void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
 
   // Wait for CRTC power event on first cycle.
   if (first_cycle_) {
+    if (hw_panel_info_.is_primary_panel) {
+      DLOGI("Sync commit on primary");
+      return;
+    }
     DLOGI("Wait for CRTC power event on first cycle");
     std::unique_lock<std::mutex> lck(power_mutex_);
     while (!transition_done_) {
