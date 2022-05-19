@@ -593,7 +593,10 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
 }
 
 uint32_t HWCSession::GetMaxVirtualDisplayCount() {
-  return map_info_virtual_.size();
+  // Limit max virtual display reported to SF as one. Even though
+  // HW may support multiple virtual displays, allow only one
+  // to be used by SF for now.
+  return std::min(map_info_virtual_.size(), static_cast<size_t>(1));
 }
 
 int32_t HWCSession::GetActiveConfig(hwc2_display_t display, hwc2_config_t *out_config) {
