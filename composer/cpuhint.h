@@ -66,6 +66,7 @@ class CPUHint {
   int ReqHintsOffload(int hint, int tid);
   int ReqHintRelease();
   int ReqHint(PerfHintThreadType type, int tid);
+  void ReqEvent(int event);
 
  private:
   const int kLargeComposition = 0x00001097;
@@ -78,6 +79,7 @@ class CPUHint {
                                        int type, int numArgs, int list[]) = NULL;
   int (*fn_perf_hint_)(int hint, const char *pkg, int duration, int type) = NULL;
   int (*fn_perf_lock_rel_offload_)(int handle) = NULL;
+  void (*fn_perf_event_)(int eventId, const char *pkg, int numArgs, int list[]) = NULL;
   std::mutex tid_lock_;
 
   LongTermHintInfo large_comp_cycle_ {};
