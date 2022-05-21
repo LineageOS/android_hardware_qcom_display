@@ -1493,6 +1493,17 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     registered_hw_events_ = true;
   }
 
+  // Register other hw events after the first successful commit to avoid missing the power event
+  // notification on framework reboot edge cases
+  if (!first_cycle_ && !registered_hw_events_ && display_type_ != kVirtual) {
+    hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
+    hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
+    hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
+    hw_events_intf_->SetEventState(HWEvent::MMRM, true);
+    hw_events_intf_->SetEventState(HWEvent::VM_RELEASE_EVENT, true);
+    registered_hw_events_ = true;
+  }
+
   error = comp_manager_->Commit(display_comp_ctx_, &disp_layer_stack_);
   if (error != kErrorNone) {
     return error;
