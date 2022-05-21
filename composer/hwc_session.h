@@ -587,7 +587,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
   void NotifyClientStatus(bool connected);
-  int32_t GetVirtualDisplayId();
+  int32_t GetVirtualDisplayId(HWDisplayInfo& info);
   android::status_t TUITransitionPrepare(int disp_id);
   android::status_t TUITransitionStart(int disp_id);
   android::status_t TUITransitionEnd(int disp_id);
@@ -601,6 +601,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int WaitForCommitDone(hwc2_display_t display, int client_id);
   void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
   int WaitForVmRelease(hwc2_display_t display, int timeout_ms);
+  void GetVirtualDisplayList();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -633,7 +634,15 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static bool pending_power_mode_[HWCCallbacks::kNumDisplays];
   static int null_display_mode_;
   HotPlugEvent pending_hotplug_event_ = kHotPlugNone;
-  hwc2_display_t virtual_id_ = HWCCallbacks::kNumDisplays;
+
+  struct VirtualDisplayData {
+    uint32_t width;
+    uint32_t height;
+    int32_t format;
+    bool in_use = false;
+  };
+
+  std::unordered_map<hwc2_display_t, VirtualDisplayData> virtual_id_map_;
   Locker pluggable_handler_lock_;
   uint32_t idle_pc_ref_cnt_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
@@ -659,6 +668,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool primary_pending_ = true;
   Locker primary_display_lock_;
   std::map <hwc2_display_t, sdm::DisplayType> map_active_displays_;
+  vector<HWDisplayInfo> virtual_display_list_ = {};
 };
 }  // namespace sdm
 
