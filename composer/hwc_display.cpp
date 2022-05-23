@@ -1164,7 +1164,8 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
     return HWC2::Error::BadConfig;
   }
 
-  DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
+  DisplayConfigVariableInfo config_info = variable_config_map_.at(config);
+  DisplayConfigVariableInfo variable_config = config_info;
 
   variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
   variable_config.y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
@@ -1190,7 +1191,7 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
       *out_value = INT32(variable_config.y_dpi * 1000.0f);
       break;
     case HwcAttribute::CONFIG_GROUP:
-      *out_value = GetDisplayConfigGroup(variable_config);
+      *out_value = GetDisplayConfigGroup(config_info);
       break;
     default:
       DLOGW("Spurious attribute type = %s", composer_V2_4::toString(attribute).c_str());
