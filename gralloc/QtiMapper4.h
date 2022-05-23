@@ -260,6 +260,9 @@ class QtiMapper : public IQtiMapper {
       {qtigralloc::MetadataType_SingleBufferMode, "Single buffer mode flag", true, true},
       {qtigralloc::MetadataType_CVPMetadata, "CVP metadata", true, true},
       {qtigralloc::MetadataType_VideoHistogramStats, "Video histogram stats", true, true},
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+      {qtigralloc::MetadataType_VideoTranscodeStats, "Video transcode stats", true, true},
+#endif
       {qtigralloc::MetadataType_FD, "fd from private_handle_t", true, false},
       {qtigralloc::MetadataType_PrivateFlags, "Flags in private_handle_t", true, false},
       {qtigralloc::MetadataType_AlignedWidthInPixels, "width in private_handle_t", true, false},

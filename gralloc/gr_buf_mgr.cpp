@@ -1128,6 +1128,16 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
         return Error::BAD_VALUE;
       }
       break;
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+     case QTI_VIDEO_TRANSCODE_STATS:
+      if (metadata_ptr != nullptr) {
+        qtigralloc::encodeVideoTranscodeStatsMetadata(
+            *reinterpret_cast<VideoTranscodeStatsMetadata *>(metadata_ptr), out);
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
+#endif
     case QTI_FD:
       if (metadata_ptr != nullptr) {
         android::gralloc4::encodeInt32(qtigralloc::MetadataType_FD,
@@ -1534,6 +1544,11 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     case QTI_VIDEO_HISTOGRAM_STATS:
       qtigralloc::decodeVideoHistogramMetadata(in, &metadata->video_histogram_stats);
       break;
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS:
+      qtigralloc::decodeVideoTranscodeStatsMetadata(in, &metadata->video_transcode_stats);
+      break;
+#endif
 #ifdef QTI_VIDEO_TS_INFO
     case QTI_VIDEO_TS_INFO:
       qtigralloc::decodeVideoTimestampInfo(in, &metadata->videoTsInfo);
