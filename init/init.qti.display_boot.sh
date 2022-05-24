@@ -136,7 +136,6 @@ case "$target" in
         setprop vendor.display.enable_qsync_idle 1
         setprop vendor.display.secure_preview_buffer_format 420_sp
         setprop vendor.gralloc.secure_preview_buffer_format 420_sp
-        setprop vendor.gralloc.secure_preview_only 1
         ;;
     esac
     ;;
