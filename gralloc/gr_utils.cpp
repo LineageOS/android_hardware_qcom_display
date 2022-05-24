@@ -2193,10 +2193,10 @@ uint64_t GetCustomContentMetadataSize(int format, uint64_t usage) {
   #ifndef METADATA_V2
     return 0;
   #else
-    if ((format == HAL_PIXEL_FORMAT_YCbCr_420_P010 ||
-        (format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC) ||
-        (format == HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC) ||
-        (format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS))) {
+    static uint64_t VALID_USAGES = (BufferUsage::VIDEO_ENCODER | BufferUsage::VIDEO_DECODER |
+                                    BufferUsage::CAMERA_OUTPUT);
+
+    if (IsYuvFormat(format) && (usage & VALID_USAGES)) {
       return sizeof(CustomContentMetadata);
     } else {
       return 0;
