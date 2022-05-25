@@ -1244,6 +1244,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       }
       AdrenoMemInfo::GetInstance()->AlignGpuDepthStencilFormat(width, height, format, tile,
                                                                alignedw, alignedh);
+      return 0;
     } else {
       ALOGE("DepthStencil format without GPU usage flags");
       return -1;
