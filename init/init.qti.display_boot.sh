@@ -118,6 +118,10 @@ case "$target" in
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_qsync_idle 1
         ;;
+    esac
+    ;;
+    "parrot")
+    case "$soc_hwid" in
         537)
         # Set property for Parrot
         setprop vendor.gralloc.use_dma_buf_heaps 1
@@ -158,6 +162,13 @@ case "$target" in
         475)
         # Set property for Yupik
         setprop vendor.display.enable_posted_start_dyn 2
+        ;;
+    esac
+    ;;
+    "neo")
+    case "$soc_hwid" in
+        554)
+        setprop vendor.display.enable_null_display 1
         ;;
     esac
     ;;
