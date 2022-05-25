@@ -878,7 +878,9 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   // Set vsync enable state to false, as driver disables vsync during display power off.
   if (state == kStateOff) {
     vsync_enable_ = false;
-    needs_avr_update_ = true;
+    if (qsync_mode_ != kQSyncModeNone) {
+      needs_avr_update_ = true;
+    }
   }
 
   if (pending_power_state_ != kPowerStateNone) {
