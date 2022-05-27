@@ -135,6 +135,7 @@ enum DebugTag {
   kTagStitchBuffer,     //!< Debug log is tagged for Stitch Buffer Implementation.
   kTagCpuHint,          //!< Debug log is tagged for CPU hint Implementation.
   kTagCwb,              //!< Debug log is tagged for CWB buffer manager.
+  kTagIWE,              //!< Debug log is tagged for IWE Implementation.
 };
 
 }  // namespace sdm
