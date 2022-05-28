@@ -191,4 +191,19 @@ void ApplyCwbRoiRestrictions(LayerRect &roi, const LayerRect &cwb_full_frame,
   }
 }
 
+const char *GetCompositionName(const LayerComposition &composition) {
+  switch (composition) {
+  case kCompositionGPU:           return "GPU";
+  case kCompositionSDE:           return "SDE";
+  case kCompositionCursor:        return "CURSOR";
+  case kCompositionStitch:        return "STITCH";
+  case kCompositionGPUTarget:     return "GPU_TARGET";
+  case kCompositionStitchTarget:  return "STITCH_TARGET";
+  case kCompositionDemura:        return "DEMURA";
+  case kCompositionCWBTarget:     return "CWB_TARGET";
+  case kCompositionIWE:           return "IWE";
+  default:                        return "UNKNOWN";
+  }
+}
+
 }  // namespace sdm

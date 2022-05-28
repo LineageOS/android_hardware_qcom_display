@@ -1604,7 +1604,7 @@ std::string DisplayBuiltIn::Dump() {
     HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    const char *comp_type = GetName(hw_layer.composition);
+    const char *comp_type = GetCompositionName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
     const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
@@ -1702,6 +1702,7 @@ std::string DisplayBuiltIn::Dump() {
     }
   }
 
+  os << comp_manager_->Dump();
   os << newline << "\n";
 
   return os.str();

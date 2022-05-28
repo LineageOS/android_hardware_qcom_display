@@ -936,6 +936,11 @@ bool CompManager::IsSafeMode() {
   return safe_mode_;
 }
 
+std::string CompManager::Dump() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  return resource_intf_->Dump();
+}
+
 DppsControlInterface* CompManager::GetDppsControlIntf() {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return dpps_ctrl_intf_;

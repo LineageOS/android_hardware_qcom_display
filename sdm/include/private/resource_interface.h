@@ -64,6 +64,8 @@
 #include <core/display_interface.h>
 #include <map>
 #include <vector>
+#include <string>
+
 #include "hw_info_types.h"
 #include "layer_feedback.h"
 
@@ -136,6 +138,7 @@ class ResourceInterface {
   virtual DisplayError PreCommit(Handle display_ctx) = 0;
   virtual bool HandleCwbTeardown(Handle display_ctx) = 0;
   virtual void HandleSkipValidate(Handle display_ctx) = 0;
+  virtual std::string Dump() = 0;
 };
 
 }  // namespace sdm

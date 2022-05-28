@@ -66,6 +66,7 @@
 #include <utils/sys.h>
 #include <dlfcn.h>
 #include <algorithm>
+#include <string>
 
 #include "resource_default.h"
 
@@ -381,6 +382,10 @@ DisplayError ResourceDefault::PreCommit(Handle display_ctx) {
 }
 
 void ResourceDefault::HandleSkipValidate(Handle display_ctx) {
+}
+
+std::string ResourceDefault::Dump() {
+  return "";
 }
 
 DisplayError ResourceDefault::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
