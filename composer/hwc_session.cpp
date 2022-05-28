@@ -3982,7 +3982,7 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
     }
   }
 
-  int ret = Fence::Wait(retire_fence, timeout_ms);
+  int ret = Fence::Wait(retire_fence, timeout_ms + kCommitDoneTimeoutMs);
   if (ret != 0) {
     DLOGE("Retire fence wait failed with error %d for client %d display %" PRIu64, ret,
           client_id, display);
