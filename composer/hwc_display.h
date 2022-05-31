@@ -630,6 +630,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool display_idle_ = false;
   bool animating_ = false;
   DisplayDrawMethod draw_method_ = kDrawDefault;
+  uint32_t fb_width_ = 0;
+  uint32_t fb_height_ = 0;
 
   // Members for N frame dump to file
   bool dump_output_to_file_ = false;
