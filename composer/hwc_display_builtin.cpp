@@ -27,6 +27,38 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the
+      names of its contributors may be used to endorse or promote
+      products derived from this software without specific prior
+      written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <cutils/properties.h>
 #include <sync/sync.h>
 #include <utils/constants.h>
@@ -478,6 +510,9 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
     if (revalidate_pending_) {
       validated_ = false;
       revalidate_pending_ = false;
+      if (force_reset_validate_) {
+        display_intf_->ClearLUTs();
+      }
     }
   } else {
     CacheAvrStatus();
@@ -517,8 +552,12 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   // In case of scaling UI layer for command mode, reset validate
   if (force_reset_validate_) {
-    validated_ = false;
-    display_intf_->ClearLUTs();
+    if (layer_stack_.block_on_fb) {
+      validated_ = false;
+      display_intf_->ClearLUTs();
+    } else {
+      revalidate_pending_ = true;
+    }
   }
   return status;
 }
@@ -781,6 +820,25 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
 
   *needs_refresh = true;
   return kErrorNone;
+}
+
+DisplayError HWCDisplayBuiltIn::TeardownCwbForVirtualDisplay() {
+  DisplayError error = kErrorNotSupported;
+  if (Fence::Wait(output_buffer_.release_fence) != kErrorNone) {
+    DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    return kErrorResources;
+  }
+  if (display_intf_) {
+    error = display_intf_->TeardownConcurrentWriteback();
+  }
+
+  readback_buffer_queued_ = false;
+  cwb_config_ = {};
+  readback_configured_ = false;
+  output_buffer_ = {};
+  cwb_client_ = kCWBClientNone;
+
+  return error;
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,

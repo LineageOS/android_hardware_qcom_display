@@ -211,6 +211,7 @@ class HWDeviceDRM : public HWInterface {
   DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
   void SetTUIState();
   void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
+  virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
 
   class Registry {
    public:
