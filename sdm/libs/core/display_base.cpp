@@ -4223,18 +4223,22 @@ DisplayError DisplayBase::CaptureCwb(const LayerBuffer &output_buffer, const Cwb
   DisplayError error = kErrorNone;
   CwbConfig cwb_config = config;
 
-  if (!IsValid(config.cwb_roi) && !config.pu_as_cwb_roi) {
-    // If Cwb client doesn't set Cwb config in config, then we consider full frame
-    // ROI and recognize LM tap-point.
-
+  // Configure default tap point, in case of invalid configured tap point.
+  if (cwb_config.tap_point < CwbTapPoint::kLmTapPoint ||
+      cwb_config.tap_point > CwbTapPoint::kDemuraTapPoint) {
     cwb_config.tap_point = CwbTapPoint::kLmTapPoint;
+  }
 
-    uint32_t buffer_width = 0, buffer_height = 0;
-    error = GetCwbBufferResolution(&cwb_config, &buffer_width, &buffer_height);
-    if (error != kErrorNone) {
-      DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config.tap_point);
-      return error;
-    }
+  // Get correct full frame resolution for configured tap point.
+  uint32_t buffer_width = 0, buffer_height = 0;
+  error = GetCwbBufferResolution(&cwb_config, &buffer_width, &buffer_height);
+  if (error != kErrorNone) {
+    DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config.tap_point);
+    return error;
+  }
+
+  if (!IsValid(config.cwb_roi) && !config.pu_as_cwb_roi) {
+    // If Cwb client doesn't set Cwb config in config, then we consider full frame ROI.
     DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
     cwb_config.cwb_roi = cwb_config.cwb_full_rect;
   }
