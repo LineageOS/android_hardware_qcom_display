@@ -149,6 +149,8 @@
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
 #define ENABLE_ASYNC_VDS_CREATION            DISPLAY_PROP("enable_async_vds_creation")
+#define VDS_ALLOW_HWC                        DISPLAY_PROP("vds_allow_hwc")
+#define DISABLE_VDS_HWC                      DISPLAY_PROP("disable_vds_hwc")
 #define ENABLE_HISTOGRAM_INTR                DISPLAY_PROP("enable_hist_intr")
 #define DISABLE_MMRM_PROP                    DISPLAY_PROP("disable_mmrm_prop")
 #define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")

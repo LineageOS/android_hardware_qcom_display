@@ -262,6 +262,16 @@ int HWCSession::Init() {
   async_vds_creation_ = (value == 1);
   DLOGI("async_vds_creation: %d", async_vds_creation_);
 
+  value = 0;
+  Debug::Get()->GetProperty(DISABLE_VDS_HWC, &value);
+  disable_vds_hwc_ = (value == 1);
+  DLOGI("disable_vds_hwc: %d", disable_vds_hwc_);
+
+  value = 0;
+  Debug::Get()->GetProperty(VDS_ALLOW_HWC, &value);
+  vds_allow_hwc_ = (value == 1);
+  DLOGI("vds_allow_hwc: %d", vds_allow_hwc_);
+
   DLOGI("Initializing supported display slots");
   InitSupportedDisplaySlots();
   DLOGI("Initializing supported display slots...done!");
@@ -621,7 +631,11 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
 }
 
 uint32_t HWCSession::GetMaxVirtualDisplayCount() {
-  return map_info_virtual_.size();
+  if (!disable_vds_hwc_) {
+    return map_info_virtual_.size();
+  }
+
+  return is_client_up_ && !vds_allow_hwc_ ? map_info_virtual_.size() : 0;
 }
 
 int32_t HWCSession::GetActiveConfig(hwc2_display_t display, hwc2_config_t *out_config) {
