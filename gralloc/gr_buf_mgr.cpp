@@ -34,9 +34,10 @@
 *      disclaimer in the documentation and/or other materials provided
 *      with the distribution.
 *
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the
+*      names of its contributors may be used to endorse or promote
+*      products derived from this software without specific prior
+*      written permission.
 *
 * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
 * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
@@ -907,10 +908,16 @@ Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo 
   unsigned int size, alignedw, alignedh;
   unsigned int max_bpp = gralloc::GetBppForUncompressedRGB(HAL_PIXEL_FORMAT_RGBA_FP16);
   info.format = GetImplDefinedFormat(info.usage, info.format);
-  int ret = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  if ((ret < 0) || (OVERFLOW((alignedw * max_bpp), alignedh))) {
+  int ret = GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+  if ((ret != 0) || (OVERFLOW((alignedw * max_bpp), alignedh))) {
     return Error::BAD_BUFFER;
   }
+
+  ret = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  if (ret != 0) {
+    return Error::BAD_BUFFER;
+  }
+
   auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
   if (size != ion_fd_size) {
     return Error::BAD_VALUE;
