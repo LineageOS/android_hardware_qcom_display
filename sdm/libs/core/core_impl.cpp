@@ -562,7 +562,7 @@ void CoreIPCVmCallbackImpl::Deinit() {
 
 void CoreIPCVmCallbackImpl::OnServerReady() {
   if (server_ready_) {
-    DLOGE("Server is ready");
+    DLOGI("Server is ready");
     return;
   }
   server_ready_ = true;
