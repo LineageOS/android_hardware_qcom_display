@@ -219,7 +219,7 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  if (property_value >= 0) {
+  if (property_value > 0) {
     max_mixer_stages = std::min(UINT32(property_value), hw_resource_info_.num_blending_stages);
   }
   DisplayBase::SetMaxMixerStages(max_mixer_stages);
