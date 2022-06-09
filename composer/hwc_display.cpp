@@ -1638,8 +1638,8 @@ HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t 
   layer_stack_.client_incompatible = false;
 
   validate_done_ = true;
-
-  return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
+  return (((*out_num_types > 0) || (has_client_composition_ && *out_num_requests > 0))
+          ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
 HWC2::Error HWCDisplay::AcceptDisplayChanges() {
