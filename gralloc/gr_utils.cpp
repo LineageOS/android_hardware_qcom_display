@@ -482,8 +482,6 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2 + 1, SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-        size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, SIZE_4K);
-        break;
       case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
         mmm_color_format =
             (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
@@ -701,10 +699,6 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
     case static_cast<int>(PixelFormat::Y8):
       c_size = c_stride = 0;
       c_height = 0;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      c_size = (width * height);
-      c_height = height;
       break;
     default:
       break;
@@ -1333,9 +1327,9 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case static_cast<int>(PixelFormat::YCBCR_422_I):
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       aligned_w = ALIGN(width, 16);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       mmm_color_format =
           (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
@@ -1721,16 +1715,6 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       }
       break;
 
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      *plane_count = 2;
-      GetYuvSPPlaneInfo(info, format, width, height, 2, plane_info);
-      GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
-      plane_info[0].h_subsampling = 0;
-      plane_info[0].v_subsampling = 0;
-      plane_info[1].h_subsampling = h_subsampling;
-      plane_info[1].v_subsampling = v_subsampling;
-      break;
-
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       *plane_count = 4;
       GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_BPP10_UBWC, plane_info);
@@ -1761,6 +1745,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[2].step = plane_info[3].step = 0;
       break;
 
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       *plane_count = 2;
       mmm_color_format =
@@ -2714,15 +2699,6 @@ static Error getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &com
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010):
-      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value ||
-          comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value ||
-          comp.type.value == android::gralloc4::PlaneLayoutComponentType_CR.value) {
-        comp.offsetInBits = 0;
-        comp.sizeInBits = 10;
-      } else {
-        return Error::BAD_VALUE;
-      }
-      break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS):
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value ||
           comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value) {
