@@ -63,7 +63,6 @@ class CoreIPCVmCallbackImpl : public IPCVmCallbackIntf {
   virtual ~CoreIPCVmCallbackImpl() {}
 
  private:
-  int SendProperties();
   int ExportDemuraCalibBuffer();
   int SendPanelBootParams();
 

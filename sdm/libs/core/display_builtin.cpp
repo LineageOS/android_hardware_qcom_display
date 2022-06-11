@@ -2423,22 +2423,22 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 // LCOV_EXCL_START
 DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
   ClientLock lock(disp_mutex_);
-  if (secure_event_ == kTUITransitionStart) {
+  if (secure_event == kTUITransitionStart) {
     if (vm_cb_intf_) {
       vm_cb_intf_->ExportHFCBuffer();
     }
     if (!pending_brightness_) {
-      if (secure_event_ == kTUITransitionStart) {
+      if (secure_event == kTUITransitionStart) {
         // Send the panel brightness event to secondary VM on TUI session start
         SendBacklight();
       }
     }
-    if (secure_event_ == kTUITransitionStart) {
+    if (secure_event == kTUITransitionStart) {
       // Send display config information to secondary VM on TUI session start
       SendDisplayConfigs();
     }
   }
-  if (secure_event_ == kTUITransitionEnd) {
+  if (secure_event == kTUITransitionEnd) {
     if (vm_cb_intf_) {
       vm_cb_intf_->FreeExportBuffer();
     }
