@@ -2128,7 +2128,7 @@ std::string DisplayBase::Dump() {
     HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    const char *comp_type = GetName(hw_layer.composition);
+    const char *comp_type = GetCompositionName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
     const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
@@ -2229,21 +2229,6 @@ std::string DisplayBase::Dump() {
   os << newline << "\n";
 
   return os.str();
-}
-
-const char * DisplayBase::GetName(const LayerComposition &composition) {
-  switch (composition) {
-  case kCompositionGPU:           return "GPU";
-  case kCompositionSDE:           return "SDE";
-  case kCompositionCursor:        return "CURSOR";
-  case kCompositionStitch:        return "STITCH";
-  case kCompositionGPUTarget:     return "GPU_TARGET";
-  case kCompositionStitchTarget:  return "STITCH_TARGET";
-  case kCompositionDemura:        return "DEMURA";
-  case kCompositionCWBTarget:     return "CWB_TARGET";
-  case kCompositionIWE:           return "IWE";
-  default:                        return "UNKNOWN";
-  }
 }
 
 DisplayError DisplayBase::ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,

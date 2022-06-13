@@ -316,7 +316,6 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
-  const char *GetName(const LayerComposition &composition);
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);

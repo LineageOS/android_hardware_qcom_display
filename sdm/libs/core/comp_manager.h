@@ -160,6 +160,7 @@ class CompManager : public CwbCallback {
   bool HandleCwbTeardown(Handle display_ctx);
   virtual void NotifyCwbDone(int32_t display_id, int32_t status, const LayerBuffer& buffer);
   virtual void TriggerRefresh(int32_t display_id);
+  std::string Dump();
 
  private:
   static const int kMaxThermalLevel = 3;

@@ -70,7 +70,7 @@
 #include <private/hw_interface.h>
 #include <vector>
 #include <map>
-
+#include <string>
 
 namespace sdm {
 
@@ -136,6 +136,7 @@ class ResourceDefault : public ResourceInterface {
     return false;
   }
   virtual void HandleSkipValidate(Handle display_ctx);
+  virtual std::string Dump();
 
  private:
   enum PipeOwner {

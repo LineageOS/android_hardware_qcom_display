@@ -87,6 +87,7 @@ void AdjustSize(const int min_size, const int bound_start, const int bound_end, 
 void ApplyCwbRoiRestrictions(LayerRect &roi, const LayerRect &cwb_full_frame,
                              const int cwb_alignment_factor,
                              LayerBufferFormat format);
+const char *GetCompositionName(const LayerComposition &composition);
 
 }  // namespace sdm
 
