@@ -74,6 +74,7 @@
 #define EXTERNAL_ACTION_SAFE_HEIGHT_PROP     DISPLAY_PROP("external_action_safe_height")
 #define FB_WIDTH_PROP                        DISPLAY_PROP("fb_width")
 #define FB_HEIGHT_PROP                       DISPLAY_PROP("fb_height")
+#define COMPOSER_THREAD_COUNT                DISPLAY_PROP("composer_thread_count")
 #define DISABLE_METADATA_DYNAMIC_FPS_PROP    DISPLAY_PROP("disable_metadata_dynamic_fps")
 #define DISABLE_SKIP_VALIDATE_PROP           DISPLAY_PROP("disable_skip_validate")
 #define DISABLE_DESTINATION_SCALER_PROP      DISPLAY_PROP("disable_dest_scaler")
