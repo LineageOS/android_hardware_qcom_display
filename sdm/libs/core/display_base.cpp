@@ -1567,6 +1567,7 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   PostCommitLayerParams();
 
   rc_prepared_ = false;
+  avoid_qsync_mode_change_ = false;
 
   if (partial_update_control_) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, true /* enable */);
@@ -1968,6 +1969,7 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
     return error;
   }
 
+  avoid_qsync_mode_change_ = true;
   active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
