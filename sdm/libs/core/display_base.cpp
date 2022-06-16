@@ -1578,6 +1578,7 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   PostCommitLayerParams();
 
   rc_prepared_ = false;
+  avoid_qync_mode_change_ = false;
 
   if (partial_update_control_) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, true /* enable */);
@@ -1974,6 +1975,8 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   if (error != kErrorNone) {
     return error;
   }
+
+  avoid_qync_mode_change_ = true;
 
   // Cache last refresh rate set by SF
   HWDisplayAttributes display_attributes = {};

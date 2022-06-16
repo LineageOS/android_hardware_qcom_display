@@ -386,7 +386,7 @@ void DisplayBuiltIn::CacheFrameROI() {
 }
 
 void DisplayBuiltIn::UpdateQsyncMode() {
-  if (!hw_panel_info_.qsync_support) {
+  if (!hw_panel_info_.qsync_support || avoid_qync_mode_change_) {
     return;
   }
 
@@ -922,6 +922,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       return error;
     }
 
+    avoid_qync_mode_change_ = true;
     DisplayBase::ReconfigureDisplay();
 
     if (mode == kModeVideo) {
@@ -1839,6 +1840,7 @@ DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   }
 
   validated_ = false;
+  avoid_qync_mode_change_ = true;
   DLOGV("Setting new dynamic bit clk value: %" PRIu64, bit_clk_rate);
   return hw_intf_->SetDynamicDSIClock(bit_clk_rate);
 }
