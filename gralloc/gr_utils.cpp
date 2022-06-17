@@ -1620,18 +1620,6 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
         Error::NONE) {
       format = INT(linear_format);
     }
-
-    // Check metadata if the geometry has been updated.
-    CropRectangle_t crop;
-    if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
-                         &crop) == Error::NONE) {
-      BufferInfo info(crop.right, crop.bottom, format, usage);
-      err = GetAlignedWidthAndHeight(info, reinterpret_cast<unsigned int *>(&width),
-                                     reinterpret_cast<unsigned int *>(&height));
-      if (err) {
-        return err;
-      }
-    }
   }
 
   switch (format) {
