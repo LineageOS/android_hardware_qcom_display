@@ -177,6 +177,9 @@ static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
 static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
                          uint64_t *drm_format_modifier) {
   switch (format) {
+    case kFormatARGB8888:
+      *drm_format = DRM_FORMAT_BGRA8888;
+      break;
     case kFormatRGBA8888:
       *drm_format = DRM_FORMAT_ABGR8888;
       break;
