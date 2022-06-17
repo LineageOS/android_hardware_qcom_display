@@ -53,6 +53,11 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <cutils/properties.h>
 #include <utils/ProcessCallStack.h>
 #include <errno.h>
@@ -3057,10 +3062,6 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
 
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
-  if (current_config == config) {
-    SetActiveConfigIndex(config);
-    return HWC2::Error::None;
-  }
 
   DisplayError error = display_intf_->SetActiveConfig(config);
   if (error == kErrorDeferred) {
