@@ -2284,6 +2284,9 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
     case QTI_SINGLE_BUFFER_MODE:
     case QTI_CVP_METADATA:
     case QTI_VIDEO_HISTOGRAM_STATS:
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS:
+#endif
     case QTI_VIDEO_TS_INFO:
     case QTI_S3D_FORMAT:
     case QTI_BUFFER_PERMISSION:
@@ -2985,6 +2988,25 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
       }
       break;
     }
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS: {
+      if (copy) {
+        struct VideoTranscodeStatsMetadata *vidtranscodestats =
+            (struct VideoTranscodeStatsMetadata *)in;
+        vidtranscodestats->stat_len = 0;
+        if (data->video_transcode_stats.stat_len <= VIDEO_TRANSCODE_STATS_SIZE) {
+          memcpy(vidtranscodestats->stats_info, data->video_transcode_stats.stats_info,
+                 VIDEO_TRANSCODE_STATS_SIZE);
+          vidtranscodestats->stat_len = data->video_transcode_stats.stat_len;
+        } else {
+          ret = Error::BAD_VALUE;
+        }
+      } else {
+        *out = &data->video_transcode_stats;
+      }
+      break;
+    }
+#endif
     case QTI_VIDEO_TS_INFO:
       if (copy) {
         *(reinterpret_cast<VideoTimestampInfo *>(in)) = data->videoTsInfo;
@@ -3291,6 +3313,9 @@ void setGralloc4Array(MetaData_t *metadata, int64_t paramType, bool isSet) {
     case QTI_SINGLE_BUFFER_MODE:
     case QTI_CVP_METADATA:
     case QTI_VIDEO_HISTOGRAM_STATS:
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS:
+#endif
     case QTI_VIDEO_TS_INFO:
     case QTI_S3D_FORMAT:
     case QTI_BUFFER_PERMISSION:
@@ -3344,6 +3369,11 @@ Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param) {
       case QTI_VIDEO_HISTOGRAM_STATS:
         data->video_histogram_stats.stat_len = 0;
         break;
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+      case QTI_VIDEO_TRANSCODE_STATS:
+        data->video_transcode_stats.stat_len = 0;
+        break;
+#endif
       default:
         ALOGE("Unknown paramType %d", paramType);
         break;
@@ -3441,6 +3471,23 @@ Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param) {
       }
       break;
     }
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS: {
+      struct VideoTranscodeStatsMetadata *vidtranscodestats =
+          (struct VideoTranscodeStatsMetadata *)param;
+      if (vidtranscodestats->stat_len <= VIDEO_TRANSCODE_STATS_SIZE) {
+        memcpy(data->video_transcode_stats.stats_info, vidtranscodestats->stats_info,
+               VIDEO_TRANSCODE_STATS_SIZE);
+        data->video_transcode_stats.stat_len = vidtranscodestats->stat_len;
+      } else {
+        setGralloc4Array(data, paramType, false);
+        ALOGE("%s: video transcode stats length %u is more than max size %u", __func__,
+               vidtranscodestats->stat_len, VIDEO_TRANSCODE_STATS_SIZE);
+        return Error::BAD_VALUE;
+      }
+      break;
+    }
+#endif
     case QTI_VIDEO_TS_INFO:
       data->videoTsInfo = *(reinterpret_cast<VideoTimestampInfo *>(param));
       break;
