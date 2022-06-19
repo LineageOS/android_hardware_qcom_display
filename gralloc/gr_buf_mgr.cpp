@@ -15,10 +15,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 /*
  * Changes from Qualcomm Innovation Center are provided under the following license:
@@ -297,7 +293,7 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
     return Error::BAD_BUFFER;
   }
 
-  auto meta_size = GetMetaDataSize(buf->reserved_size, buf->custom_content_md_size);
+  auto meta_size = GetMetaDataSize(hnd->reserved_size, buf->custom_content_md_size);
 
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset, hnd->fd,
                              buf->ion_handle_main) != 0) {
@@ -679,6 +675,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
                           descriptor.GetWidth(), descriptor.GetHeight(), format, buffer_type,
                           data.size, usage);
 
+  hnd->reserved_size = static_cast<unsigned int>(descriptor.GetReservedSize());
   hnd->id = ++next_id_;
   hnd->base = 0;
   hnd->base_metadata = 0;
@@ -691,11 +688,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
     UnmapAndReset(hnd);
   }
 
-#ifdef METADATA_V2
-  auto error = ValidateAndMap(hnd, reserved_region_size);
-#else
   auto error = ValidateAndMap(hnd);
-#endif
 
   if (error != 0) {
     ALOGE("ValidateAndMap failed");
@@ -717,7 +710,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   metadata->crop.right = hnd->width;
   metadata->crop.bottom = hnd->height;
 
-  UnmapAndReset(hnd, reserved_region_size);
+  UnmapAndReset(hnd);
 
   *handle = hnd;
 
