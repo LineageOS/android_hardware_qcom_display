@@ -88,6 +88,7 @@ using aidl::android::hardware::graphics::common::Smpte2086;
 using aidl::android::hardware::graphics::common::StandardMetadataType;
 using aidl::android::hardware::graphics::common::XyColor;
 using ::android::hardware::graphics::common::V1_2::PixelFormat;
+using IMapper_4_0_Error =  ::android::hardware::graphics::mapper::V4_0::Error;
 
 static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
   return BufferInfo(descriptor.GetWidth(), descriptor.GetHeight(), descriptor.GetFormat(),
@@ -1490,7 +1491,9 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       return Error::UNSUPPORTED;
     case (int64_t)StandardMetadataType::DATASPACE:
       Dataspace dataspace;
-      android::gralloc4::decodeDataspace(in, &dataspace);
+      if (android::gralloc4::decodeDataspace(in, &dataspace)) {
+        return Error::UNSUPPORTED;
+      }
       dataspaceToColorMetadata(dataspace, &metadata->color);
       break;
     case (int64_t)StandardMetadataType::BLEND_MODE:
@@ -1500,7 +1503,9 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       break;
     case (int64_t)StandardMetadataType::SMPTE2086: {
       std::optional<Smpte2086> mastering_display_values;
-      android::gralloc4::decodeSmpte2086(in, &mastering_display_values);
+      if (android::gralloc4::decodeSmpte2086(in, &mastering_display_values)) {
+        return Error::UNSUPPORTED;
+      }
       if (mastering_display_values != std::nullopt) {
         metadata->color.masteringDisplayInfo.colorVolumeSEIEnabled = true;
 
@@ -1539,7 +1544,9 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     }
     case (int64_t)StandardMetadataType::CTA861_3: {
       std::optional<Cta861_3> content_light_level;
-      android::gralloc4::decodeCta861_3(in, &content_light_level);
+      if (android::gralloc4::decodeCta861_3(in, &content_light_level)) {
+        return Error::UNSUPPORTED;
+      }
       if (content_light_level != std::nullopt) {
         metadata->color.contentLightLevel.lightLevelSEIEnabled = true;
         metadata->color.contentLightLevel.maxContentLightLevel =
@@ -1557,7 +1564,9 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     }
     case (int64_t)StandardMetadataType::SMPTE2094_40: {
       std::optional<std::vector<uint8_t>> dynamic_metadata_payload;
-      android::gralloc4::decodeSmpte2094_40(in, &dynamic_metadata_payload);
+      if (android::gralloc4::decodeSmpte2094_40(in, &dynamic_metadata_payload)) {
+        return Error::UNSUPPORTED;
+      }
       if (dynamic_metadata_payload != std::nullopt) {
         if (dynamic_metadata_payload->size() > HDR_DYNAMIC_META_DATA_SZ)
           return Error::BAD_VALUE;
@@ -1578,9 +1587,13 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     }
     case (int64_t)StandardMetadataType::CROP: {
       std::vector<Rect> in_crop;
-      android::gralloc4::decodeCrop(in, &in_crop);
-      if (in_crop.size() != 1)
+      if (android::gralloc4::decodeCrop(in, &in_crop)) {
         return Error::UNSUPPORTED;
+      }
+
+      if (in_crop.size() != 1) {
+        return Error::UNSUPPORTED;
+      }
 
       metadata->crop.left = in_crop[0].left;
       metadata->crop.top = in_crop[0].top;
@@ -1589,49 +1602,75 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       break;
     }
     case QTI_VT_TIMESTAMP:
-      android::gralloc4::decodeUint64(qtigralloc::MetadataType_VTTimestamp, in,
-                                      &metadata->vtTimeStamp);
+      if (android::gralloc4::decodeUint64(qtigralloc::MetadataType_VTTimestamp, in,
+                                      &metadata->vtTimeStamp)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_COLOR_METADATA:
       ColorMetaData color;
-      qtigralloc::decodeColorMetadata(in, &color);
+      if (qtigralloc::decodeColorMetadata(in, &color) != IMapper_4_0_Error::NONE) {
+        return Error::UNSUPPORTED;
+      }
       metadata->color = color;
       break;
     case QTI_PP_PARAM_INTERLACED:
-      android::gralloc4::decodeInt32(qtigralloc::MetadataType_PPParamInterlaced, in,
-                                     &metadata->interlaced);
+      if (android::gralloc4::decodeInt32(qtigralloc::MetadataType_PPParamInterlaced, in,
+                                     &metadata->interlaced)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_VIDEO_PERF_MODE:
-      android::gralloc4::decodeUint32(qtigralloc::MetadataType_VideoPerfMode, in,
-                                      &metadata->isVideoPerfMode);
+      if (android::gralloc4::decodeUint32(qtigralloc::MetadataType_VideoPerfMode, in,
+                                      &metadata->isVideoPerfMode)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_GRAPHICS_METADATA:
-      qtigralloc::decodeGraphicsMetadata(in, &metadata->graphics_metadata);
+      if (qtigralloc::decodeGraphicsMetadata(in, &metadata->graphics_metadata) !=
+                                       IMapper_4_0_Error::NONE) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_UBWC_CR_STATS_INFO:
-      qtigralloc::decodeUBWCStats(in, &metadata->ubwcCRStats[0]);
+      if (qtigralloc::decodeUBWCStats(in, &metadata->ubwcCRStats[0]) != IMapper_4_0_Error::NONE) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_REFRESH_RATE:
-      android::gralloc4::decodeFloat(qtigralloc::MetadataType_RefreshRate, in,
-                                     &metadata->refreshrate);
+      if (android::gralloc4::decodeFloat(qtigralloc::MetadataType_RefreshRate, in,
+                                     &metadata->refreshrate)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_MAP_SECURE_BUFFER:
-      android::gralloc4::decodeInt32(qtigralloc::MetadataType_MapSecureBuffer, in,
-                                     &metadata->mapSecureBuffer);
+      if (android::gralloc4::decodeInt32(qtigralloc::MetadataType_MapSecureBuffer, in,
+                                     &metadata->mapSecureBuffer)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_LINEAR_FORMAT:
-      android::gralloc4::decodeUint32(qtigralloc::MetadataType_LinearFormat, in,
-                                      &metadata->linearFormat);
+      if (android::gralloc4::decodeUint32(qtigralloc::MetadataType_LinearFormat, in,
+                                      &metadata->linearFormat)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_SINGLE_BUFFER_MODE:
-      android::gralloc4::decodeUint32(qtigralloc::MetadataType_SingleBufferMode, in,
-                                      &metadata->isSingleBufferMode);
+      if (android::gralloc4::decodeUint32(qtigralloc::MetadataType_SingleBufferMode, in,
+                                      &metadata->isSingleBufferMode)) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_CVP_METADATA:
-      qtigralloc::decodeCVPMetadata(in, &metadata->cvpMetadata);
+      if (qtigralloc::decodeCVPMetadata(in, &metadata->cvpMetadata) != IMapper_4_0_Error::NONE) {
+        return Error::UNSUPPORTED;
+      }
       break;
     case QTI_VIDEO_HISTOGRAM_STATS:
-      qtigralloc::decodeVideoHistogramMetadata(in, &metadata->video_histogram_stats);
+      if (qtigralloc::decodeVideoHistogramMetadata(in, &metadata->video_histogram_stats) !=
+                                      IMapper_4_0_Error::NONE) {
+        return Error::UNSUPPORTED;
+      }
       break;
     default:
 #ifdef METADATA_V2
