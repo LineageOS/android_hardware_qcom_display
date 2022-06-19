@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "adce0a17_724901a4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2022-06-19T19:54:19Z",
+      "side": 1,
+      "message": "Don\u0027t want to merge tags higher than the latest blobs we have available (which is LA.UM.9.14.r1-19200-LAHAINA.QSSI12.0).",
+      "revId": "5da0a59597fa8a0c57e444f3d3a470c3730468c7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
