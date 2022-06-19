@@ -25,14 +25,46 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *
+ *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef __QTIMAPPEREXTENSIONS_H__
 #define __QTIMAPPEREXTENSIONS_H__
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/mapperextensions/1.1/IQtiMapperExtensions.h>
+#include <vendor/qti/hardware/display/mapperextensions/1.3/IQtiMapperExtensions.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -55,10 +87,11 @@ using ::android::hardware::graphics::common::V1_2::PixelFormat;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using gralloc::BufferManager;
-using ::vendor::qti::hardware::display::mapperextensions::V1_1::IQtiMapperExtensions;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::PlaneLayout;
 using ::vendor::qti::hardware::display::mapperextensions::V1_0::YCbCrLayout;
+using ::vendor::qti::hardware::display::mapperextensions::V1_3::IQtiMapperExtensions;
+using IMapperExtensions_1_0_Error = ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
 
 class QtiMapperExtensions : public IQtiMapperExtensions {
  public:
@@ -91,6 +124,16 @@ class QtiMapperExtensions : public IQtiMapperExtensions {
   Return<void> getFormatLayout(int32_t format, uint64_t usage, int32_t flags, int32_t width,
                                int32_t height, getFormatLayout_cb hidl_cb) override;
   Return<Error> getSurfaceMetadata_V1(void *buffer, void *metadata) override;
+  Return<void> getMetadataFd(void *buffer, getFd_cb _hidl_cb) override;
+  Return<void> getMetadataSize(void *buffer, getSize_cb _hidl_cb) override;
+  Return<void> getCRCBufferOffset(void *buffer, getOffset_cb hidl_cb) override;
+  Return<Error> getCRCBufferData(void *buffer, void *data) override;
+  Return<Error> copyMetaData(void *src, void *dst) override;
+  Return<Error> setMetadataBlob(const hidl_vec<uint8_t> &src, void *dst) override;
+  Return<void> getMetadataBlob(void *src, getMetadataBlob_cb _hidl_cb) override;
+
+ private:
+  BufferManager *buf_mgr_ = nullptr;
 };
 
 }  // namespace implementation
