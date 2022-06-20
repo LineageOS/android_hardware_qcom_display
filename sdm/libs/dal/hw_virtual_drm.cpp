@@ -357,5 +357,23 @@ DisplayError HWVirtualDRM::GetDisplayIdentificationData(uint8_t *out_port, uint3
   return kErrorNone;
 }
 
+DisplayError HWVirtualDRM::Deinit() {
+#ifdef FEATURE_DNSC_BLUR
+  sde_drm::DRMFrameTriggerMode trigger_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_DEFAULT;
+  sde_drm::DRMWBUsageType usage_mode = sde_drm::DRMWBUsageType::WB_USAGE_WFD;
+  uint32_t conn_id = token_.conn_id;
+
+  dnsc_cfg_ = {};
+
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_CACHE_STATE, conn_id, 0);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_EARLY_FENCE_LINE, conn_id, 0);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_DNSC_BLR, conn_id, &dnsc_cfg_);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_WB_USAGE_TYPE, conn_id, usage_mode);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FRAME_TRIGGER, conn_id, trigger_mode);
+#endif
+
+  return HWDeviceDRM::Deinit();
+}
+
 }  // namespace sdm
 

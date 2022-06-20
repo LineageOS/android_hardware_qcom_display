@@ -83,6 +83,7 @@ class HWVirtualDRM : public HWDeviceDRM {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
+  virtual DisplayError Deinit();
 
  protected:
   virtual DisplayError Validate(HWLayersInfo *hw_layers_info);
