@@ -2918,5 +2918,34 @@ uint32_t DisplayBuiltIn::SanitizeRefreshRate(uint32_t req_refresh_rate, uint32_t
   return refresh_rate;
 }
 
+DisplayError DisplayBuiltIn::SetDemuraState(int state) {
+  int ret = 0;
+
+  if (!demura_intended_) {
+    DLOGW("Demura has not enabled");
+    return kErrorNone;
+  }
+
+  if (state && !comp_manager_->GetDemuraStatusForDisplay(display_id_)) {
+    ret = SetDemuraIntfStatus(true);
+    if (ret) {
+      DLOGE("Failed to set demura status to true, ret = %d", ret);
+      return kErrorUndefined;
+    }
+    comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
+  } else if (!state && comp_manager_->GetDemuraStatusForDisplay(display_id_)) {
+    ret = SetDemuraIntfStatus(false);
+    if (ret) {
+      DLOGE("Failed to set demura status to false, ret = %d", ret);
+      return kErrorUndefined;
+    }
+    comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
+  }
+
+  // Disable Partial Update for one frame.
+  DisablePartialUpdateOneFrameInternal();
+
+  return kErrorNone;
+}
 
 }  // namespace sdm

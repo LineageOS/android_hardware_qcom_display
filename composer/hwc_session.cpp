@@ -1405,6 +1405,10 @@ int32_t HWCSession::SetDimmingMinBl(hwc2_display_t display, int32_t min_bl) {
   return CallDisplayFunction(display, &HWCDisplay::SetDimmingMinBl, min_bl);
 }
 
+int32_t HWCSession::SetDemuraState(hwc2_display_t display, int32_t state) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDemuraState, state);
+}
+
 int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support) {
   if (!out_support) {
     return HWC2_ERROR_BAD_PARAMETER;
@@ -2098,6 +2102,17 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     }
     break;
 
+    case qService::IQService::SET_DEMURA_STATE: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int state = input_parcel->readInt32();
+      status = SetDemuraState(disp_id, state);
+      output_parcel->writeInt32(status);
+    }
+    break;
 
     default:
       DLOGW("QService command = %d is not supported.", command);

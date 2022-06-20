@@ -514,6 +514,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error RetrieveDemuraTnFiles() {
     return HWC2::Error::Unsupported;
   }
+  virtual HWC2::Error SetDemuraState(int state) {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error GetClientTargetProperty(ClientTargetProperty *out_client_target_property);
   virtual void GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
                              int *active_config_index, uint32_t *num_configs);

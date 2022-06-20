@@ -143,6 +143,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetDimmingEnable(int int_enabled))
   MAKE_NO_OP(SetDimmingMinBl(int min_bl))
   MAKE_NO_OP(RetrieveDemuraTnFiles())
+  MAKE_NO_OP(SetDemuraState(int state))
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))
   MAKE_NO_OP(colorSamplingOn());
   MAKE_NO_OP(colorSamplingOff());

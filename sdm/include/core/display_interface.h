@@ -1332,6 +1332,14 @@ class DisplayInterface {
   */
   virtual uint32_t GetAvailableMixerCount() = 0;
 
+  /*! @brief Method to enable/disable for demura feature.
+
+   @param[in] enable or disable
+
+   @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDemuraState(int state) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };
