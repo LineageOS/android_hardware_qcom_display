@@ -1356,6 +1356,42 @@ void HWCSession::GetVirtualDisplayList() {
   }
 }
 
+HWC2::Error HWCSession::CheckWbAvailability() {
+  uint32_t max_wbs = virtual_display_list_.size();
+  uint32_t cwb_count = 0;
+  uint32_t vd_count = 0;
+
+  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY;
+        display < HWCCallbacks::kNumDisplays; display++) {
+    if (cwb_.IsCwbActiveOnDisplay(display)) {
+      cwb_count++;
+    }
+  }
+
+  if (cwb_count >= max_wbs) {
+    goto end;
+  }
+
+  for (auto& vds_map : virtual_id_map_) {
+    if (vds_map.second.in_use) {
+      vd_count++;
+    }
+  }
+
+  if (vd_count >= max_wbs) {
+    goto end;
+  }
+
+  if (cwb_count + vd_count >= max_wbs) {
+    goto end;
+  }
+
+  return HWC2::Error::None;
+end:
+  DLOGW("No wb available, max: %d, cwb: %d, wfd: %d", max_wbs, cwb_count, vd_count);
+  return HWC2::Error::Unsupported;
+}
+
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
                                                 hwc2_display_t *out_display_id) {
   // Get virtual display from cache if already created
@@ -1390,9 +1426,19 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
   }
 
-  HWC2::Error error = TeardownConcurrentWriteback(HWC_DISPLAY_PRIMARY);
-  if (error != HWC2::Error::None) {
-    return error;
+  // check if wb hw is available
+  auto err = CheckWbAvailability();
+  if (err != HWC2::Error::None) {
+    for (auto display : {HWC_DISPLAY_EXTERNAL, HWC_DISPLAY_PRIMARY}) {
+      if (!cwb_.IsCwbActiveOnDisplay(display)) {
+        continue;
+      }
+
+      err = TeardownConcurrentWriteback(display);
+      if (err != HWC2::Error::None) {
+        return err;
+      }
+    }
   }
 
   // Lock confined to this scope

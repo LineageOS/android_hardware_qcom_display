@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <core/buffer_allocator.h>
 #include <utils/debug.h>
 #include <utils/constants.h>
@@ -1050,14 +1086,13 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
-  // Output buffer dump is not supported, if Virtual display is present.
-  int dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-  if ((dpy_index != -1) && hwc_session_->hwc_display_[dpy_index]) {
-    DLOGW("Output buffer dump is not supported with Virtual display!");
+  auto err = hwc_session_->CheckWbAvailability();
+  if (err != HWC2::Error::None) {
     return -1;
   }
 
   hwc2_display_t disp_type = HWC_DISPLAY_PRIMARY;
+  int dpy_index;
   if (disp_id == UINT32(DisplayConfig::DisplayType::kPrimary)) {
     dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_PRIMARY);
   } else if (disp_id == UINT32(DisplayConfig::DisplayType::kExternal)) {
@@ -1386,12 +1421,6 @@ int HWCSession::DisplayConfigImpl::CreateVirtualDisplay(uint32_t width, uint32_t
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
       hwc_session_->WaitForResources(true, active_builtin_disp_id, virtual_id);
     }
-
-    VirtualDisplayData vds_data;
-    vds_data.width = width;
-    vds_data.height = height;
-    vds_data.format = format;
-    hwc_session_->virtual_id_map_.insert(std::make_pair(virtual_id, vds_data));
   } else {
     DLOGE("Failed to create virtual display: %s", to_string(status).c_str());
   }
