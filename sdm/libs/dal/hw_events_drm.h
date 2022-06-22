@@ -126,6 +126,7 @@ class HWEventsDRM : public HWEventsInterface {
   uint32_t mmrm_index_ = UINT32_MAX;
   uint32_t power_event_index_ = UINT32_MAX;
   uint32_t vm_release_event_index_ = UINT32_MAX;
+  bool received_crtc_power_event_ = false;
 };
 
 }  // namespace sdm
