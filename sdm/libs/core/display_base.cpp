@@ -1949,7 +1949,12 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   validated_ = false;
   hw_intf_->GetActiveConfig(&active_index);
 
+  // Cache the last refresh rate set by SF
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &display_attributes);
+
   if (active_index == index) {
+    active_refresh_rate_ = display_attributes.fps;
     return kErrorNone;
   }
 
@@ -1964,9 +1969,6 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
     return error;
   }
 
-  // Cache last refresh rate set by SF
-  HWDisplayAttributes display_attributes = {};
-  hw_intf_->GetDisplayAttributes(index, &display_attributes);
   active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
