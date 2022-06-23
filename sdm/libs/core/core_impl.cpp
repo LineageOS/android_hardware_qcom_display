@@ -562,7 +562,7 @@ void CoreIPCVmCallbackImpl::Deinit() {
 
 void CoreIPCVmCallbackImpl::OnServerReady() {
   if (server_ready_) {
-    DLOGE("Server is ready");
+    DLOGI("Server is ready");
     return;
   }
   server_ready_ = true;
@@ -570,63 +570,12 @@ void CoreIPCVmCallbackImpl::OnServerReady() {
 }
 
 void CoreIPCVmCallbackImpl::OnServerReadyThread(CoreIPCVmCallbackImpl *obj) {
-  if (obj->SendProperties()) {
-    DLOGE("Failed to send Properties");
-  }
   if (obj->ExportDemuraCalibBuffer()) {
     DLOGE("Failed to export Calibration buffer");
   }
   if (obj->SendPanelBootParams()) {
     DLOGE("Failed to Send SendPanelBootParams");
   }
-}
-
-int CoreIPCVmCallbackImpl::SendProperties() {
-  if (!ipc_intf_) {
-    DLOGW("IPC interface is NULL");
-    return -EINVAL;
-  }
-
-  GenericPayload in;
-  int ret = 0, enable, count = 0;
-  IPCSetPropertyParams *prop_configs = nullptr;
-  ret = in.CreatePayload<IPCSetPropertyParams>(prop_configs);
-  if (ret) {
-    DLOGW("failed to create the payload. Error:%d", ret);
-    return ret;
-  }
-
-  Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
-  if (enable) {
-    std::snprintf(prop_configs->props.property_list[count].prop_name,
-                  sizeof prop_configs->props.property_list[count].prop_name,
-                  "%s", ENABLE_DEMURA);
-    std::snprintf(prop_configs->props.property_list[count].value,
-                  sizeof prop_configs->props.property_list[count].value,
-                  "%d", enable);
-    count++;
-  }
-  Debug::Get()->GetProperty(ENABLE_SPR, &enable);
-  if (enable) {
-    std::snprintf(prop_configs->props.property_list[count].prop_name,
-                  sizeof prop_configs->props.property_list[count].prop_name,
-                  "%s", ENABLE_SPR);
-    std::snprintf(prop_configs->props.property_list[count].value,
-                  sizeof prop_configs->props.property_list[count].value,
-                  "%d", enable);
-    count++;
-  }
-
-  if (count) {
-    prop_configs->props.count = count;
-    if ((ret = ipc_intf_->SetParameter(kIpcParamProperties, in))) {
-      DLOGW("Failed to set properties, error = %d", ret);
-      return ret;
-    }
-    DLOGI("Sent Properties successful");
-  }
-
-  return 0;
 }
 
 int CoreIPCVmCallbackImpl::SendPanelBootParams() {

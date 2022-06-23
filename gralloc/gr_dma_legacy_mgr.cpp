@@ -326,4 +326,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string
   return;
 }
 
+int DmaLegacyManager::SetBufferPermission(int fd, BufferPermission *buf_perm, int64_t *mem_hdl) {
+  return 0;
+}
 }  // namespace gralloc

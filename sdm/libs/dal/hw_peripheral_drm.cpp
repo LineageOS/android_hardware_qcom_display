@@ -588,6 +588,10 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     }
   }
 
+  // QSync mode needs to be reset on device suspend and re-enabled on resume.
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id,
+                            sde_drm::DRMQsyncMode::NONE);
+
   err = HWDeviceDRM::PowerOff(teardown, sync_points);
   if (err != kErrorNone) {
     return err;

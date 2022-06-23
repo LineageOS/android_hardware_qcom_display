@@ -49,14 +49,15 @@
 
 #define ASTC_BLOCK_SIZE 16
 
-#define ONLY_GPU_CPU_USAGE_MASK                                                                 \
-    (BufferUsage::GPU_TEXTURE | BufferUsage::GPU_RENDER_TARGET | BufferUsage::GPU_DATA_BUFFER | \
-     BufferUsage::RENDERSCRIPT | BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)
+#define ONLY_GPU_USAGE_MASK                                                                       \
+    (BufferUsage::GPU_TEXTURE | BufferUsage::GPU_RENDER_TARGET | BufferUsage::GPU_CUBE_MAP |      \
+     BufferUsage::GPU_MIPMAP_COMPLETE | BufferUsage::GPU_DATA_BUFFER | BufferUsage::RENDERSCRIPT)
 
-#define NON_GPU_CPU_USAGE_MASK                                                                \
-    (BufferUsage::COMPOSER_CLIENT_TARGET | BufferUsage::COMPOSER_OVERLAY |                    \
-     BufferUsage::COMPOSER_CURSOR | BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT | \
-     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | GRALLOC_USAGE_PRIVATE_CDSP |    \
+#define NON_GPU_USAGE_MASK                                                                        \
+    (BufferUsage::COMPOSER_CLIENT_TARGET | BufferUsage::COMPOSER_OVERLAY |                        \
+     BufferUsage::COMPOSER_CURSOR | BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT |     \
+     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | BufferUsage::CPU_READ_MASK |        \
+     BufferUsage::CPU_WRITE_MASK | GRALLOC_USAGE_PRIVATE_CDSP |                                   \
      GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
 
 #define DEBUG 0
@@ -481,8 +482,6 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2 + 1, SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-        size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, SIZE_4K);
-        break;
       case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
         mmm_color_format =
             (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
@@ -701,10 +700,6 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_size = c_stride = 0;
       c_height = 0;
       break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      c_size = (width * height);
-      c_height = height;
-      break;
     default:
       break;
   }
@@ -843,11 +838,11 @@ bool IsTileRendered(int format) {
   return IsGpuDepthStencilFormat(format);
 }
 
-bool IsOnlyGpuCpuUsage(uint64_t usage) {
-  if (usage & NON_GPU_CPU_USAGE_MASK) {
+bool IsOnlyGpuUsage(uint64_t usage) {
+  if (usage & NON_GPU_USAGE_MASK) {
     return false;
   }
-  if (usage & ONLY_GPU_CPU_USAGE_MASK) {
+  if (usage & ONLY_GPU_USAGE_MASK) {
     return true;
   }
   return false;
@@ -1127,7 +1122,7 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
   if (GetMetaDataValue(hnd, QTI_COLOR_METADATA, &color_metadata) == Error::NONE) {
     switch (color_metadata.colorPrimaries) {
       case ColorPrimaries_BT709_5:
-        *color_space = HAL_CSC_ITU_R_709;
+        *color_space = ((color_metadata.range) ? HAL_CSC_ITU_R_709_FR : HAL_CSC_ITU_R_709);
         break;
       case ColorPrimaries_BT601_6_525:
       case ColorPrimaries_BT601_6_625:
@@ -1202,10 +1197,21 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   if (IsUncompressedRGBFormat(format)) {
     unsigned int aligned_w = width;
     unsigned int aligned_h = height;
-    if (AdrenoMemInfo::GetInstance()) {
+    unsigned int alignment = 32;
+
+    if (usage & ONLY_GPU_USAGE_MASK) {
+      if (AdrenoMemInfo::GetInstance() == nullptr) {
+        ALOGE("Unable to get adreno instance");
+        return -1;
+      }
       AdrenoMemInfo::GetInstance()->AlignUnCompressedRGB(width, height, format, tile, alignedw,
                                                          alignedh);
+    } else {
+      alignment = GetBppForUncompressedRGB(format) * 8;
+      *alignedw = ALIGN(width, alignment);
+      *alignedh = height;
     }
+
     if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER)) &&
         (format == static_cast<int>(PixelFormat::RGBA_8888))) {
       int mmm_format = MMM_COLOR_FMT_RGBA8888;
@@ -1222,14 +1228,21 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   }
 
   if (IsGpuDepthStencilFormat(format)) {
-    if (IsTileRendered(info.format)) {
-      tile = true;
-    }
-    if (AdrenoMemInfo::GetInstance()) {
+    if (usage & ONLY_GPU_USAGE_MASK) {
+      if (IsTileRendered(info.format)) {
+        tile = true;
+      }
+      if (AdrenoMemInfo::GetInstance() == nullptr) {
+        ALOGE("Unable to get adreno instance");
+        return -1;
+      }
       AdrenoMemInfo::GetInstance()->AlignGpuDepthStencilFormat(width, height, format, tile,
                                                                alignedw, alignedh);
+      return 0;
+    } else {
+      ALOGE("DepthStencil format without GPU usage flags");
+      return -1;
     }
-    return 0;
   }
 
   if (ubwc_enabled) {
@@ -1238,10 +1251,16 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   }
 
   if (IsCompressedRGBFormat(format)) {
-    if (AdrenoMemInfo::GetInstance()) {
+    if (usage & ONLY_GPU_USAGE_MASK) {
+      if (AdrenoMemInfo::GetInstance() == nullptr) {
+        ALOGE("Unable to get adreno instance");
+        return -1;
+      }
       AdrenoMemInfo::GetInstance()->AlignCompressedRGB(width, height, format, alignedw, alignedh);
+    } else {
+      ALOGE("CompressedRGB format without GPU usage flags");
+      return -1;
     }
-    return 0;
   }
 
   int aligned_w = width;
@@ -1251,21 +1270,26 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Below should be only YUV family
   switch (format) {
     case static_cast<int>(PixelFormat::YCRCB_420_SP):
-    /*
-    * Todo: relook this alignment again
-    * Change made to unblock the software EIS feature from camera
-    * Currently using same alignment as camera doing
-    */
+      /*
+      * Todo: relook this alignment again
+      * Change made to unblock the software EIS feature from camera
+      * Currently using same alignment as camera doing
+      */
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
-    break;
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      if (AdrenoMemInfo::GetInstance() == nullptr) {
-        ALOGW("%s: AdrenoMemInfo instance pointing to a NULL value.", __FUNCTION__);
-        return -1;
+      if (usage & ONLY_GPU_USAGE_MASK) {
+        if (AdrenoMemInfo::GetInstance() == nullptr) {
+          ALOGE("Unable to get adreno instance");
+          return -1;
+        }
+        alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+        aligned_w = ALIGN(width, alignment);
+      } else {
+        // Keep default alignment as per current GpuPixelAlignment
+        aligned_w = ALIGN(width, 64);
       }
-      alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
-      aligned_w = ALIGN(width, alignment);
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
       aligned_w = ALIGN(width, alignment);
@@ -1291,7 +1315,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       if (AdrenoAlignmentRequired(usage)) {
         if (AdrenoMemInfo::GetInstance() == nullptr) {
           ALOGE("Unable to get adreno instance");
-          return 0;
+          return -1;
         }
         alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
         aligned_w = ALIGN(width, alignment);
@@ -1303,9 +1327,9 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case static_cast<int>(PixelFormat::YCBCR_422_I):
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       aligned_w = ALIGN(width, 16);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       mmm_color_format =
           (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_P010_512 : MMM_COLOR_FMT_P010;
@@ -1393,9 +1417,10 @@ bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
     return false;
   }
 
-  if (!IsOnlyGpuCpuUsage(usage)) {
+  if (!IsOnlyGpuUsage(usage)) {
     return false;
   }
+
   return true;
 }
 
@@ -1595,18 +1620,6 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
         Error::NONE) {
       format = INT(linear_format);
     }
-
-    // Check metadata if the geometry has been updated.
-    CropRectangle_t crop;
-    if (GetMetaDataValue(const_cast<private_handle_t *>(hnd), (int64_t)StandardMetadataType::CROP,
-                         &crop) == Error::NONE) {
-      BufferInfo info(crop.right, crop.bottom, format, usage);
-      err = GetAlignedWidthAndHeight(info, reinterpret_cast<unsigned int *>(&width),
-                                     reinterpret_cast<unsigned int *>(&height));
-      if (err) {
-        return err;
-      }
-    }
   }
 
   switch (format) {
@@ -1690,16 +1703,6 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       }
       break;
 
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      *plane_count = 2;
-      GetYuvSPPlaneInfo(info, format, width, height, 2, plane_info);
-      GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
-      plane_info[0].h_subsampling = 0;
-      plane_info[0].v_subsampling = 0;
-      plane_info[1].h_subsampling = h_subsampling;
-      plane_info[1].v_subsampling = v_subsampling;
-      break;
-
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       *plane_count = 4;
       GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_BPP10_UBWC, plane_info);
@@ -1730,6 +1733,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[2].step = plane_info[3].step = 0;
       break;
 
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       *plane_count = 2;
       mmm_color_format =
@@ -2280,8 +2284,12 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
     case QTI_SINGLE_BUFFER_MODE:
     case QTI_CVP_METADATA:
     case QTI_VIDEO_HISTOGRAM_STATS:
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS:
+#endif
     case QTI_VIDEO_TS_INFO:
     case QTI_S3D_FORMAT:
+    case QTI_BUFFER_PERMISSION:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)];
     case QTI_COLORSPACE:
       // QTI_COLORSPACE is derived from QTI_COLOR_METADATA
@@ -2311,6 +2319,9 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
     case QTI_BUFFER_TYPE:
     case (int64_t)StandardMetadataType::DATASPACE:
     case (int64_t)StandardMetadataType::PLANE_LAYOUTS:
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+#endif
       return true;
     default:
       ALOGE("paramType %d not supported", paramType);
@@ -2679,15 +2690,6 @@ static Error getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &com
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010):
-      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value ||
-          comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value ||
-          comp.type.value == android::gralloc4::PlaneLayoutComponentType_CR.value) {
-        comp.offsetInBits = 0;
-        comp.sizeInBits = 10;
-      } else {
-        return Error::BAD_VALUE;
-      }
-      break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS):
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value ||
           comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value) {
@@ -2986,6 +2988,25 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
       }
       break;
     }
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS: {
+      if (copy) {
+        struct VideoTranscodeStatsMetadata *vidtranscodestats =
+            (struct VideoTranscodeStatsMetadata *)in;
+        vidtranscodestats->stat_len = 0;
+        if (data->video_transcode_stats.stat_len <= VIDEO_TRANSCODE_STATS_SIZE) {
+          memcpy(vidtranscodestats->stats_info, data->video_transcode_stats.stats_info,
+                 VIDEO_TRANSCODE_STATS_SIZE);
+          vidtranscodestats->stat_len = data->video_transcode_stats.stat_len;
+        } else {
+          ret = Error::BAD_VALUE;
+        }
+      } else {
+        *out = &data->video_transcode_stats;
+      }
+      break;
+    }
+#endif
     case QTI_VIDEO_TS_INFO:
       if (copy) {
         *(reinterpret_cast<VideoTimestampInfo *>(in)) = data->videoTsInfo;
@@ -2993,6 +3014,15 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         *out = &data->videoTsInfo;
       }
       break;
+#ifdef QTI_TIMED_RENDERING
+    case QTI_TIMED_RENDERING:
+      if (copy) {
+        *(reinterpret_cast<uint32_t *>(in)) = data->timedRendering;
+      } else {
+        *out = &data->timedRendering;
+      }
+      break;
+#endif
     case (int64_t)StandardMetadataType::BUFFER_ID:
       if (copy) {
         *(reinterpret_cast<uint64_t *>(in)) = (uint64_t)handle->id;
@@ -3233,6 +3263,28 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         GetPlaneLayout(handle, plane_layouts);
       }
       break;
+#ifdef QTI_BUFFER_PERMISSION
+    case QTI_BUFFER_PERMISSION:
+      if (copy) {
+        BufferPermission *buf_perm = reinterpret_cast<BufferPermission *>(in);
+        int numelems = sizeof(data->bufferPerm) / sizeof(BufferPermission);
+        for (int i = 0; i < numelems; i++) {
+          buf_perm[i] = data->bufferPerm[i];
+        }
+      } else {
+        *out = &data->bufferPerm[0];
+      }
+      break;
+#endif
+#ifdef QTI_MEM_HANDLE
+    case QTI_MEM_HANDLE:
+      if (copy) {
+        *(reinterpret_cast<int64_t *>(in)) = data->memHandle;
+      } else {
+        *out = &data->memHandle;
+      }
+      break;
+#endif
     default:
       ALOGD_IF(DEBUG, "Unsupported metadata type %d", type);
       ret = Error::BAD_VALUE;
@@ -3261,8 +3313,12 @@ void setGralloc4Array(MetaData_t *metadata, int64_t paramType, bool isSet) {
     case QTI_SINGLE_BUFFER_MODE:
     case QTI_CVP_METADATA:
     case QTI_VIDEO_HISTOGRAM_STATS:
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS:
+#endif
     case QTI_VIDEO_TS_INFO:
     case QTI_S3D_FORMAT:
+    case QTI_BUFFER_PERMISSION:
       metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)] = isSet;
       break;
     // Following metadata types are not changed after allocation - treat as set by default
@@ -3281,6 +3337,7 @@ void setGralloc4Array(MetaData_t *metadata, int64_t paramType, bool isSet) {
     case QTI_PRIVATE_FLAGS:
     case QTI_ALIGNED_WIDTH_IN_PIXELS:
     case QTI_ALIGNED_HEIGHT_IN_PIXELS:
+    case QTI_MEM_HANDLE:
       break;
     default:
       ALOGE("paramType %d not supported in Gralloc4", paramType);
@@ -3312,6 +3369,11 @@ Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param) {
       case QTI_VIDEO_HISTOGRAM_STATS:
         data->video_histogram_stats.stat_len = 0;
         break;
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+      case QTI_VIDEO_TRANSCODE_STATS:
+        data->video_transcode_stats.stat_len = 0;
+        break;
+#endif
       default:
         ALOGE("Unknown paramType %d", paramType);
         break;
@@ -3409,8 +3471,36 @@ Error SetMetaData(private_handle_t *handle, uint64_t paramType, void *param) {
       }
       break;
     }
+#ifdef QTI_VIDEO_TRANSCODE_STATS
+    case QTI_VIDEO_TRANSCODE_STATS: {
+      struct VideoTranscodeStatsMetadata *vidtranscodestats =
+          (struct VideoTranscodeStatsMetadata *)param;
+      if (vidtranscodestats->stat_len <= VIDEO_TRANSCODE_STATS_SIZE) {
+        memcpy(data->video_transcode_stats.stats_info, vidtranscodestats->stats_info,
+               VIDEO_TRANSCODE_STATS_SIZE);
+        data->video_transcode_stats.stat_len = vidtranscodestats->stat_len;
+      } else {
+        setGralloc4Array(data, paramType, false);
+        ALOGE("%s: video transcode stats length %u is more than max size %u", __func__,
+               vidtranscodestats->stat_len, VIDEO_TRANSCODE_STATS_SIZE);
+        return Error::BAD_VALUE;
+      }
+      break;
+    }
+#endif
     case QTI_VIDEO_TS_INFO:
       data->videoTsInfo = *(reinterpret_cast<VideoTimestampInfo *>(param));
+      break;
+    case QTI_BUFFER_PERMISSION: {
+      BufferPermission*buf_perm = reinterpret_cast<BufferPermission *>(param);
+      int numelems = sizeof(data->bufferPerm) / sizeof(BufferPermission);
+      for (int i = 0; i < numelems; i++) {
+        data->bufferPerm[i] = buf_perm[i];
+      }
+      break;
+    }
+    case QTI_MEM_HANDLE:
+      data->memHandle = *(reinterpret_cast<int64_t *>(param));
       break;
     default:
       ALOGE("Unknown paramType %d", paramType);

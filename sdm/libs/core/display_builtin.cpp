@@ -1,6 +1,8 @@
 /*
 * Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -876,6 +878,9 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   // Set vsync enable state to false, as driver disables vsync during display power off.
   if (state == kStateOff) {
     vsync_enable_ = false;
+    if (qsync_mode_ != kQSyncModeNone) {
+      needs_avr_update_ = true;
+    }
   }
 
   if (pending_power_state_ != kPowerStateNone) {
@@ -984,6 +989,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   if (err == kErrorNone) {
     level_remainder_ = level_remainder;
     pending_brightness_ = false;
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
   } else if (err == kErrorDeferred) {
@@ -1137,6 +1143,7 @@ void DisplayBuiltIn::IdlePowerCollapse() {
     ClientLock lock(disp_mutex_);
     validated_ = false;
     comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+    event_handler_->HandleEvent(kIdleTimeout);
   }
 }
 
@@ -1598,7 +1605,7 @@ std::string DisplayBuiltIn::Dump() {
     HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    const char *comp_type = GetName(hw_layer.composition);
+    const char *comp_type = GetCompositionName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
     const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
@@ -1696,6 +1703,7 @@ std::string DisplayBuiltIn::Dump() {
     }
   }
 
+  os << comp_manager_->Dump();
   os << newline << "\n";
 
   return os.str();
@@ -1961,6 +1969,10 @@ bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
 
 bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
   if (!CanCompareFrameROI(layer_stack)) {
+    return false;
+  }
+
+  if (disp_layer_stack_.info.iwe_target_index != -1) {
     return false;
   }
 
@@ -2413,22 +2425,22 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 // LCOV_EXCL_START
 DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
   ClientLock lock(disp_mutex_);
-  if (secure_event_ == kTUITransitionStart) {
+  if (secure_event == kTUITransitionStart) {
     if (vm_cb_intf_) {
       vm_cb_intf_->ExportHFCBuffer();
     }
     if (!pending_brightness_) {
-      if (secure_event_ == kTUITransitionStart) {
+      if (secure_event == kTUITransitionStart) {
         // Send the panel brightness event to secondary VM on TUI session start
         SendBacklight();
       }
     }
-    if (secure_event_ == kTUITransitionStart) {
+    if (secure_event == kTUITransitionStart) {
       // Send display config information to secondary VM on TUI session start
       SendDisplayConfigs();
     }
   }
-  if (secure_event_ == kTUITransitionEnd) {
+  if (secure_event == kTUITransitionEnd) {
     if (vm_cb_intf_) {
       vm_cb_intf_->FreeExportBuffer();
     }
@@ -2530,7 +2542,7 @@ void DisplayIPCVmCallbackImpl::ExportHFCBuffer() {
   export_buf_in_params->buffers.emplace(kIpcBufferTypeDemuraHFC, hfc_buf);
 
   DLOGI("Allocated hfc buffer fd %d size %d panel id :%x", hfc_buf.fd, hfc_buf.size,
-    hfc_buf);
+        hfc_buf.panel_id);
 
   GenericPayload out;
   IPCExportBufOutParams *export_buf_out_params = nullptr;

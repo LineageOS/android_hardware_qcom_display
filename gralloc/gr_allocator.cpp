@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+
 #ifndef QMAA
 #include <linux/msm_ion.h>
 #endif
@@ -203,4 +204,13 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
 
   return true;
 }
+
+int Allocator::SetBufferPermission(int fd, BufferPermission *buffer_perm, int64_t *mem_hdl) {
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return -ENOMEM;
+  }
+  return alloc_intf->SetBufferPermission(fd, buffer_perm, mem_hdl);
+}
+
 }  // namespace gralloc

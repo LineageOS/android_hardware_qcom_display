@@ -127,23 +127,6 @@ enum CWBClient {
   kCWBClientComposer,   // Client to HWC i.e. SurfaceFlinger
 };
 
-enum CWBStatus {
-  kCWBAvailable,     // Available to accept new CWB request
-  kCWBConfigure,     // CWB is Configured in the current frame
-  kCWBTeardown,      // CWB tear down in the current frame. Frame's Retire fence would be cached.
-                     // New CWB requests coming in are rejected until this retire fence signals.
-  kCWBPostTeardown,  // CWB teardown done in previous frame.
-};
-
-struct CwbState {
-  hwc2_display_t cwb_disp_id = -1;                          // display id on which cwb is either
-                                                            // requested, active or tearing down.
-  CWBClient cwb_client = kCWBClientNone;                    // the client actively performing cwb.
-  CWBStatus cwb_status = CWBStatus::kCWBAvailable;          // current cwb statuss
-  shared_ptr<Fence> teardown_frame_retire_fence = nullptr;  // cache cwb disable frame retire fence
-                                                            // to reject requests until it signals.
-};
-
 struct TransientRefreshRateInfo {
   uint32_t transient_vsync_period;
   int64_t vsync_applied_time;
@@ -168,6 +151,7 @@ class HWCColorMode {
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();
   virtual ColorMode GetCurrentColorMode() { return current_color_mode_; }
+  virtual RenderIntent GetCurrentRenderIntent() { return current_render_intent_; }
   virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   void ReapplyMode() { apply_mode_ = true; };
@@ -333,6 +317,9 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
+  RenderIntent GetCurrentRenderIntent() {
+    return (color_mode_ ? color_mode_->GetCurrentRenderIntent() : RenderIntent::COLORIMETRIC);
   }
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
@@ -526,6 +513,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id);
   virtual DisplayError HandleEvent(DisplayEvent event);
   virtual DisplayError HandleQsyncState(const QsyncEventData &qsync_data);
+  virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
                                 shared_ptr<Fence> &retire_fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -534,6 +522,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError DisablePartialUpdateOneFrame() {
     return kErrorNotSupported;
   }
+  virtual void ReqPerfHintRelease() { return; }
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
@@ -573,8 +562,6 @@ class HWCDisplay : public DisplayEventHandler {
   void SetDrawMethod();
 
   // CWB related methods
-  void SetCwbState();
-  void ResetCwbState();
   void HandleFrameOutput();
   void HandleFrameDump();
   virtual void HandleFrameCapture(){};
@@ -644,16 +631,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool display_idle_ = false;
   bool animating_ = false;
   DisplayDrawMethod draw_method_ = kDrawDefault;
-
-  // CWB state & configuration
-  CwbConfig cwb_config_ = {};
-  static CwbState cwb_state_;
-  static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_state_
-
-  // Readback buffer configuration
-  LayerBuffer output_buffer_ = {};
-  bool readback_buffer_queued_ = false;
-  bool readback_configured_ = false;
+  uint32_t fb_width_ = 0;
+  uint32_t fb_height_ = 0;
 
   // Members for N frame dump to file
   bool dump_output_to_file_ = false;
@@ -662,6 +641,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool dump_input_layers_ = false;
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;  // points to base address of output_buffer_info_
+  CwbConfig output_buffer_cwb_config_ = {};
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
@@ -672,6 +652,10 @@ class HWCDisplay : public DisplayEventHandler {
   shared_ptr<Fence> client_acquire_fence_ = nullptr;
   int32_t client_dataspace_ = 0;
   hwc_region_t client_damage_region_ = {};
+  std::map<uint64_t, CWBClient> cwb_buffer_map_ = {};
+  std::mutex cwb_mutex_;
+  std::condition_variable cwb_cv_;
+  DisplayError cwb_capture_status_ = kErrorNone;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);

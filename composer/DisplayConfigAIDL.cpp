@@ -608,14 +608,16 @@ ScopedAStatus DisplayConfigAIDL::createVirtualDisplay(int width, int height, int
     return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
   }
 
+  hwc2_display_t virtual_id;
   hwc2_display_t active_builtin_disp_id = hwc_session_->GetActiveBuiltinDisplay();
   auto status = hwc_session_->CreateVirtualDisplayObj(width, height, &format,
-                                                    &hwc_session_->virtual_id_);
+                                                    &virtual_id);
   if (status == HWC2::Error::None) {
     ALOGI("%s, Created virtual display id:%" PRIu64 ", res: %dx%d",
-          __FUNCTION__, hwc_session_->virtual_id_, width, height);
+          __FUNCTION__, virtual_id, width, height);
+
     if (active_builtin_disp_id < sdm::HWCCallbacks::kNumRealDisplays) {
-      hwc_session_->WaitForResources(true, active_builtin_disp_id, hwc_session_->virtual_id_);
+      hwc_session_->WaitForResources(true, active_builtin_disp_id, virtual_id);
     }
   } else {
     ALOGE("%s: Failed to create virtual display: %s", __FUNCTION__, to_string(status).c_str());

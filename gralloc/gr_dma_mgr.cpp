@@ -40,6 +40,7 @@
 #include <cutils/properties.h>
 #include <errno.h>
 #include <utils/Trace.h>
+#include <dlfcn.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -63,7 +64,43 @@ DmaManager *DmaManager::GetInstance() {
   return dma_manager_;
 }
 
+void DmaManager::InitMemUtils() {
+  if (mem_utils_lib_) {
+    return;
+  }
+  mem_utils_lib_ = ::dlopen(MEMBUF_CLIENT_LIB_NAME, RTLD_NOW);
+  if (mem_utils_lib_) {
+    CreateMemBuf_ = reinterpret_cast<CreateMemBufInterface>(::dlsym(mem_utils_lib_,
+                                                            CREATE_MEMBUF_INTERFACE_NAME));
+    DestroyMemBuf_ = reinterpret_cast<DestroyMemBufInterface>(::dlsym(mem_utils_lib_,
+                                                             DESTROY_MEMBUF_INTERFACE_NAME));
+    if (!CreateMemBuf_ || !DestroyMemBuf_) {
+      ALOGW("Membuf Symbols not resolved");
+      return;
+    }
+  } else {
+    ALOGW("Unable to load = %s, error = %s", MEMBUF_CLIENT_LIB_NAME, ::dlerror());
+    return;
+  }
+  int err = CreateMemBuf_(&mem_buf_);
+  if (err != 0) {
+    ALOGW("GetMemBuf failed!! %d", err);
+    return;
+  }
+}
+
+void DmaManager::DeinitMemUtils() {
+  if (DestroyMemBuf_) {
+    DestroyMemBuf_();
+  }
+  if (mem_utils_lib_) {
+    ::dlclose(mem_utils_lib_);
+    mem_utils_lib_ = nullptr;
+  }
+}
+
 void DmaManager::Deinit() {
+  DeinitMemUtils();
   if (dma_dev_fd_ > FD_INIT) {
     close(dma_dev_fd_);
   }
@@ -235,10 +272,11 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
       heap_name = "qcom,secure-pixel";
     }
     type |= qtigralloc::PRIV_FLAGS_SECURE_BUFFER;
-  } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED
-    // for tursted UI use case and align the size to 2MB
-    heap_name = "qcom,demura";
+  }
+
+  if (usage & GRALLOC_USAGE_PRIVATE_TRUSTED_VM) {
+    // Allocate buffer from system heap and align the size to 2MB for all trusted UI use cases
+    heap_name = "qcom,display";
     *alloc_size = ALIGN(*alloc_size, SIZE_2MB);
   }
 
@@ -257,4 +295,61 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
 
   return;
 }
+
+void DmaManager::GetVMPermission(BufferPermission buf_perm,
+                                 std::bitset<kVmPermissionMax> *vm_perm) {
+  if (!vm_perm) {
+    return;
+  }
+  vm_perm->reset();
+  if (buf_perm.read) {
+    vm_perm->set(kVmPermissionRead);
+  }
+  if (buf_perm.write) {
+    vm_perm->set(kVmPermissionWrite);
+  }
+  if (buf_perm.execute) {
+    vm_perm->set(kVmPermissionExecute);
+  }
+}
+
+int DmaManager::SetBufferPermission(int fd, BufferPermission *buf_perm, int64_t *mem_hdl) {
+  int ret = 0;
+  if (!mem_hdl) {
+    return -EINVAL;
+  }
+  *mem_hdl = -1;
+  if (!buf_perm) {
+    return 0;
+  }
+
+  InitMemUtils();
+  if (!mem_buf_) {
+    return -EINVAL;
+  }
+  VmParams vm_params = {};
+  bool shared = false;
+  if (buf_perm[BUFFER_CLIENT_TRUSTED_VM].permission != 0) {
+    std::bitset<kVmPermissionMax> vm_perm = {0};
+    GetVMPermission(buf_perm[BUFFER_CLIENT_TRUSTED_VM], &vm_perm);
+    vm_params.emplace(kVmTypeTrusted, vm_perm);
+  }
+  // if untrusted vm is not in the list then its a secure usecase
+  if (buf_perm[BUFFER_CLIENT_UNTRUSTED_VM].permission == 0) {
+    std::bitset<kVmPermissionMax> vm_perm = {0};
+    GetVMPermission(buf_perm[BUFFER_CLIENT_DPU], &vm_perm);
+    vm_params.emplace(kVmTypeCpPixel, vm_perm);
+  } else {
+    std::bitset<kVmPermissionMax> vm_perm = {0};
+    GetVMPermission(buf_perm[BUFFER_CLIENT_UNTRUSTED_VM], &vm_perm);
+    vm_params.emplace(kVmTypePrimary, vm_perm);
+    shared = true;
+  }
+  if (!vm_params.empty()) {
+    ret = mem_buf_->Export(fd, vm_params, shared, mem_hdl);
+    ALOGI("fd %d mem_hdl %lld ret %d", fd, *mem_hdl, ret);
+  }
+  return ret;
+}
+
 }  // namespace gralloc

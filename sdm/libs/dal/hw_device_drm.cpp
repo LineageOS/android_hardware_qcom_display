@@ -177,6 +177,9 @@ static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
 static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
                          uint64_t *drm_format_modifier) {
   switch (format) {
+    case kFormatARGB8888:
+      *drm_format = DRM_FORMAT_BGRA8888;
+      break;
     case kFormatRGBA8888:
       *drm_format = DRM_FORMAT_ABGR8888;
       break;
@@ -576,6 +579,7 @@ DisplayError HWDeviceDRM::Init() {
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
   InitializeConfigs();
+  GetCWBCapabilities();
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
@@ -586,8 +590,6 @@ DisplayError HWDeviceDRM::Init() {
 
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr(new HWColorManagerDrm());
   hw_color_mgr_ = std::move(hw_color_mgr);
-
-  GetCWBCapabilities();
 
   return kErrorNone;
 }
@@ -842,6 +844,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
                  connector_info_.modes[index].sub_modes[sub_mode_index].panel_mode_caps;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
+  hw_panel_info_.has_cwb_crop = has_cwb_crop_;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   if (hw_panel_info_.dynamic_fps) {
     uint32_t min_fps = current_mode.vrefresh;
@@ -1104,32 +1107,6 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
         }
       }
       break;
-    }
-  }
-
-  if (!switch_mode_valid_) {
-    // in case there is no corresponding switch mode with same fps, try for a switch
-    // mode with lowest fps. This is to handle cases where there are multiple video mode fps
-    // but only one command mode for doze like 30 fps.
-    uint32_t refresh_rate = 0;
-    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((to_set.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (to_set.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (switch_mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
-        if (!refresh_rate || (refresh_rate > connector_info_.modes[mode_index].mode.vrefresh)) {
-          for (uint32_t submode_idx = 0; submode_idx <
-               connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
-            sde_drm::DRMSubModeInfo sub_mode =
-                     connector_info_.modes[mode_index].sub_modes[submode_idx];
-           if (sub_mode.panel_compression_mode == target_compression) {
-              switch_index = mode_index;
-              switch_mode_valid_ = true;
-              refresh_rate = connector_info_.modes[mode_index].mode.vrefresh;
-              break;
-            }
-          }
-        }
-      }
     }
   }
 
@@ -2039,7 +2016,8 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
                DRMCscType::kCscYuv2Rgb601FR : DRMCscType::kCscYuv2Rgb601L);
       break;
     case ColorPrimaries_BT709_5:
-      *type = DRMCscType::kCscYuv2Rgb709L;
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+               DRMCscType::kCscYuv2Rgb709FR : DRMCscType::kCscYuv2Rgb709L);
       break;
     case ColorPrimaries_BT2020:
       *type = ((input_buffer.color_metadata.range == Range_Full) ?

@@ -93,8 +93,6 @@ namespace sdm {
 
 bool HWCDisplay::mmrm_restricted_ = false;
 uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
-CwbState HWCDisplay::cwb_state_ = {};
-std::mutex HWCDisplay::cwb_state_lock_;
 
 bool NeedsToneMap(const LayerStack &layer_stack) {
   for (Layer *layer : layer_stack.layers) {
@@ -242,9 +240,10 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
     }
     if (mode_string.empty() &&
        (current_color_mode_ == ColorMode::DISPLAY_P3 ||
-       current_color_mode_ == ColorMode::DISPLAY_BT2020) &&
+       current_color_mode_ == ColorMode::DISPLAY_BT2020 ||
+       current_color_mode_ == ColorMode::NATIVE) &&
        curr_dynamic_range_ == kHdrType) {
-      // fall back to display_p3/display_bt2020 SDR mode if there is no HDR mode
+      // fall back to display_p3/display_bt2020/native SDR mode if there is no HDR mode
       mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
     }
 
@@ -262,6 +261,9 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
     RestoreColorTransform();
     DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d range = %d name = %s",
              current_color_mode_, current_render_intent_, curr_dynamic_range_, mode_string.c_str());
+  } else {
+    DLOGE("Failed to apply mode = %d intent = %d range = %d name = %s",
+          current_color_mode_, current_render_intent_, curr_dynamic_range_, mode_string.c_str());
   }
 
   return error;
@@ -628,15 +630,6 @@ int HWCDisplay::Deinit() {
     delete static_cast<DisplayNull *>(display_intf_);
     display_intf_ = nullptr;
   } else {
-    {
-      std::lock_guard<std::mutex> lock(cwb_state_lock_);
-      if (cwb_state_.cwb_disp_id == id_) {
-        // If CWB is requested or configured or tearing-down on disp id_,
-        // then flush cwb setup before the display is deleted.
-        ResetCwbState();
-        display_intf_->FlushConcurrentWriteback();
-      }
-    }  // releasing the cwb state lock
     DisplayError error = core_intf_->DestroyDisplay(display_intf_);
     if (error != kErrorNone) {
       DLOGE("Display destroy failed. Error = %d", error);
@@ -1015,13 +1008,6 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
-      {
-        std::lock_guard<std::mutex> lock(cwb_state_lock_);
-        if (cwb_state_.cwb_disp_id == id_) {  // If CWB is requested or configured or
-          // tearing-down on disp id_, then flush cwb setup before the display power off.
-          ResetCwbState();
-        }
-      }  // releasing the cwb state lock
       break;
     case HWC2::PowerMode::On:
       if (mmrm_restricted_ && (display_class_ != DISPLAY_CLASS_BUILTIN) &&
@@ -1393,16 +1379,6 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   bool dump_output_to_file = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("Requested o/p dump enable = %d", dump_output_to_file);
 
-  {
-    std::lock_guard<std::mutex> lock(cwb_state_lock_);
-    if (dump_output_to_file) {
-      if (cwb_state_.cwb_client != kCWBClientNone) {
-        DLOGW("CWB is in use with client = %d", cwb_state_.cwb_client);
-        return HWC2::Error::NoResources;
-      }
-    }
-  }  // releasing the cwb state lock
-
   if (!count || (dump_output_to_file && (output_buffer_info_.alloc_buffer_info.fd >= 0))) {
     DLOGW("FrameDump Not enabled Framecount = %d dump_output_to_file = %d o/p fd = %d", count,
           dump_output_to_file, output_buffer_info_.alloc_buffer_info.fd);
@@ -1521,6 +1497,9 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
+    case kIdleTimeout:
+      ReqPerfHintRelease();
+      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -2882,6 +2861,11 @@ HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
                                 vsync_period_change_constraints->desiredTimeNanos);
 
   out_timeline->refreshRequired = true;
+  if (info.x_pixels != fb_width_ || info.y_pixels != fb_height_) {
+    out_timeline->refreshRequired = false;
+    fb_width_ = info.x_pixels;
+    fb_height_ = info.y_pixels;
+  }
   return HWC2::Error::None;
 }
 
@@ -3175,32 +3159,31 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
   if (!needs_refresh) {
     return kErrorParameters;
   }
-  std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  if (cwb_state_.cwb_client == kCWBClientNone) {
+
+  if (!cwb_buffer_map_.size() && !display_intf_->HandleCwbTeardown()) {
     *needs_refresh = false;
     return kErrorNone;
   }
-  if (cwb_state_.cwb_client == kCWBClientFrameDump) {
-    dump_frame_count_ = 0;
-    dump_output_to_file_ = false;
-    // Unmap and Free buffer
-    if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
-      DLOGW("unmap failed with err %d", errno);
+
+  for (auto itr = cwb_buffer_map_.begin(); itr != cwb_buffer_map_.end(); itr++) {
+    if (itr->second == kCWBClientFrameDump) {
+      dump_frame_count_ = 0;
+      dump_output_to_file_ = false;
+      // Unmap and Free buffer
+      if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+        DLOGW("unmap failed with err %d", errno);
+      }
+      if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+        DLOGW("FreeBuffer failed");
+      }
+      output_buffer_info_ = {};
+      output_buffer_base_ = nullptr;
+    } else if (itr->second == kCWBClientColor) {
+      frame_capture_buffer_queued_ = false;
+      frame_capture_status_ = 0;
     }
-    if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
-      DLOGW("FreeBuffer failed");
-    }
-    output_buffer_info_ = {};
-    output_buffer_base_ = nullptr;
-  } else if (cwb_state_.cwb_client == kCWBClientColor) {
-    frame_capture_buffer_queued_ = false;
-    frame_capture_status_ = 0;
+    cwb_buffer_map_.erase(itr->first);
   }
-  readback_buffer_queued_ = false;
-  cwb_config_ = {};
-  readback_configured_ = false;
-  output_buffer_ = {};
-  cwb_state_.cwb_client = kCWBClientNone;
 
   *needs_refresh = true;
   return kErrorNone;
@@ -3265,66 +3248,6 @@ HWC2::Error HWCDisplay::TryDrawMethod(IQtiComposerClient::DrawMethod client_draw
   return status;
 }
 
-void HWCDisplay::SetCwbState() {
-  DTRACE_SCOPED();
-
-  std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
-  hwc2_display_t &cwb_disp_id = cwb_state_.cwb_disp_id;
-  shared_ptr<Fence> &teardown_frame_retire_fence = cwb_state_.teardown_frame_retire_fence;
-  CWBStatus &cwb_status = cwb_state_.cwb_status;
-
-  if (cwb_disp_id == id_) {  // cwb is in Active state for the caller display
-    bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
-    readback_configured_ = false;
-    bool perform_cwb =
-        (readback_buffer_queued_ || pending_output_dump) && !layer_stack_.flags.secure_present;
-
-    if ((cwb_status != CWBStatus::kCWBTeardown) && perform_cwb) {
-      // cwb requested for current frame.
-      // RHS values were set in FrameCaptureAsync() called from a binder thread. They are picked up
-      // here in a subsequent draw round. Readback is not allowed for any secure use case.
-      uint32_t cwb_with_pu_supported = 0;
-      display_intf_->IsSupportedOnDisplay(kCwbCrop, &cwb_with_pu_supported);
-      if (!cwb_with_pu_supported) {  // If CWB ROI isn't supported, then go for full frame update
-        DisablePartialUpdateOneFrame();
-      }
-      layer_stack_.output_buffer = &output_buffer_;
-      layer_stack_.cwb_config = &cwb_config_;  // set CWB config as specified by the CWB client.
-      layer_stack_.flags.post_processed_output = static_cast<bool>(cwb_config_.tap_point);
-
-      readback_configured_ = true;
-      teardown_frame_retire_fence = nullptr;
-      cwb_status = CWBStatus::kCWBConfigure;
-    } else if (cwb_status == CWBStatus::kCWBConfigure) {
-      cwb_status = CWBStatus::kCWBTeardown;  // cwb teardown for the caller display in this frame
-    } else if ((cwb_status == CWBStatus::kCWBAvailable) ||
-               (cwb_status == CWBStatus::kCWBPostTeardown)) {
-      // In a frame with kCWBAvailable state, a new CWB request sets the cwb_state_ members
-      // cwb_disp_id and cwb_client. But if this requests is not served due to secure present, then
-      // need to reset the members cwb_disp_id & cwb_client so as to unblock upcoming requests.
-      cwb_disp_id = -1;
-      cwb_state_.cwb_client = CWBClient::kCWBClientNone;
-    }
-  } else if ((cwb_disp_id == -1) && (cwb_status == CWBStatus::kCWBPostTeardown) &&
-             (Fence::GetStatus(teardown_frame_retire_fence) == Fence::Status::kSignaled)) {
-    // If no new request has arrived on any display since the last cwb teardown, check whether the
-    // last teardown frame's retire fence has signaled. If signaled, reset the fence pointer. Note
-    // that this SetCwbState caller disp can be different from the teardwn disp, still it can reset
-    teardown_frame_retire_fence = nullptr;
-    cwb_status = CWBStatus::kCWBAvailable;
-  }
-
-  DLOGV_IF(kTagClient, "CWB State: cwb_display_id = %d , cwb_client = %d , cwb_status = %d",
-           cwb_disp_id, cwb_state_.cwb_client, cwb_status);
-}
-
-void HWCDisplay::ResetCwbState() {
-  // Resets cwb state struct. Used in CWB teardown frame if flush_ is set.
-  // Also called incase cwb active display is unplugged.
-  DLOGV_IF(kTagClient, "Resetting Cwb State.");
-  cwb_state_ = {};
-}
-
 HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
                                           shared_ptr<Fence> acquire_fence,
                                           CwbConfig cwb_config, CWBClient client) {
@@ -3332,25 +3255,6 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
       current_power_mode_ == HWC2::PowerMode::DozeSuspend) {
     DLOGW("CWB requested on either Powered-Off or Doze-Suspended display.");
     return HWC2::Error::BadDisplay;
-  }
-
-  std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  if (cwb_state_.cwb_disp_id != -1 && cwb_state_.cwb_disp_id != id_) {
-    // cwb is already Active on a display other than on which it is requested.
-    DLOGE("CWB is already in use with display = %d", cwb_state_.cwb_disp_id);
-    return HWC2::Error::NoResources;
-  }
-
-  if (cwb_state_.cwb_client != kCWBClientNone && cwb_state_.cwb_client != client) {
-    // cwb is already Active for a client other than the one who is requesting.
-    DLOGE("CWB is already in use with client = %d", cwb_state_.cwb_client);
-    return HWC2::Error::NoResources;
-  }
-
-  if ((cwb_state_.cwb_status == CWBStatus::kCWBTeardown) ||
-      (Fence::GetStatus(cwb_state_.teardown_frame_retire_fence) != Fence::Status::kSignaled)) {
-    DLOGW("CWB teardown is currently undergoing on display = %d", cwb_state_.cwb_disp_id);
-    return HWC2::Error::Unsupported;
   }
 
   if (secure_event_ != kSecureEventMax) {
@@ -3372,24 +3276,25 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
     return HWC2::Error::BadParameter;
   }
 
+  LayerBuffer output_buffer = {};
   // Configure the output buffer as Readback buffer
   auto err = gralloc::GetMetaDataValue(
-      hdl, (int64_t)qtigralloc::MetadataType_AlignedWidthInPixels.value, &output_buffer_.width);
+      hdl, (int64_t)qtigralloc::MetadataType_AlignedWidthInPixels.value, &output_buffer.width);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve aligned width");
   }
   err = gralloc::GetMetaDataValue(
-      hdl, (int64_t)qtigralloc::MetadataType_AlignedHeightInPixels.value, &output_buffer_.height);
+      hdl, (int64_t)qtigralloc::MetadataType_AlignedHeightInPixels.value, &output_buffer.height);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve aligned height");
   }
   err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::WIDTH,
-                                  &output_buffer_.unaligned_width);
+                                  &output_buffer.unaligned_width);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve unaligned width");
   }
   err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::HEIGHT,
-                                  &output_buffer_.unaligned_height);
+                                  &output_buffer.unaligned_height);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve unaligned height");
   }
@@ -3403,44 +3308,40 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve flag");
   }
-  output_buffer_.format = HWCLayer::GetSDMFormat(format, flag);
-  err = gralloc::GetMetaDataValue(hdl, (int64_t)QTI_FD, &output_buffer_.planes[0].fd);
+  output_buffer.format = HWCLayer::GetSDMFormat(format, flag);
+  err = gralloc::GetMetaDataValue(hdl, (int64_t)QTI_FD, &output_buffer.planes[0].fd);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve file descriptor");
   }
   err = gralloc::GetMetaDataValue(hdl, (int64_t)QTI_ALIGNED_WIDTH_IN_PIXELS,
-                                  &output_buffer_.planes[0].stride);
+                                  &output_buffer.planes[0].stride);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve stride");
   }
   err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::BUFFER_ID,
-                                  &output_buffer_.handle_id);
+                                  &output_buffer.handle_id);
   if (err != gralloc::Error::NONE) {
     DLOGE("Failed to retrieve buffer id");
   }
 
-  output_buffer_.acquire_fence = acquire_fence;
+  output_buffer.acquire_fence = acquire_fence;
 
-  if (output_buffer_.format == kFormatInvalid) {
+  if (output_buffer.format == kFormatInvalid) {
     DLOGW("Format %d is not supported by SDM", format);
     return HWC2::Error::BadParameter;
-  } else if (!display_intf_->IsWriteBackSupportedFormat(output_buffer_.format)) {
-    DLOGW("WB doesn't support color format : %s .", GetFormatString(output_buffer_.format));
+  } else if (!display_intf_->IsWriteBackSupportedFormat(output_buffer.format)) {
+    DLOGW("WB doesn't support color format : %s .", GetFormatString(output_buffer.format));
     return HWC2::Error::BadParameter;
   }
 
-  readback_buffer_queued_ = true;
-  readback_configured_ = false;
-  cwb_state_.cwb_client = client;
-  cwb_state_.cwb_disp_id = id_;
-  cwb_config_ = cwb_config;
-  LayerRect &roi = cwb_config_.cwb_roi;
-  LayerRect &full_rect = cwb_config_.cwb_full_rect;
-  CwbTapPoint &tap_point = cwb_config_.tap_point;
+  CwbConfig config = cwb_config;
+  LayerRect &roi = config.cwb_roi;
+  LayerRect &full_rect = config.cwb_full_rect;
+  CwbTapPoint &tap_point = config.tap_point;
 
   DisplayError error = kErrorNone;
   uint32_t buffer_width = 0, buffer_height = 0;
-  error = display_intf_->GetCwbBufferResolution(&cwb_config_, &buffer_width,
+  error = display_intf_->GetCwbBufferResolution(&cwb_config, &buffer_width,
                                                 &buffer_height);
   if (error) {
     DLOGE("Configuring CWB Buffer allocation failed.");
@@ -3451,14 +3352,24 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
     }
   }
 
+  error = display_intf_->CaptureCwb(output_buffer, config);
+  if (error) {
+    DLOGE("CaptureCwb failed");
+    if (error == kErrorParameters) {
+      return HWC2::Error::BadParameter;
+    } else {
+      return HWC2::Error::Unsupported;
+    }
+  }
+
+  cwb_buffer_map_.emplace(output_buffer.handle_id, client);
+
   DLOGV_IF(kTagClient, "CWB config from client: tap_point %d, CWB ROI Rect(%f %f %f %f), "
            "PU_as_CWB_ROI %d, Cwb full rect : (%f %f %f %f)", tap_point,
-           roi.left, roi.top, roi.right, roi.bottom, cwb_config_.pu_as_cwb_roi,
+           roi.left, roi.top, roi.right, roi.bottom, config.pu_as_cwb_roi,
            full_rect.left, full_rect.top, full_rect.right, full_rect.bottom);
 
-  DLOGV_IF(kTagClient, "Successfully configured the output buffer: readback_buffer_queued_ %d, "
-           "readback_configured_ %d, cwb_client %d",
-           readback_buffer_queued_, readback_configured_, cwb_state_.cwb_client);
+  DLOGV_IF(kTagClient, "Successfully configured the output buffer: cwb_client %d", client);
 
   return HWC2::Error::None;
 }
@@ -3466,43 +3377,55 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
 HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
   auto status = HWC2::Error::None;
 
-  std::lock_guard<std::mutex> lock(cwb_state_lock_);
-  if (readback_configured_ && (cwb_state_.cwb_client == kCWBClientExternal)) {
-    display_intf_->GetOutputBufferAcquireFence(release_fence);
-  } else if (readback_configured_ && output_buffer_.release_fence) {
-    *release_fence = output_buffer_.release_fence;
-    DLOGI("Successfully retrieved readback buffer fence for cwb clinet %d on tappoint %d",
-          cwb_state_.cwb_client, cwb_config_.tap_point);
-  } else {
-    DLOGE("Failed to retrieve readback buffer fence: readback_configured_ %d, "
-          "output_buffer_.release_fence for client %d on tappoint %d ",
-          readback_configured_, cwb_state_.cwb_client, cwb_config_.tap_point);
-    status = HWC2::Error::Unsupported;
+  CWBClient client = kCWBClientNone;
+
+  if (layer_stack_.output_buffer != nullptr) {
+    uint64_t handle_id = layer_stack_.output_buffer->handle_id;
+    const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
+    if (map_cwb_buffer != cwb_buffer_map_.end()) {
+      client = map_cwb_buffer->second;
+    }
   }
 
-  cwb_config_ = {};
-  readback_buffer_queued_ = false;
-  readback_configured_ = false;
-  output_buffer_ = {};
-  cwb_state_.cwb_client = kCWBClientNone;
-
-  DLOGV_IF(kTagQDCM, "Reseting to : cwb_tap_point %d, cwb_client %d, "
-           "readback_buffer_queued_ %d, readback_configured_ %d",
-           cwb_config_.tap_point, cwb_state_.cwb_client,
-           readback_buffer_queued_, readback_configured_);
+  if (client == kCWBClientExternal) {
+    display_intf_->GetOutputBufferAcquireFence(release_fence);
+    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
+  } else if (client != kCWBClientNone && layer_stack_.output_buffer->release_fence) {
+    *release_fence = layer_stack_.output_buffer->release_fence;
+    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
+    DLOGI("Successfully retrieved readback buffer fence for cwb client %d",
+          client);
+  } else {
+    DLOGE("Failed to retrieve readback buffer fence");
+    return HWC2::Error::Unsupported;
+  }
 
   return status;
 }
 
 void HWCDisplay::HandleFrameOutput() {
-  if (readback_buffer_queued_) {
-    DLOGV_IF(kTagQDCM, "No pending readback buffer found on the queue.");
+  // Block on output buffer fence if client is internal.
+  // External clients will wait on their thread.
+  CWBClient client = kCWBClientNone;
+
+  if (layer_stack_.output_buffer != nullptr) {
+    uint64_t handle_id = layer_stack_.output_buffer->handle_id;
+    const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
+    if (map_cwb_buffer != cwb_buffer_map_.end()) {
+      client = map_cwb_buffer->second;
+    }
   }
 
-  if (frame_capture_buffer_queued_) {
+  if (client != kCWBClientNone && client != kCWBClientExternal) {
+    auto &fence = layer_stack_.output_buffer->release_fence;
+    display_intf_->GetOutputBufferAcquireFence(&fence);
+  }
+
+  if (client == kCWBClientColor) {
     DLOGV_IF(kTagQDCM, "frame_capture_buffer_queued_ is in use. Handle frame capture.");
     HandleFrameCapture();
-  } else if (dump_output_to_file_) {
+    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
+  } else if (client == kCWBClientFrameDump) {
     DLOGV_IF(kTagQDCM, "dump_output_to_file is in use. Handle frame dump.");
     HandleFrameDump();
   }
@@ -3513,8 +3436,14 @@ void HWCDisplay::HandleFrameDump() {
     return;
   }
 
-  int ret = 0;
-  ret = Fence::Wait(output_buffer_.release_fence);
+  DisplayError ret = kErrorNone;
+  {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
+    cwb_capture_status_ = kErrorNone;
+    cwb_cv_.wait(lock);
+    ret = cwb_capture_status_;
+  }
+
   if (ret != kErrorNone) {
     DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
   }
@@ -3533,15 +3462,20 @@ void HWCDisplay::HandleFrameDump() {
       DLOGE("FreeBuffer failed");
     }
 
-    readback_buffer_queued_ = false;
-    cwb_config_ = {};
-    readback_configured_ = false;
-
-    output_buffer_ = {};
     output_buffer_info_ = {};
     output_buffer_base_ = nullptr;
-    std::lock_guard<std::mutex> lock(cwb_state_lock_);
-    cwb_state_.cwb_client = kCWBClientNone;
+    output_buffer_cwb_config_ = {};
+    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
+  } else {
+    const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
+    HWC2::Error err = SetReadbackBuffer(handle, nullptr, output_buffer_cwb_config_,
+                                        kCWBClientFrameDump);
+    if (err != HWC2::Error::None) {
+      munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size);
+      buffer_allocator_->FreeBuffer(&output_buffer_info_);
+      output_buffer_info_ = {};
+      return;
+    }
   }
 }
 
@@ -3585,6 +3519,38 @@ void HWCDisplay::GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *va
   *variable_config_map = variable_config_map_;
   *active_config_index = active_config_index_;
   *num_configs = num_configs_;
+}
+
+void HWCDisplay::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
+  CWBClient client = kCWBClientNone;
+  uint64_t handle_id = buffer.handle_id;
+
+  const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
+  if (map_cwb_buffer == cwb_buffer_map_.end()) {
+    DLOGI("CWB Buffer not found in map");
+    return;
+  }
+
+  client = map_cwb_buffer->second;
+
+  switch (client) {
+    case kCWBClientFrameDump:
+    case kCWBClientColor:
+      {
+        std::unique_lock<std::mutex> lock(cwb_mutex_);
+        if (!status) {
+          cwb_capture_status_ = kErrorNone;
+        } else {
+          cwb_capture_status_ = kErrorTimeOut;
+        }
+        cwb_cv_.notify_one();
+      }
+      break;
+    case kCWBClientExternal:
+    default:
+      DLOGV_IF(kTagClient, "CWB notified for client = %d", client);
+      return;
+  }
 }
 
 } //namespace sdm

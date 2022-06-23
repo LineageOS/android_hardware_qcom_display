@@ -808,7 +808,7 @@ DisplayError ColorManagerProxy::ColorMgrSetLtmPccConfig(void* pcc_input, size_t 
 DisplayError ColorManagerProxy::ConfigureCWBDither(CwbConfig *cwb_cfg, bool free_data) {
   DisplayError error = kErrorNone;
 
-  if (!stc_intf_ || !cwb_cfg) {
+  if (!stc_intf_ || (!cwb_cfg && !free_data)) {
     DLOGE("Invalid stc_intf_ %pK, cwb_cfg %pK", stc_intf_, cwb_cfg);
     return kErrorParameters;
   }

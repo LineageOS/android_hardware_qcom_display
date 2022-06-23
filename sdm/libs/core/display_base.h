@@ -97,7 +97,7 @@ using std::lock_guard;
 
 typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
 
-class DisplayBase : public DisplayInterface {
+class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
@@ -200,6 +200,7 @@ class DisplayBase : public DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual DisplayError CaptureCwb(const LayerBuffer &output_buffer, const CwbConfig &config);
   virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) {
     return kErrorNotSupported;
   }
@@ -266,6 +267,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ForceToneMapUpdate(LayerStack *layer_stack);
   virtual void EnableLlccDuringAodMode(LayerStack *layer_stack);
   virtual DisplayError UpdateTransferTime(uint32_t transfer_time) { return kErrorNotSupported; }
+  virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer);
+  virtual void Refresh();
+  virtual bool HandleCwbTeardown();
 
  protected:
   struct DisplayMutex {
@@ -312,7 +316,6 @@ class DisplayBase : public DisplayInterface {
   DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
-  const char *GetName(const LayerComposition &composition);
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
@@ -349,7 +352,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError PostCommit(HWLayersInfo *hw_layers_info);
   bool IsPrimaryDisplayLocked();
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
-  DisplayError ConfigureCwb(LayerStack *layer_stack);
+  void ConfigureCwbParams(LayerStack *layer_stack);
   void ProcessPowerEvent();
   DisplayError SetHWDetailedEnhancerConfig(void *params);
   DisplayError NoiseInit();
@@ -428,6 +431,7 @@ class DisplayBase : public DisplayInterface {
   PanelFeatureFactoryIntf *pf_factory_ = nullptr;
   PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   bool first_cycle_ = true;
+  bool registered_hw_events_ = false;
   bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.
   bool validated_ = false;  // display validation status based on sideband events driver events etc.
   shared_ptr<Fence> retire_fence_ = nullptr;
@@ -477,7 +481,7 @@ class DisplayBase : public DisplayInterface {
   uint32_t mmrm_requested_clk_ = 0;
   static bool primary_active_;
   bool draw_method_set_ = false;
-  CwbConfig *cwb_config_ = NULL;
+  bool cwb_configured_ = false;
   bool transition_done_ = false;
   bool gpu_comp_frame_ = false;
   uint32_t retire_fence_offset_ = 0;

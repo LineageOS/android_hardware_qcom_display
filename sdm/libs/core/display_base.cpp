@@ -205,7 +205,7 @@ DisplayError DisplayBase::Init() {
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
                                          hw_panel_info_, mixer_attributes_, fb_config_,
-                                         &display_comp_ctx_, &cached_qos_data_);
+                                         &display_comp_ctx_, &cached_qos_data_, this);
   if (error != kErrorNone) {
     DLOGW("Display %d comp manager registration failed!", display_id_);
     goto CleanupOnError;
@@ -219,7 +219,7 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  if (property_value >= 0) {
+  if (property_value > 0) {
     max_mixer_stages = std::min(UINT32(property_value), hw_resource_info_.num_blending_stages);
   }
   DisplayBase::SetMaxMixerStages(max_mixer_stages);
@@ -357,6 +357,10 @@ void DisplayBase::GenerateBorderLayers(const std::vector<LayerRect> &border_rect
 DisplayError DisplayBase::Deinit() {
   {  // Scope for lock
     ClientLock lock(disp_mutex_);
+    if (cwb_configured_) {
+      FlushConcurrentWriteback();
+      cwb_configured_ = false;
+    }
     ClearColorInfo();
     if (IsPrimaryDisplayLocked()) {
       hw_intf_->UnsetScaleLutConfig();
@@ -541,93 +545,37 @@ DisplayError DisplayBase::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t
   return error;
 }
 
-DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
+void DisplayBase::ConfigureCwbParams(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
   if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {  // CWB requested
+    cwb_configured_ = true;
     comp_manager_->HandleCwbFrequencyBoost(true);
 
-    if (!cwb_config_) {  // Instantiate cwb_config_ if cwb was not enabled in previous draw cycle.
-      cwb_config_ = new CwbConfig;
-      needs_validate_ = true;  // Do not skip Validate in CWB setup frame.
-    }
-    *cwb_config_ = {};  // Reset cwb_config_ so as to set it to new cwb config passed by the client
-
-    if (layer_stack->cwb_config == NULL) {
-      // If Cwb client doesn't set Cwb config in LayerStack.cwb_config, then we consider full frame
-      // ROI and recognize tppt. from post-processed flag (demura tappoint is not suopported then).
-
-      // set tappoint based on post-processed flag.
-      cwb_config_->tap_point = (layer_stack->flags.post_processed_output)
-                                   ? CwbTapPoint::kDsppTapPoint
-                                   : CwbTapPoint::kLmTapPoint;
-
-      uint32_t buffer_width = 0, buffer_height = 0;
-      error = GetCwbBufferResolution(cwb_config_, &buffer_width, &buffer_height);
-      if (error != kErrorNone) {
-        DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
-        return error;
-      }
-      DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
-      cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
-    } else {  // Cwb client has set the cwb config in LayerStack.cwb_config .
-      *cwb_config_ = *(layer_stack->cwb_config);
-    }
-
     // Config dither data
-    cwb_config_->dither_info = nullptr;
-    if (cwb_config_->tap_point != CwbTapPoint::kLmTapPoint && color_mgr_) {
-      error = color_mgr_->ConfigureCWBDither(cwb_config_, false);
+    layer_stack->cwb_config->dither_info = nullptr;
+    if (layer_stack->cwb_config->tap_point != CwbTapPoint::kLmTapPoint && color_mgr_) {
+      error = color_mgr_->ConfigureCWBDither(layer_stack->cwb_config, false);
       if (error != kErrorNone) {
         DLOGE("CWB dither config failed, error %d", error);
       }
     }
 
-    disp_layer_stack_.info.hw_cwb_config = cwb_config_;
-    error = ValidateCwbConfigInfo(disp_layer_stack_.info.hw_cwb_config,
-                                  layer_stack->output_buffer->format);
-    if (error != kErrorNone) {
-      DLOGE("CWB_config validation failed.");
-      return error;
+    uint32_t cwb_roi_supported = 0;  // Check whether CWB ROI is supported.
+    IsSupportedOnDisplay(kCwbCrop, &cwb_roi_supported);
+    if (!cwb_roi_supported) {  // If CWB ROI isn't supported, then go for full frame update
+      disable_pu_one_frame_ = true;
     }
-    if (!needs_validate_) {
-      if (cwb_config_->pu_as_cwb_roi) {
-        needs_validate_ = true;
-        DLOGI_IF(kTagDisplay, "pu_as_cwb_roi: true. Validate call needed for CWB.");
-      } else if (cwb_config_->tap_point == CwbTapPoint::kLmTapPoint ||
-                 !disable_pu_on_dest_scaler_) {
-        // Either if cwb tppt is LM or if cwb tppt is DSPP/Demura with destin scalar disabled, then
-        // check whether PU ROI contains CWB ROI. If it doesn't, then set needs_validate_ to true.
-        // Note: If destin scalar is enabled, then there would be full frame update and the check
-        // whether PU ROI contains CWB ROI isn't needed. CWB doesn't requires Validate call then.
-        bool cwb_needs_validate = true;
-        for (uint32_t i = 0; i < disp_layer_stack_.info.left_frame_roi.size(); i++) {
-          auto &pu_roi = disp_layer_stack_.info.left_frame_roi.at(i);
-          if (Contains(pu_roi, cwb_config_->cwb_roi)) {  // checking whether PU roi contain CWB roi
-            DLOGI_IF(kTagDisplay, "PU ROI contains CWB ROI. Validate not needed for CWB.");
-            cwb_needs_validate = false;
-            break;
-          }
-        }
-        needs_validate_ = cwb_needs_validate;
-      }
-    }
-  } else if (cwb_config_) {  // CWB isn't requested in the current draw cycle.
+  } else if (cwb_configured_) {  // CWB isn't requested in the current draw cycle.
     // Release dither data
     if (color_mgr_) {
-      error = color_mgr_->ConfigureCWBDither(cwb_config_, true);
+      error = color_mgr_->ConfigureCWBDither(layer_stack->cwb_config, true);
       if (error != kErrorNone) {
         DLOGE("Release dither data failed.");
       }
     }
-    // Check and release cwb_config_ if it was instantiated in the previous draw cycle.
-    delete cwb_config_;
-    cwb_config_ = NULL;
-    disp_layer_stack_.info.hw_cwb_config = NULL;
-    needs_validate_ = true;  // Do not skip Validate in CWB teardown frame.
-
+    cwb_configured_ = false;
     comp_manager_->HandleCwbFrequencyBoost(false);
   }
-  return error;
 }
 
 bool DisplayBase::IsWriteBackSupportedFormat(const LayerBufferFormat &format) {
@@ -797,11 +745,6 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
 
   needs_validate_ |= IsValidateNeeded();
 
-  error = ConfigureCwb(layer_stack);
-  if (error != kErrorNone) {
-    return error;
-  }
-
   layer_stack->needs_validate = !validated_ || needs_validate_;
   if (!layer_stack->needs_validate) {
     // Check for validation in case of new display connected, other displays exiting off state etc.
@@ -809,7 +752,12 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
     comp_manager_->NeedsValidate(display_comp_ctx_, &needs_validate);
     layer_stack->needs_validate = needs_validate;
   }
-  return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
+
+  error =  comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
+
+  ConfigureCwbParams(layer_stack);
+
+  return error;
 }
 
 DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
@@ -885,6 +833,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
+  disp_layer_stack_.info.hw_cwb_config = layer_stack->cwb_config;
 
   EnableLlccDuringAodMode(layer_stack);
 
@@ -901,11 +850,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   // This call in Prepare will return the cached value during PrePrepare()
   PrepareRC(layer_stack);
-
-  error = ConfigureCwb(layer_stack);
-  if (error != kErrorNone) {
-    return error;
-  }
 
   if (color_mgr_) {
     color_mgr_->Prepare();
@@ -1426,6 +1370,7 @@ void DisplayBase::CommitThread() {
       return (disp_mutex_.worker_busy);
     }))) {
       DLOGI("Received idle timeout");
+      event_handler_->HandleEvent(kIdleTimeout);
       IdleTimeout();
       continue;
     }
@@ -1447,16 +1392,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  // Register all hw events on first commit for trusted vm only as the hw acquire happens as a
-  // part of first validate
-  if (first_cycle_) {
-    hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
-    hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
-    hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
-    hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
-    hw_events_intf_->SetEventState(HWEvent::MMRM, true);
-  }
-
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
   if (layer_stack->request_flags.trigger_refresh) {
     if (!disable_cwb_idle_fallback_ && disp_layer_stack_.info.output_buffer) {
@@ -1467,11 +1402,12 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
-  if (first_cycle_) {
+  if (first_cycle_ && display_type_ != kVirtual) {
     // Register for panel dead since notification is sent at any time
     hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
 
-    if ((draw_method_ != kDrawDefault) && (display_type_ != kVirtual)) {
+    if (draw_method_ != kDrawDefault && !hw_panel_info_.is_primary_panel &&
+        display_type_ != kHDMI) {
       DLOGI("Registering for power events");
       hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
     }
@@ -1492,16 +1428,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   DLOGI_IF(kTagDisplay, "Entering commit for display: %d-%d", display_id_, display_type_);
   CommitLayerParams(layer_stack);
-
-  // Register other hw events after the first successful commit to avoid missing the power event
-  // notification on framework reboot edge cases
-  if (!first_cycle_ && !registered_hw_events_) {
-    hw_events_intf_->SetEventState(HWEvent::IDLE_POWER_COLLAPSE, true);
-    hw_events_intf_->SetEventState(HWEvent::HW_RECOVERY, true);
-    hw_events_intf_->SetEventState(HWEvent::HISTOGRAM, true);
-    hw_events_intf_->SetEventState(HWEvent::MMRM, true);
-    registered_hw_events_ = true;
-  }
 
   // Register other hw events after the first successful commit to avoid missing the power event
   // notification on framework reboot edge cases
@@ -1638,7 +1564,7 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   }
 
   int level = 0;
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+  if (first_cycle_ && (hw_intf_->GetPanelBrightness(&level) == kErrorNone)) {
     comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
   }
 
@@ -1907,6 +1833,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateOn:
+    if (display_type_ == kHDMI && first_cycle_) {
+      hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
+    }
+
     error = hw_intf_->PowerOn(cached_qos_data_, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
@@ -1972,7 +1902,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
-  if ((pending_power_state_ == kPowerStateNone) && !first_cycle_) {
+  if ((pending_power_state_ == kPowerStateNone) && (!first_cycle_ || display_type_ == kHDMI)) {
     CacheRetireFence();
     SyncPoints sync = {};
     sync.retire_fence = retire_fence_;
@@ -2198,7 +2128,7 @@ std::string DisplayBase::Dump() {
     HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    const char *comp_type = GetName(hw_layer.composition);
+    const char *comp_type = GetCompositionName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
     const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
@@ -2299,21 +2229,6 @@ std::string DisplayBase::Dump() {
   os << newline << "\n";
 
   return os.str();
-}
-
-const char * DisplayBase::GetName(const LayerComposition &composition) {
-  switch (composition) {
-  case kCompositionGPU:           return "GPU";
-  case kCompositionSDE:           return "SDE";
-  case kCompositionCursor:        return "CURSOR";
-  case kCompositionStitch:        return "STITCH";
-  case kCompositionGPUTarget:     return "GPU_TARGET";
-  case kCompositionStitchTarget:  return "STITCH_TARGET";
-  case kCompositionDemura:        return "DEMURA";
-  case kCompositionCWBTarget:     return "CWB_TARGET";
-  case kCompositionIWE:           return "IWE";
-  default:                        return "UNKNOWN";
-  }
 }
 
 DisplayError DisplayBase::ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
@@ -3018,6 +2933,9 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
+    if (layer->flags.is_demura) {
+      continue;
+    }
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
     uint32_t layer_height = UINT32(layer->src_rect.bottom - layer->src_rect.top);
@@ -3996,6 +3914,10 @@ void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
 
   // Wait for CRTC power event on first cycle.
   if (first_cycle_) {
+    if (hw_panel_info_.is_primary_panel) {
+      DLOGI("Sync commit on primary");
+      return;
+    }
     DLOGI("Wait for CRTC power event on first cycle");
     std::unique_lock<std::mutex> lck(power_mutex_);
     while (!transition_done_) {
@@ -4235,8 +4157,13 @@ void DisplayBase::PrepareForAsyncTransition() {
 std::chrono::system_clock::time_point DisplayBase::WaitUntil() {
   int idle_time_ms = disp_layer_stack_.info.set_idle_time_ms;
   std::chrono::system_clock::time_point timeout_time;
+
+  DLOGV_IF(kTagDisplay, "Off: %d, time: %d, timeout:%d, panel: %s",
+        state_ == kStateOff, idle_time_ms, handle_idle_timeout_,
+        hw_panel_info_.mode == kModeVideo ? "video" : "cmd");
+
   // Indefinite wait if state is off or idle timeout has triggered
-  if (state_ == kStateOff || idle_time_ms == 0 || handle_idle_timeout_) {
+  if (state_ == kStateOff || idle_time_ms <= 0 || handle_idle_timeout_) {
     timeout_time = std::chrono::system_clock::from_time_t(INT_MAX);
   } else {
     std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
@@ -4253,17 +4180,7 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
 
   comp_manager_->HandleCwbFrequencyBoost(true);
 
-  cwb_config_ = new CwbConfig;
-  if (layer_stack->cwb_config == NULL) {
-    cwb_config_->tap_point = CwbTapPoint::kLmTapPoint;
-
-    // Setting full frame ROI
-    cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(mixer_attributes_.width),
-                                           FLOAT(mixer_attributes_.height));
-    cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
-  }
-
-  disp_layer_stack_.info.hw_cwb_config = cwb_config_;
+  cwb_configured_ = true;
   error = ValidateCwbConfigInfo(disp_layer_stack_.info.hw_cwb_config,
                                 layer_stack->output_buffer->format);
   if (error != kErrorNone) {
@@ -4272,6 +4189,71 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
   }
 
   return error;
+}
+
+void DisplayBase::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
+  ClientLock lock(disp_mutex_);
+  event_handler_->NotifyCwbDone(status, buffer);
+}
+
+void DisplayBase::Refresh() {
+  ClientLock lock(disp_mutex_);
+  event_handler_->Refresh();
+}
+
+DisplayError DisplayBase::CaptureCwb(const LayerBuffer &output_buffer, const CwbConfig &config) {
+  ClientLock lock(disp_mutex_);
+
+  if (!hw_resource_info_.has_concurrent_writeback) {
+    return kErrorNotSupported;
+  }
+
+  DisplayError error = kErrorNone;
+  CwbConfig cwb_config = config;
+
+  // Configure default tap point, in case of invalid configured tap point.
+  if (cwb_config.tap_point < CwbTapPoint::kLmTapPoint ||
+      cwb_config.tap_point > CwbTapPoint::kDemuraTapPoint) {
+    cwb_config.tap_point = CwbTapPoint::kLmTapPoint;
+  }
+
+  // Get correct full frame resolution for configured tap point.
+  uint32_t buffer_width = 0, buffer_height = 0;
+  error = GetCwbBufferResolution(&cwb_config, &buffer_width, &buffer_height);
+  if (error != kErrorNone) {
+    DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config.tap_point);
+    return error;
+  }
+
+  if (!IsValid(config.cwb_roi) && !config.pu_as_cwb_roi) {
+    // If Cwb client doesn't set Cwb config in config, then we consider full frame ROI.
+    DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+    cwb_config.cwb_roi = cwb_config.cwb_full_rect;
+  }
+
+  error = ValidateCwbConfigInfo(&cwb_config, output_buffer.format);
+  if (error != kErrorNone) {
+    DLOGE("CWB_config validation failed.");
+    return error;
+  }
+
+  error = comp_manager_->CaptureCwb(display_comp_ctx_, output_buffer, cwb_config);
+  if (error != kErrorNone) {
+    DLOGE("CWB config failed");
+    return error;
+  }
+
+  return kErrorNone;
+}
+
+bool DisplayBase::HandleCwbTeardown() {
+  ClientLock lock(disp_mutex_);
+
+  if (!hw_resource_info_.has_concurrent_writeback) {
+    return false;
+  }
+
+  return comp_manager_->HandleCwbTeardown(display_comp_ctx_);
 }
 
 }  // namespace sdm

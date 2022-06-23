@@ -85,6 +85,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   DisplayError error = kErrorNone;
 
   if (extension_intf) {
+    extension_intf->CreateCwbManagerExtn(this, &cwb_mgr_intf_);
     error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, &resource_intf_);
     extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
     extension_intf->CreateCapabilitiesExtn(&cap_intf_);
@@ -96,6 +97,7 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
     if (extension_intf) {
       extension_intf->DestroyDppsControlExtn(dpps_ctrl_intf_);
       extension_intf->DestroyCapabilitiesExtn(cap_intf_);
+      extension_intf->DestroyCwbManagerExtn(cwb_mgr_intf_);
     }
     return error;
   }
@@ -114,6 +116,7 @@ DisplayError CompManager::Deinit() {
     extension_intf_->DestroyResourceExtn(resource_intf_);
     extension_intf_->DestroyDppsControlExtn(dpps_ctrl_intf_);
     extension_intf_->DestroyCapabilitiesExtn(cap_intf_);
+    extension_intf_->DestroyCwbManagerExtn(cwb_mgr_intf_);
   } else {
     ResourceDefault::DestroyResourceDefault(resource_intf_);
   }
@@ -126,7 +129,8 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes,
                                           const DisplayConfigVariableInfo &fb_config,
-                                          Handle *display_ctx, HWQosData*default_qos_data) {
+                                          Handle *display_ctx, HWQosData*default_qos_data,
+                                          CompManagerEventHandler *event_handler) {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
 
   DisplayError error = kErrorNone;
@@ -189,6 +193,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
   }
 
   registered_displays_.insert(display_id);
+  callback_map_[display_id] = event_handler;
   display_comp_ctx->is_primary_panel = hw_panel_info.is_primary_panel;
   display_comp_ctx->display_id = display_id;
   display_comp_ctx->display_type = type;
@@ -226,6 +231,7 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   strategy->Deinit();
   delete strategy;
 
+  callback_map_.erase(display_comp_ctx->display_id);
   registered_displays_.erase(display_comp_ctx->display_id);
   powered_on_displays_.erase(display_comp_ctx->display_id);
 
@@ -930,6 +936,11 @@ bool CompManager::IsSafeMode() {
   return safe_mode_;
 }
 
+std::string CompManager::Dump() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  return resource_intf_->Dump();
+}
+
 DppsControlInterface* CompManager::GetDppsControlIntf() {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return dpps_ctrl_intf_;
@@ -952,6 +963,38 @@ void CompManager::SetDemuraStatusForDisplay(const int32_t &display_id, bool stat
 
 bool CompManager::GetDemuraStatusForDisplay(const int32_t &display_id) {
   return display_demura_status_[display_id];
+}
+
+DisplayError CompManager::CaptureCwb(Handle display_ctx, const LayerBuffer &output_buffer,
+                                     const CwbConfig &cwb_config) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  DisplayError error = kErrorNone;
+  error = cwb_mgr_intf_->CaptureCwb(display_comp_ctx->display_id, kCwbClientExternal,
+                                    output_buffer, cwb_config, this);
+  return error;
+}
+
+void CompManager::NotifyCwbDone(int32_t display_id, int32_t status,
+                                        const LayerBuffer& buffer) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  callback_map_[display_id]->NotifyCwbDone(status, buffer);
+}
+
+void CompManager::TriggerRefresh(int32_t display_id) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  callback_map_[display_id]->Refresh();
+}
+
+bool CompManager::HandleCwbTeardown(Handle display_ctx) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return resource_intf_->HandleCwbTeardown(display_comp_ctx->display_resource_ctx);
 }
 
 }  // namespace sdm
