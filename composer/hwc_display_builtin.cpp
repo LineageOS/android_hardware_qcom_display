@@ -792,48 +792,6 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
   DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d",frame_capture_buffer_queued_);
 }
 
-int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
-                                                  const CwbTapPoint &cwb_tappoint) {
-  DTRACE_SCOPED();
-  if (cwb_tappoint < CwbTapPoint::kLmTapPoint || cwb_tappoint > CwbTapPoint::kDemuraTapPoint) {
-    DLOGE("Invalid CWB tappoint passed by client ");
-    return -1;
-  } else if (cwb_tappoint == CwbTapPoint::kDsppTapPoint ||
-             cwb_tappoint == CwbTapPoint::kDemuraTapPoint) {
-    auto panel_width = 0u;
-    auto panel_height = 0u;
-    GetPanelResolution(&panel_width, &panel_height);
-    if (output_buffer_info.buffer_config.width < panel_width ||
-        output_buffer_info.buffer_config.height < panel_height) {
-      DLOGE("Buffer dimensions should not be less than panel resolution");
-      return -1;
-    }
-  } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
-    uint32_t dest_scalar_enabled = 0;
-    display_intf_->IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
-    if (dest_scalar_enabled) {
-      auto mixer_width = 0u;
-      auto mixer_height = 0u;
-      GetMixerResolution(&mixer_width, &mixer_height);
-      if (output_buffer_info.buffer_config.width < mixer_width ||
-          output_buffer_info.buffer_config.height < mixer_height) {
-        DLOGE("Buffer dimensions should not be less than LM resolution");
-        return -1;
-      }
-    } else {
-      auto fb_width = 0u;
-      auto fb_height = 0u;
-      GetFrameBufferResolution(&fb_width, &fb_height);
-      if (output_buffer_info.buffer_config.width < fb_width ||
-          output_buffer_info.buffer_config.height < fb_height) {
-        DLOGE("Buffer dimensions should not be less than FB resolution");
-        return -1;
-      }
-    }
-  }
-  return 0;
-}
-
 int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
                                          const CwbConfig &cwb_config) {
   // Note: This function is called in context of a binder thread and a lock is already held
@@ -842,8 +800,9 @@ int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
     return -1;
   }
 
-  int error = ValidateFrameCaptureConfig(output_buffer_info, cwb_config.tap_point);
-  if (error) {
+  if (cwb_config.tap_point < CwbTapPoint::kLmTapPoint ||
+      cwb_config.tap_point > CwbTapPoint::kDemuraTapPoint) {
+    DLOGE("Invalid CWB tappoint passed by client ");
     return -1;
   }
 
