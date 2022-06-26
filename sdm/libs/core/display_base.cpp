@@ -4214,7 +4214,6 @@ void DisplayBase::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
 }
 
 void DisplayBase::Refresh() {
-  ClientLock lock(disp_mutex_);
   event_handler_->Refresh();
 }
 
