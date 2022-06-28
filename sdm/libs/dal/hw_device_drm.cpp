@@ -2673,6 +2673,11 @@ void HWDeviceDRM::ResetROI() {
 }
 
 bool HWDeviceDRM::IsFullFrameUpdate(const HWLayersInfo &hw_layer_info) {
+  // Perform Full Frame Update for video mode
+  if (connector_info_.modes[current_mode_index_].cur_panel_mode && DRM_MODE_FLAG_VID_MODE_PANEL) {
+    return true;
+  }
+
   LayerRect full_frame = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
 
   const LayerRect &frame_roi = hw_layer_info.left_frame_roi.at(0);
