@@ -1841,7 +1841,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   } else {
     if (error == kErrorShutDown) {
       shutdown_pending_ = true;
-      return HWC2::Error::Unsupported;
     } else if (error == kErrorNotValidated) {
       return HWC2::Error::NotValidated;
     } else if (error != kErrorPermission) {
@@ -1850,6 +1849,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
     }
+    return HWC2::Error::Unsupported;
   }
 
   return HWC2::Error::None;
