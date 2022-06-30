@@ -877,6 +877,8 @@ void HWCDisplay::BuildLayerStack() {
   sdm_client_target->layer_id = client_target_->GetId();
   sdm_client_target->geometry_changes = client_target_->GetGeometryChanges();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
+  sdm_client_target->layer_name = client_target_->GetName();
+
   // Derive client target dataspace based on the color mode - bug/115482728
   int32_t client_target_dataspace = GetDataspaceFromColorMode(GetCurrentColorMode());
   SetClientTargetDataSpace(client_target_dataspace);
