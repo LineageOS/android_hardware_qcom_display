@@ -581,16 +581,24 @@ DisplayError CompManager::SetMaxMixerStages(Handle display_ctx, uint32_t max_mix
   return error;
 }
 
-DisplayError CompManager::GetHDR10PlusCapability(bool *hdr_plus_support) {
+DisplayError CompManager::GetHDRCapability(bool *hdr_plus_support, bool *dolby_vision_supported) {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   DisplayError error = kErrorNone;
   if (cap_intf_) {
     DLOGD_IF(kTagCompManager, "Attempting to get HDR10+ capability");
     error = cap_intf_->GetCapability(kHDR10PlusCapability, hdr_plus_support);
+    if (error != kErrorNone) {
+      DLOGW("Failed to get HDR10+ capability");
+    } else {
+      error = cap_intf_->GetCapability(kDolbyVisionCapability, dolby_vision_supported);
+      if (error != kErrorNone) {
+        DLOGW("Failed to get Dolby vision capability");
+      }
+    }
+  } else {
+    DLOGW("Failed to get HDR capabilities");
   }
-  if (error != kErrorNone || !cap_intf_) {
-    DLOGW("Failed to get HDR10+ capability");
-  }
+
   return error;
 }
 

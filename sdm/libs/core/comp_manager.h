@@ -151,7 +151,7 @@ class CompManager : public CwbCallback {
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
   DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);
-  DisplayError GetHDR10PlusCapability(bool *hdr_plus_support);
+  DisplayError GetHDRCapability(bool *hdr_plus_support, bool *dolby_vision_supported);
   DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError GetDefaultQosData(Handle display_ctx, HWQosData *qos_data);
   DisplayError HandleCwbFrequencyBoost(bool isRequest);

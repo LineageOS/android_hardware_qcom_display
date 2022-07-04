@@ -1711,6 +1711,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   bool hdr_supported = hw_resource_info.has_hdr;
   bool hdr_plus_supported = false;
+  bool dolby_vision_supported = false;
   HWDisplayInterfaceInfo hw_disp_info = {};
   hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
   if (hw_disp_info.type == kHDMI) {
@@ -1718,12 +1719,14 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   }
 
   // Checking library support for HDR10+
-  comp_manager_->GetHDR10PlusCapability(&hdr_plus_supported);
+  comp_manager_->GetHDRCapability(&hdr_plus_supported, &dolby_vision_supported);
 
   fixed_info->hdr_supported = hdr_supported;
   // For non-builtin displays, check panel capability for HDR10+
   fixed_info->hdr_plus_supported =
       hdr_supported && hw_panel_info_.hdr_plus_enabled && hdr_plus_supported;
+  fixed_info->dolby_vision_supported =
+      hdr_supported && hw_panel_info_.hdr_plus_enabled && dolby_vision_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
