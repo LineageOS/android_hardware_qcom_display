@@ -1337,10 +1337,8 @@ int HWCDisplayBuiltIn::PostInit() {
 }
 
 bool HWCDisplayBuiltIn::NeedsLargeCompPerfHint() {
-  if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
-    DLOGV_IF(kTagResources, "cpu_hint_:%d not initialized or property:%d not set",
-             !cpu_hint_, !perf_hint_large_comp_cycle_);
-
+  if (!cpu_hint_) {
+    DLOGV_IF(kTagResources, "CPU hint is not initialized");
     return false;
   }
 
@@ -1492,8 +1490,12 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
 
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
-  bool needs_hint = NeedsLargeCompPerfHint();
-  HandleLargeCompositionHint(!needs_hint);
+
+  if (perf_hint_large_comp_cycle_) {
+    bool needs_hint = NeedsLargeCompPerfHint();
+    HandleLargeCompositionHint(!needs_hint);
+  }
+
   return status;
 }
 
