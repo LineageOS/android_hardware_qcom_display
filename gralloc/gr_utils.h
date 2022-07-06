@@ -1,8 +1,6 @@
 /*
  * Copyright (c) 2011-2016,2018-2021, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -27,6 +25,10 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef __GR_UTILS_H__
@@ -257,7 +259,8 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
                   uint64_t *drm_format_modifier);
 bool CanAllocateZSLForSecureCamera();
 
-uint64_t GetMetaDataSize(uint64_t reserved_region_size);
+uint64_t GetCustomContentMetadataSize(int format, uint64_t usage);
+uint64_t GetMetaDataSize(uint64_t reserved_region_size, uint64_t custom_content_md_region_size = 0);
 void UnmapAndReset(private_handle_t *handle, uint64_t reserved_region_size = 0);
 int ValidateAndMap(private_handle_t *handle, uint64_t reserved_region_size = 0);
 Error GetColorSpaceFromColorMetaData(ColorMetaData color_metadata, uint32_t *color_space);
