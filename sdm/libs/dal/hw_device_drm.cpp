@@ -2674,7 +2674,7 @@ void HWDeviceDRM::ResetROI() {
 
 bool HWDeviceDRM::IsFullFrameUpdate(const HWLayersInfo &hw_layer_info) {
   // Perform Full Frame Update for video mode
-  if (connector_info_.modes[current_mode_index_].cur_panel_mode && DRM_MODE_FLAG_VID_MODE_PANEL) {
+  if (connector_info_.modes[current_mode_index_].cur_panel_mode & DRM_MODE_FLAG_VID_MODE_PANEL) {
     return true;
   }
 
