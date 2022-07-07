@@ -4074,19 +4074,6 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
     return -ENOTSUP;
   }
 
-  std::bitset<kSecureMax> secure_sessions = 0;
-  {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
-    if (hwc_display_[target_display]) {
-      hwc_display_[target_display]->GetActiveSecureSession(&secure_sessions);
-    }
-  }
-
-  if (secure_sessions[kSecureCamera]) {
-    DLOGW("TUI session not allowed during ongoing Secure Camera session");
-    return -ENOTSUP;
-  }
-
   std::vector<DisplayMapInfo> map_info = {map_info_primary_};
   std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
   std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
