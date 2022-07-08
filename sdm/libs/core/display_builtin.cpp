@@ -931,6 +931,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       uint32_t inactive_ms = 0;
       Debug::GetIdleTimeoutMs(&active_ms, &inactive_ms);
       comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
+      InitCWBBuffer();
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
       comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
@@ -1781,7 +1782,7 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   }
 
   // force clear qsync mode if set by idle timeout.
-  if (qsync_mode_ !=  kQSyncModeNone && qsync_mode_ == qsync_mode) {
+  if (qsync_mode_ ==  active_qsync_mode_ && qsync_mode_ == qsync_mode) {
     DLOGW("Qsync mode already set as requested mode: qsync_mode_=%d", qsync_mode_);
     return kErrorNone;
   }
@@ -2490,6 +2491,10 @@ void DisplayIPCVmCallbackImpl::OnServerExit() {
 // LCOV_EXCL_STOP
 
 void DisplayBuiltIn::InitCWBBuffer() {
+  if (cwb_buffer_inited_) {
+    return;
+  }
+
   if (hw_panel_info_.mode != kModeVideo || !hw_resource_info_.has_concurrent_writeback
       || !hw_panel_info_.is_primary_panel) {
     return;
@@ -2552,6 +2557,7 @@ void DisplayBuiltIn::InitCWBBuffer() {
   cwb_config.tap_point = CwbTapPoint::kLmTapPoint;
   cwb_config.cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(cwb_layer_.input_buffer.width),
                                        FLOAT(cwb_layer_.input_buffer.height));
+  cwb_buffer_inited_ = true;
   return;
 }
 

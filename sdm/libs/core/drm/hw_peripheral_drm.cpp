@@ -117,6 +117,7 @@ DisplayError HWPeripheralDRM::Deinit() {
 }
 
 void HWPeripheralDRM::InitDestScaler() {
+#ifndef TRUSTED_VM
   if (hw_resource_.hw_dest_scalar_info.count) {
     // Do all destination scaler block resource allocations here.
     dest_scaler_blocks_used_ = 1;
@@ -137,6 +138,7 @@ void HWPeripheralDRM::InitDestScaler() {
     // Update crtc (layer-mixer) configuration info.
     mixer_attributes_.dest_scaler_blocks_used = dest_scaler_blocks_used_;
   }
+#endif
 
   topology_control_ = UINT32(sde_drm::DRMTopologyControl::DSPP);
   if (dest_scaler_blocks_used_) {
