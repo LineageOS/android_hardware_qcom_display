@@ -2429,6 +2429,11 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   char buffer[3*1024 + 1];
   auto dir = opendir(devcd_dir_path.c_str());
 
+  if (dir == nullptr) {
+    DLOGW("Failed to access %s directory", devcd_dir_path.c_str());
+    return kErrorPermission;
+  }
+
   // Find the devcd node corresponding to display driver
   while (auto i = readdir(dir)) {
     if (string(i->d_name).find("devcd") != string::npos) {
