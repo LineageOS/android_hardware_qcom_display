@@ -1777,6 +1777,7 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
   PreValidateDisplay(&exit_validate);
   if (exit_validate) {
     validate_done_ = true;
+    client_target_3_1_set_ = false;
     return HWC2::Error::None;
   }
 
@@ -1786,6 +1787,7 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
   // Mask error if needed.
   auto status = HandlePrepareError(error);
   if (status != HWC2::Error::None) {
+    client_target_3_1_set_ = false;
     return status;
   }
 
