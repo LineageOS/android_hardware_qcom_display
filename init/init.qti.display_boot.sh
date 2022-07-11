@@ -37,6 +37,24 @@ else
 fi
 
 case "$target" in
+    "pineapple")
+    #SOC ID for Pineapple is 557
+    case "$soc_hwid" in
+      557)
+        setprop vendor.display.enable_fb_scaling 0
+        setprop vendor.gralloc.use_dma_buf_heaps 1
+        setprop vendor.display.target.version 4
+        setprop vendor.display.enable_posted_start_dyn 2
+        setprop vendor.display.enable_allow_idle_fallback 1
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_rotator_ui 1
+        setprop vendor.display.enable_spec_fence 1
+        setprop vendor.display.thermal.version 1
+        setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.enable_latch_media_content 1
+        ;;
+    esac
+    ;;
     "kalama")
     #SOC ID for Kalama is 519
     case "$soc_hwid" in
