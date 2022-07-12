@@ -615,9 +615,9 @@ DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_p
   if (err != kErrorNone) {
     return err;
   }
-  if (first_cycle_) {
-    active_ = true;
-  }
+
+  active_ = true;
+
   SetTUIState();
   return kErrorNone;
 }
