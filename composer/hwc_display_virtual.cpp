@@ -255,7 +255,6 @@ DisplayError HWCDisplayVirtual::NotifyFpsMitigation(const float fps,
   commit_done_ = false;
   std::thread notify_concurrency_fps = std::thread(&HWCDisplayVirtual::NotifyConcurrencyFps, this, fps,
                                         concurrency, concurrency_begin);
-  notify_concurrency_fps.detach();
   notify_concurrency_fps_.push_back(std::move(notify_concurrency_fps));
   return kErrorNone;
 }
