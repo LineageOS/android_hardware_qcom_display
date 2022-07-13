@@ -122,11 +122,11 @@ DisplayError CoreImpl::Init() {
   }
 
   // Must only call after GetDisplaysStatus
-#ifndef TRUSTED_VM
   if (ReserveDemuraResources() != kErrorNone) {
     comp_mgr_.SetDemuraStatus(false);
   }
-  vm_cb_intf_ = new CoreIPCVmCallbackImpl(ipc_intf_, pm_intf_, hw_info_intf_);
+#ifndef TRUSTED_VM
+  vm_cb_intf_ = new CoreIPCVmCallbackImpl(ipc_intf_, hw_info_intf_);
   if (vm_cb_intf_) {
     vm_cb_intf_->Init();
   }
@@ -508,10 +508,8 @@ DisplayError CoreImpl::ReserveDemuraResources() {
 
 // LCOV_EXCL_START
 CoreIPCVmCallbackImpl::CoreIPCVmCallbackImpl(std::shared_ptr<IPCIntf> ipc_intf,
-                                        std::shared_ptr<DemuraParserManagerIntf> pm_intf,
-                                        HWInfoInterface *hw_info_intf)
-  : ipc_intf_(ipc_intf), pm_intf_(pm_intf), hw_info_intf_(hw_info_intf) {
-}
+                                             HWInfoInterface *hw_info_intf)
+    : ipc_intf_(ipc_intf), hw_info_intf_(hw_info_intf) {}
 
 void CoreIPCVmCallbackImpl::Init() {
   if (!ipc_intf_) {
@@ -570,9 +568,6 @@ void CoreIPCVmCallbackImpl::OnServerReady() {
 }
 
 void CoreIPCVmCallbackImpl::OnServerReadyThread(CoreIPCVmCallbackImpl *obj) {
-  if (obj->ExportDemuraCalibBuffer()) {
-    DLOGE("Failed to export Calibration buffer");
-  }
   if (obj->SendPanelBootParams()) {
     DLOGE("Failed to Send SendPanelBootParams");
   }
@@ -604,33 +599,8 @@ int CoreIPCVmCallbackImpl::SendPanelBootParams() {
   return 0;
 }
 
-int CoreIPCVmCallbackImpl::ExportDemuraCalibBuffer() {
-  int enable = 0;
-  Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
-  if (enable && pm_intf_) {
-    GenericPayload dummy;
-    int ret = 0;
-    if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamExportCalibBuffers, dummy))) {
-      DLOGE("Failed to export calibration buffers");
-      return ret;
-    }
-    DLOGI("Export buffer successful");
-  }
-  return 0;
-}
-
 void CoreIPCVmCallbackImpl::OnServerExit() {
-  GenericPayload dummy;
-  int ret = 0;
-
   server_ready_ = false;
-  if (!pm_intf_)
-    return;
-  if ((ret = pm_intf_->SetParameter(kDemuraParserManagerParamFreeCalibBuffers, dummy))) {
-    DLOGE("Failed to export calibration buffers");
-    return;
-  }
-  DLOGI("Free Export buffers successful");
 }
 // LCOV_EXCL_STOP
 

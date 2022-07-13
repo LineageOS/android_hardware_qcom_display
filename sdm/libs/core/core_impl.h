@@ -52,9 +52,7 @@ typedef UtilsFactoryIntf* (*GetUtilsFactory)();
 
 class CoreIPCVmCallbackImpl : public IPCVmCallbackIntf {
  public:
-  CoreIPCVmCallbackImpl(std::shared_ptr<IPCIntf> ipc_intf,
-                        std::shared_ptr<DemuraParserManagerIntf> pm_intf_,
-                        HWInfoInterface *hw_info_intf);
+  CoreIPCVmCallbackImpl(std::shared_ptr<IPCIntf> ipc_intf, HWInfoInterface *hw_info_intf);
   void Init();
   void OnServerReady();
   void OnServerExit();
@@ -63,13 +61,9 @@ class CoreIPCVmCallbackImpl : public IPCVmCallbackIntf {
   virtual ~CoreIPCVmCallbackImpl() {}
 
  private:
-  int ExportDemuraCalibBuffer();
   int SendPanelBootParams();
-
-  IPCExportBufOutParams export_buf_out_params_ = {};
   int cb_hnd_out_ = 0;
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
-  std::shared_ptr<DemuraParserManagerIntf> pm_intf_ = nullptr;
   HWInfoInterface *hw_info_intf_ = nullptr;
   bool server_ready_ = false;
 };
