@@ -132,9 +132,10 @@ case "$target" in
         setprop vendor.display.enable_allow_idle_fallback 1
         setprop vendor.display.enable_rc_support 1
         ;;
-        507|565)
+        507|565|578)
         # Set property for blair
         # SOC ID for blair APQ is 565
+        # SOC Id for Blair Lite is 578
         setprop vendor.display.target.version 3
         setprop vendor.display.disable_offline_rotator 0
         setprop vendor.display.disable_rotator_ubwc 1
