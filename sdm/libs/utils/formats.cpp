@@ -111,6 +111,8 @@ bool IsRgbFormat(const LayerBufferFormat &format) {
     case kFormatRGBA4444:
     case kFormatBGR565Ubwc:
     case kFormatRGB101010:
+    case kFormatRGBA16161616F:
+    case kFormatRGBA16161616FUbwc:
       return true;
     default:
       return false;
@@ -187,6 +189,9 @@ BufferLayout GetBufferLayout(LayerBufferFormat format) {
 float GetBufferFormatBpp(LayerBufferFormat format) {
   float bpp = 0.0f;
   switch (format) {
+    case kFormatRGBA16161616F:
+    case kFormatRGBA16161616FUbwc:
+      return 8.0f;
     case kFormatARGB8888:
     case kFormatRGBA8888:
     case kFormatBGRA8888:
@@ -321,6 +326,8 @@ bool HasAlphaChannel(LayerBufferFormat format) {
   case kFormatBGRA1010102:
   case kFormatABGR2101010:
   case kFormatRGBA1010102Ubwc:
+  case kFormatRGBA16161616F:
+  case kFormatRGBA16161616FUbwc:
     return true;
   default:
     return false;
