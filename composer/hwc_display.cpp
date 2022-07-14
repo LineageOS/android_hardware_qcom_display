@@ -1924,18 +1924,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     SetActiveConfig(pending_first_commit_config_index_);
   }
 
-  if (pending_fb_reconfig_) {
-    hwc2_config_t current_config = 0;
-    GetActiveConfig(&current_config);
-    DisplayConfigVariableInfo current_config_info = {};
-    GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
-    // Set fb config if new resolution differs
-    if (SetFrameBufferResolution(current_config_info.x_pixels, current_config_info.y_pixels) != 0) {
-      DLOGE("Failed to set FB reolution for %d-%d", sdm_id_, type_);
-    }
-    pending_fb_reconfig_ = false;
-  }
-
   return status;
 }
 
@@ -3042,7 +3030,9 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   // Set fb config if new resolution differs
   if (info.x_pixels != current_config_info.x_pixels ||
       info.y_pixels != current_config_info.y_pixels) {
-    pending_fb_reconfig_ = true;
+    if (SetFrameBufferResolution(info.x_pixels, info.y_pixels)) {
+      return HWC2::Error::BadParameter;
+    }
   }
 
   return HWC2::Error::None;
