@@ -1599,8 +1599,10 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
       plane_info[0].h_subsampling = 0;
       plane_info[0].v_subsampling = 0;
+      plane_info[0].step = 2;
       plane_info[1].h_subsampling = h_subsampling;
       plane_info[1].v_subsampling = v_subsampling;
+      plane_info[1].step = 4;
       break;
 
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
