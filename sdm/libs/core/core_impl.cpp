@@ -166,6 +166,15 @@ DisplayError CoreImpl::Deinit() {
   ColorManagerProxy::Deinit();
 
   comp_mgr_.Deinit();
+
+  if (destroy_extension_intf_) {
+    DisplayError error = destroy_extension_intf_(extension_intf_);
+    if (error != kErrorNone) {
+      DLOGE("Unable to destroy interface");
+      return error;
+    }
+  }
+
   HWInfoInterface::Destroy(hw_info_intf_);
 #ifdef TRUSTED_VM
   // release free memory from the heap, needed for Trusted_VM due to the limited
