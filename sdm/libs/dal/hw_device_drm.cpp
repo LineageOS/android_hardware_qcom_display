@@ -1459,7 +1459,6 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
           int fp16_igc_en = 0;
           int fp16_unmult_en = 0;
           drm_msm_fp16_gc fp16_gc_config = {.flags = 0, .mode = FP16_GC_MODE_INVALID};
-
           SelectFp16Config(layer.input_buffer, &fp16_igc_en, &fp16_unmult_en, &fp16_csc_type,
                            &fp16_gc_config, layer.blending);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FP16_CSC_CONFIG, pipe_id, fp16_csc_type);
@@ -1471,17 +1470,20 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
           // blending definition and avoid issues when a layer structure is reused.
           DRMBlendType blending = DRMBlendType::UNDEFINED;
           LayerBlending layer_blend = layer.blending;
-          if (layer_blend ==  kBlendingPremultiplied && pipe_info->inverse_pma_info.inverse_pma) {
-            layer_blend = kBlendingCoverage;
-            DLOGI_IF(kTagDriverConfig, "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
+          if (layer_blend == kBlendingPremultiplied) {
+            // If blending type is premultiplied alpha and FP16 unmult is enabled,
+            // prevent performing alpha unmultiply twice
+            if (fp16_unmult_en) {
+              layer_blend = kBlendingCoverage;
+              pipe_info->inverse_pma_info.inverse_pma = false;
+              pipe_info->inverse_pma_info.op = kReset;
+              DLOGI_IF(kTagDriverConfig, "PMA handled by FP16 UNMULT block - Pipe id: %u", pipe_id);
+            } else if (pipe_info->inverse_pma_info.inverse_pma) {
+              layer_blend = kBlendingCoverage;
+              DLOGI_IF(kTagDriverConfig, "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
+            }
           }
-
-          // If blending type is premultiplied alpha and the FP16 unmult is enabled,
-          // prevent performing alpha unmultiply twice
-          if (!fp16_unmult_en) {
-            SetBlending(layer_blend, &blending);
-          }
-
+          SetBlending(layer_blend, &blending);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
 
           DRMRect src = {};
