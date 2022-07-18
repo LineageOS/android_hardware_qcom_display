@@ -1434,6 +1434,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   }
   dump_output_to_file_ = dump_output_to_file;
   output_buffer_base_ = buffer;
+  output_buffer_cwb_config_ = cwb_config;
 
   return HWC2::Error::None;
 }
