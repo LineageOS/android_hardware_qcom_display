@@ -664,7 +664,7 @@ int HWCDisplay::Deinit() {
 HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
   if (disable_sdr_histogram_)
-    layer->IgnoreSdrContentMetadata(true);
+    layer->IgnoreSdrHistogramMetadata(true);
 
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();

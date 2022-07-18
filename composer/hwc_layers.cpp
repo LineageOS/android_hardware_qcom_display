@@ -1101,11 +1101,6 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
   // Handle colorMetaData / Dataspace handling now
   ValidateAndSetCSC(static_cast<native_handle_t *>(handle));
 
-  if (ignore_sdr_content_md_ &&
-      !IsHdr(layer_buffer->color_metadata.colorPrimaries, layer_buffer->color_metadata.transfer)) {
-    return kErrorNone;
-  }
-
   int extended_md_set = qtigralloc::getMetadataState(handle, QTI_CUSTOM_CONTENT_METADATA);
   if (extended_md_set > 0) {
     std::shared_ptr<CustomContentMetadata> dv_md = std::make_shared<CustomContentMetadata>();
@@ -1122,23 +1117,27 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
     }
   }
 
-  VideoHistogramMetadata histogram = {};
-  if (layer_->update_mask.test(kContentMetadata) == false &&
-      gralloc::GetMetaDataValue(static_cast<native_handle_t *>(handle),
-                                qtigralloc::MetadataType_VideoHistogramStats.value,
-                                &histogram) == gralloc::Error::NONE) {
-    uint32_t bins = histogram.stat_len / sizeof(histogram.stats_info[0]);
-    layer_buffer->hist_data.display_width = layer_buffer->unaligned_width;
-    layer_buffer->hist_data.display_height = layer_buffer->unaligned_height;
-    if (histogram.stat_len <= sizeof(histogram.stats_info) && bins > 0) {
-      layer_buffer->hist_data.stats_info.clear();
-      layer_buffer->hist_data.stats_info.reserve(bins);
-      for (uint32_t i = 0; i < bins; i++) {
-        layer_buffer->hist_data.stats_info.push_back(histogram.stats_info[i]);
-      }
+  if (!ignore_sdr_histogram_md_ ||
+      IsHdr(layer_buffer->color_metadata.colorPrimaries, layer_buffer->color_metadata.transfer)) {
 
-      layer_buffer->hist_data.stats_valid = true;
-      layer_->update_mask.set(kContentMetadata);
+    VideoHistogramMetadata histogram = {};
+    if (layer_->update_mask.test(kContentMetadata) == false &&
+        gralloc::GetMetaDataValue(static_cast<native_handle_t *>(handle),
+                                  qtigralloc::MetadataType_VideoHistogramStats.value,
+                                  &histogram) == gralloc::Error::NONE) {
+      uint32_t bins = histogram.stat_len / sizeof(histogram.stats_info[0]);
+      layer_buffer->hist_data.display_width = layer_buffer->unaligned_width;
+      layer_buffer->hist_data.display_height = layer_buffer->unaligned_height;
+      if (histogram.stat_len <= sizeof(histogram.stats_info) && bins > 0) {
+        layer_buffer->hist_data.stats_info.clear();
+        layer_buffer->hist_data.stats_info.reserve(bins);
+        for (uint32_t i = 0; i < bins; i++) {
+          layer_buffer->hist_data.stats_info.push_back(histogram.stats_info[i]);
+        }
+
+        layer_buffer->hist_data.stats_valid = true;
+        layer_->update_mask.set(kContentMetadata);
+      }
     }
   }
 
