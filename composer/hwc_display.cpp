@@ -1716,6 +1716,8 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
                                            float *out_max_luminance,
                                            float *out_max_average_luminance,
                                            float *out_min_luminance) {
+  int32_t supported_types[static_cast<int32_t>(Hdr::HDR10_PLUS)];
+
   if (out_num_types == nullptr || out_max_luminance == nullptr ||
       out_max_average_luminance == nullptr || out_min_luminance == nullptr) {
     return HWC2::Error::BadParameter;
@@ -1732,26 +1734,29 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
   uint32_t num_types = 0;
   if (fixed_info.hdr_plus_supported) {
-    num_types = UINT32(Hdr::HDR10_PLUS) - 1;
-  } else {
-    num_types = UINT32(Hdr::HLG) - 1;
+    supported_types[num_types] = static_cast<int32_t>(Hdr::HDR10_PLUS);
+    num_types++;
   }
 
-  // We support HDR10, HLG and HDR10_PLUS.
+  if (fixed_info.dolby_vision_supported) {
+    supported_types[num_types] = static_cast<int32_t>(Hdr::DOLBY_VISION);
+    num_types++;
+  }
+
+  if (fixed_info.hdr_supported) {
+    supported_types[num_types] = static_cast<int32_t>(Hdr::HDR10);
+    num_types++;
+  }
+
+  supported_types[num_types] = static_cast<int32_t>(Hdr::HLG);
+  num_types++;
+
   if (out_types == nullptr) {
     *out_num_types = num_types;
   } else {
     uint32_t max_out_types = std::min(*out_num_types, num_types);
-    int32_t type = static_cast<int32_t>(Hdr::DOLBY_VISION);
     for (int32_t i = 0; i < max_out_types; i++) {
-      while (type == static_cast<int32_t>(Hdr::DOLBY_VISION) /* Skip list */) {
-        // Skip the type
-        type++;
-      }
-      if (type > (num_types + 1)) {
-        break;
-      }
-      out_types[i] = type++;
+      out_types[i] = supported_types[i];
     }
     *out_max_luminance = fixed_info.max_luminance;
     *out_max_average_luminance = fixed_info.average_luminance;
