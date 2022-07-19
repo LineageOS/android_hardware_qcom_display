@@ -354,7 +354,8 @@ int NoisePlugInIntfImpl::RunNoisePlugIn(const GenericPayload &in, GenericPayload
   if (override_ && (noise_zpos_override_ > 0)) {
     if ((noise_zpos_override_ >= input_params->layers.size()) ||
         (input_params->layers[noise_zpos_override_].layer_type == kMaskLayer)) {
-      DLOGW("invalid z order override %d\n", noise_zpos_override_);
+      DLOGW("invalid z order override %d, layer stack size %d\n", noise_zpos_override_,
+            input_params->layers.size());
       return -EINVAL;
     }
     output_params->enabled = true;

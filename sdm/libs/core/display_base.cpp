@@ -941,7 +941,7 @@ DisplayError DisplayBase::HandleNoiseLayer(LayerStack *layer_stack) {
 
   DisplayError error = GetNoisePluginParams(layer_stack);
   if (error) {
-    DLOGE("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
+    DLOGW("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
     return error;
   }
 
