@@ -1259,7 +1259,8 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       *alignedh = height;
     }
 
-    if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER)) &&
+    if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER) ||
+        (usage & BufferUsage::COMPOSER_OVERLAY)) &&
         (format == static_cast<int>(PixelFormat::RGBA_8888))) {
       int mmm_format = MMM_COLOR_FMT_RGBA8888;
       if (ubwc_enabled) {
