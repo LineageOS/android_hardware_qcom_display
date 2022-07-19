@@ -240,6 +240,11 @@ HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
   bool res_exhausted = false;
 
+  if (bypass_drawcycle_) {
+    bypass_drawcycle_ = false;
+    return status;
+  }
+
   if (!active_secure_sessions_[kSecureDisplay] && !display_paused_ &&
      !(mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
      current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {

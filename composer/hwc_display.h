@@ -647,6 +647,7 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayDrawMethod draw_method_ = kDrawDefault;
   uint32_t fb_width_ = 0;
   uint32_t fb_height_ = 0;
+  bool bypass_drawcycle_ = false;
 
   // CWB state & configuration
   CwbConfig cwb_config_ = {};
