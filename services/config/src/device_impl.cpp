@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <string>
 #include <vector>
 
@@ -48,7 +84,6 @@ int DeviceImpl::CreateInstance(ClientContext *intf) {
     android::status_t status = device_obj_->IDisplayConfig::registerAsService();
     // Unable to start Display Config 2.0 service. Fail Init.
     if (status != android::OK) {
-      delete device_obj_;
       device_obj_ = nullptr;
       return -1;
     }
@@ -101,7 +136,7 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
 
   device_client->SetDeviceConfigIntf(intf);
 
-  std::lock_guard<std::mutex> lock(death_service_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(death_service_mutex_);
   ALOGI("Register client id: %lu name: %s device client: %p", client_handle, client_name.c_str(),
       device_client.get());
   display_config_map_.emplace(std::make_pair(client_handle, device_client));
@@ -111,7 +146,7 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
 
 void DeviceImpl::serviceDied(uint64_t client_handle,
                              const android::wp<::android::hidl::base::V1_0::IBase>& callback) {
-  std::lock_guard<std::mutex> lock(death_service_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(death_service_mutex_);
   auto itr = display_config_map_.find(client_handle);
   std::shared_ptr<DeviceClientContext> client = itr->second;
   if (client != NULL) {
@@ -756,6 +791,7 @@ void DeviceImpl::DeviceClientContext::ParseSendTUIEvent(const ByteStream &input_
 }
 
 void DeviceImpl::ParseDestroy(uint64_t client_handle, perform_cb _hidl_cb) {
+  std::lock_guard<std::recursive_mutex> lock(death_service_mutex_);
   auto itr = display_config_map_.find(client_handle);
   if (itr == display_config_map_.end()) {
     _hidl_cb(-EINVAL, {}, {});
@@ -863,6 +899,7 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
                                  const ByteStream &input_params, const HandleStream &input_handles,
                                  perform_cb _hidl_cb) {
   int32_t error = 0;
+  std::lock_guard<std::recursive_mutex> lock(death_service_mutex_);
   auto itr = display_config_map_.find(client_handle);
   if (itr == display_config_map_.end()) {
     error = -EINVAL;
