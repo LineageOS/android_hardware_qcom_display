@@ -3129,6 +3129,10 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     uint32_t sdm_layer_index = disp_layer_stack_.info.index.at(i);
     Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
+    if (hw_layer.request.flags.tone_map) {
+      DLOGW("Display %d-%d, GPU Tonemap requested for SDM Layer[%d] HW Layer[%d]", display_id_,
+            display_type_, disp_layer_stack_.info.index.at(i), i);
+    }
 
     hw_layer.input_buffer.planes[0].fd = Sys::dup_(sdm_layer->input_buffer.planes[0].fd);
     hw_layer.input_buffer.planes[0].offset = sdm_layer->input_buffer.planes[0].offset;
