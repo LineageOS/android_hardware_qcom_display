@@ -1,8 +1,6 @@
 /*
  * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -27,6 +25,10 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef __HWC_BUFFER_ALLOCATOR_H__
 #define __HWC_BUFFER_ALLOCATOR_H__
@@ -39,15 +41,15 @@
 #include <android/hardware/graphics/allocator/4.0/IAllocator.h>
 #include <android/hardware/graphics/mapper/4.0/IMapper.h>
 #include <vendor/qti/hardware/display/mapper/4.0/IQtiMapper.h>
-#include <vendor/qti/hardware/display/mapperextensions/1.2/IQtiMapperExtensions.h>
+#include <vendor/qti/hardware/display/mapperextensions/1.3/IQtiMapperExtensions.h>
 #include <QtiGrallocPriv.h>
 
 using android::hardware::graphics::allocator::V4_0::IAllocator;
 using android::hardware::graphics::mapper::V4_0::IMapper;
 using android::hardware::graphics::common::V1_1::BufferUsage;
-using vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
-using IQtiMapperExtensions_v1_2 =
-    vendor::qti::hardware::display::mapperextensions::V1_2::IQtiMapperExtensions;
+using vendor::qti::hardware::display::mapperextensions::V1_3::IQtiMapperExtensions;
+using IQtiMapperExtensions_v1_3 =
+    vendor::qti::hardware::display::mapperextensions::V1_3::IQtiMapperExtensions;
 
 namespace sdm {
 
@@ -84,13 +86,14 @@ class HWCBufferAllocator : public BufferAllocator {
   int GetSDMFormat(void *buf, LayerBufferFormat &sdm_format);
   int GetBufferType(void *buf, uint32_t &buffer_type);
   int GetBufferGeometry(void *buf, int32_t &slice_width, int32_t &slice_height);
+  int GetCustomContentMetadata(void *buf, CustomContentMetadata *dest);
 
  private:
   int GetGrallocInstance();
   void SetBufferAccessControlInfo(std::bitset<kBufferPermMax> perm, BufferPermission *buf_perm);
   android::sp<IMapper> mapper_;
   android::sp<IAllocator> allocator_;
-  android::sp<IQtiMapperExtensions_v1_2> mapper_ext_;
+  android::sp<IQtiMapperExtensions_v1_3> mapper_ext_;
 };
 
 }  // namespace sdm

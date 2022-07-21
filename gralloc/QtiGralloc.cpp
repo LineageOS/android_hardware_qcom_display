@@ -1,8 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -27,11 +25,17 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "QtiGralloc.h"
 
 #include <log/log.h>
+#include "color_extensions.h"
+
 namespace qtigralloc {
 
 using android::hardware::graphics::mapper::V4_0::IMapper;
@@ -240,6 +244,38 @@ Error encodeBufferPermission(BufferPermission *in, hidl_vec<uint8_t> *out) {
   return Error::NONE;
 }
 
+Error decodeCustomContentMetadata(hidl_vec<uint8_t> &in, void *out) {
+  static size_t target_size = sizeof(CustomContentMetadata);
+
+  if (in.size() != target_size || !out) {
+    return Error::BAD_VALUE;
+  }
+
+  CustomContentMetadata *c_md_in = reinterpret_cast<CustomContentMetadata *>(in.data());
+  CustomContentMetadata *c_md_out = reinterpret_cast<CustomContentMetadata *>(out);
+
+  if (c_md_in->size > CUSTOM_METADATA_SIZE_BYTES) {
+    return Error::BAD_VALUE;
+  }
+
+  c_md_out->size = c_md_in->size;
+  memcpy(c_md_out->metadataPayload, c_md_in->metadataPayload, c_md_in->size);
+  return Error::NONE;
+}
+
+Error encodeCustomContentMetadata(const void *in, hidl_vec<uint8_t> *out) {
+  static size_t target_size = sizeof(CustomContentMetadata);
+
+  if (!in || !out) {
+    return Error::BAD_VALUE;
+  }
+
+  out->resize(target_size);
+
+  memcpy(out->data(), in, target_size);
+  return Error::NONE;
+}
+
 MetadataType getMetadataType(uint32_t in) {
   switch (in) {
     case QTI_VT_TIMESTAMP:
@@ -307,6 +343,10 @@ MetadataType getMetadataType(uint32_t in) {
 #ifdef QTI_TIMED_RENDERING
     case QTI_TIMED_RENDERING:
       return MetadataType_TimedRendering;
+#endif
+#ifdef QTI_CUSTOM_CONTENT_METADATA
+    case QTI_CUSTOM_CONTENT_METADATA:
+      return MetadataType_CustomContentMetadata;
 #endif
     default:
       return MetadataType_Invalid;
@@ -457,6 +497,11 @@ Error get(void *buffer, uint32_t type, void *param) {
           bytestream, reinterpret_cast<uint32_t *>(param)));
       break;
 #endif
+#ifdef QTI_CUSTOM_CONTENT_METADATA
+    case QTI_CUSTOM_CONTENT_METADATA:
+      err = decodeCustomContentMetadata(bytestream, param);
+      break;
+#endif
     default:
       param = nullptr;
       return Error::UNSUPPORTED;
@@ -542,6 +587,11 @@ Error set(void *buffer, uint32_t type, void *param) {
       err = static_cast<Error>(
           android::gralloc4::encodeUint32(qtigralloc::MetadataType_TimedRendering,
                                           *reinterpret_cast<uint32_t *>(param), &bytestream));
+      break;
+#endif
+#ifdef QTI_CUSTOM_CONTENT_METADATA
+    case QTI_CUSTOM_CONTENT_METADATA:
+      err = encodeCustomContentMetadata(param, &bytestream);
       break;
 #endif
     default:

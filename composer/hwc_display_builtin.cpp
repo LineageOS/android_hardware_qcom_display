@@ -792,48 +792,6 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
   DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d",frame_capture_buffer_queued_);
 }
 
-int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
-                                                  const CwbTapPoint &cwb_tappoint) {
-  DTRACE_SCOPED();
-  if (cwb_tappoint < CwbTapPoint::kLmTapPoint || cwb_tappoint > CwbTapPoint::kDemuraTapPoint) {
-    DLOGE("Invalid CWB tappoint passed by client ");
-    return -1;
-  } else if (cwb_tappoint == CwbTapPoint::kDsppTapPoint ||
-             cwb_tappoint == CwbTapPoint::kDemuraTapPoint) {
-    auto panel_width = 0u;
-    auto panel_height = 0u;
-    GetPanelResolution(&panel_width, &panel_height);
-    if (output_buffer_info.buffer_config.width < panel_width ||
-        output_buffer_info.buffer_config.height < panel_height) {
-      DLOGE("Buffer dimensions should not be less than panel resolution");
-      return -1;
-    }
-  } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
-    uint32_t dest_scalar_enabled = 0;
-    display_intf_->IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
-    if (dest_scalar_enabled) {
-      auto mixer_width = 0u;
-      auto mixer_height = 0u;
-      GetMixerResolution(&mixer_width, &mixer_height);
-      if (output_buffer_info.buffer_config.width < mixer_width ||
-          output_buffer_info.buffer_config.height < mixer_height) {
-        DLOGE("Buffer dimensions should not be less than LM resolution");
-        return -1;
-      }
-    } else {
-      auto fb_width = 0u;
-      auto fb_height = 0u;
-      GetFrameBufferResolution(&fb_width, &fb_height);
-      if (output_buffer_info.buffer_config.width < fb_width ||
-          output_buffer_info.buffer_config.height < fb_height) {
-        DLOGE("Buffer dimensions should not be less than FB resolution");
-        return -1;
-      }
-    }
-  }
-  return 0;
-}
-
 int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
                                          const CwbConfig &cwb_config) {
   // Note: This function is called in context of a binder thread and a lock is already held
@@ -842,8 +800,9 @@ int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
     return -1;
   }
 
-  int error = ValidateFrameCaptureConfig(output_buffer_info, cwb_config.tap_point);
-  if (error) {
+  if (cwb_config.tap_point < CwbTapPoint::kLmTapPoint ||
+      cwb_config.tap_point > CwbTapPoint::kDemuraTapPoint) {
+    DLOGE("Invalid CWB tappoint passed by client ");
     return -1;
   }
 
@@ -1398,10 +1357,8 @@ int HWCDisplayBuiltIn::PostInit() {
 }
 
 bool HWCDisplayBuiltIn::NeedsLargeCompPerfHint() {
-  if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
-    DLOGV_IF(kTagResources, "cpu_hint_:%d not initialized or property:%d not set",
-             !cpu_hint_, !perf_hint_large_comp_cycle_);
-
+  if (!cpu_hint_) {
+    DLOGV_IF(kTagResources, "CPU hint is not initialized");
     return false;
   }
 
@@ -1526,8 +1483,12 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
 
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
-  bool needs_hint = NeedsLargeCompPerfHint();
-  HandleLargeCompositionHint(!needs_hint);
+
+  if (perf_hint_large_comp_cycle_) {
+    bool needs_hint = NeedsLargeCompPerfHint();
+    HandleLargeCompositionHint(!needs_hint);
+  }
+
   return status;
 }
 
@@ -1616,7 +1577,7 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
   if (release) {
     if (hwc_tid_ != tid) {
       DLOGV_IF(kTagResources, "HWC's tid:%d is updated to :%d", hwc_tid_, tid);
-      int ret = cpu_hint_->ReqHint(kHWC, hwc_tid_);
+      int ret = cpu_hint_->ReqHint(kHWC, tid);
       if (!ret) {
         hwc_tid_ = tid;
       }
@@ -1645,6 +1606,9 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
 }
 
 void HWCDisplayBuiltIn::ReqPerfHintRelease() {
+  if (!cpu_hint_) {
+    return;
+  }
   cpu_hint_->ReqHintRelease();
 }
 

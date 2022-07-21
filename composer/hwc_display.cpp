@@ -877,6 +877,8 @@ void HWCDisplay::BuildLayerStack() {
   sdm_client_target->layer_id = client_target_->GetId();
   sdm_client_target->geometry_changes = client_target_->GetGeometryChanges();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
+  sdm_client_target->layer_name = client_target_->GetName();
+
   // Derive client target dataspace based on the color mode - bug/115482728
   int32_t client_target_dataspace = GetDataspaceFromColorMode(GetCurrentColorMode());
   SetClientTargetDataSpace(client_target_dataspace);
@@ -1775,6 +1777,7 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
   PreValidateDisplay(&exit_validate);
   if (exit_validate) {
     validate_done_ = true;
+    client_target_3_1_set_ = false;
     return HWC2::Error::None;
   }
 
@@ -1784,6 +1787,7 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
   // Mask error if needed.
   auto status = HandlePrepareError(error);
   if (status != HWC2::Error::None) {
+    client_target_3_1_set_ = false;
     return status;
   }
 
@@ -1839,7 +1843,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   } else {
     if (error == kErrorShutDown) {
       shutdown_pending_ = true;
-      return HWC2::Error::Unsupported;
     } else if (error == kErrorNotValidated) {
       return HWC2::Error::NotValidated;
     } else if (error != kErrorPermission) {
@@ -1848,6 +1851,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
     }
+    return HWC2::Error::Unsupported;
   }
 
   return HWC2::Error::None;
@@ -3013,10 +3017,6 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
 
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
-  if (current_config == config) {
-    SetActiveConfigIndex(config);
-    return HWC2::Error::None;
-  }
 
   DisplayError error = display_intf_->SetActiveConfig(config);
   if (error == kErrorDeferred) {

@@ -984,7 +984,6 @@ void CompManager::NotifyCwbDone(int32_t display_id, int32_t status,
 }
 
 void CompManager::TriggerRefresh(int32_t display_id) {
-  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   callback_map_[display_id]->Refresh();
 }
 

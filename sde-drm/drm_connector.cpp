@@ -1011,6 +1011,7 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   info->type = drm_connector_->connector_type;
   info->type_id = drm_connector_->connector_type_id;
   info->is_connected = IsConnected();
+  info->is_reserved = GetStatus() == DRMStatus::BUSY ? true : false;
 
   drmModeObjectProperties *props =
       drmModeObjectGetProperties(fd_, drm_connector_->connector_id, DRM_MODE_OBJECT_CONNECTOR);

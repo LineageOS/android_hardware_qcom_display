@@ -4,8 +4,6 @@
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +15,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef __GR_BUF_MGR_H__
@@ -56,6 +58,8 @@ class BufferManager {
   Error SetMetadata(private_handle_t *handle, int64_t metadatatype_value, hidl_vec<uint8_t> in);
   Error GetReservedRegion(private_handle_t *handle, void **reserved_region,
                           uint64_t *reserved_region_size);
+  Error GetCustomContentMdRegion(private_handle_t *handle, void **custom_content_md_region,
+                       uint64_t *custom_content_md_region_size);
   Error FlushBuffer(const private_handle_t *handle);
   Error RereadBuffer(const private_handle_t *handle);
   Error GetAllHandles(std::vector<const private_handle_t *> *out_handle_list);
@@ -93,6 +97,8 @@ class BufferManager {
     bool DecRef() { return --ref_count == 0; }
     uint64_t reserved_size = 0;
     void *reserved_region_ptr = nullptr;
+    uint64_t custom_content_md_size = 0;
+    void *custom_content_md_region_ptr = nullptr;
   };
 
   Error FreeBuffer(std::shared_ptr<Buffer> buf);

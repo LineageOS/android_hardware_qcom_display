@@ -112,6 +112,7 @@ struct HWDisplayInfo {
   bool is_primary = false;                     //!< True only if this is the main display of the
                                                //!< device.
   bool is_wb_ubwc_supported = true;            //!< check hardware wb ubwc support
+  bool is_reserved = false;                    //!< check if currently reserved by any display
 };
 
 /*! @brief Information on all displays as a map with display_id as key.

@@ -1949,7 +1949,12 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   validated_ = false;
   hw_intf_->GetActiveConfig(&active_index);
 
+  // Cache the last refresh rate set by SF
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &display_attributes);
+
   if (active_index == index) {
+    active_refresh_rate_ = display_attributes.fps;
     return kErrorNone;
   }
 
@@ -1964,9 +1969,6 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
     return error;
   }
 
-  // Cache last refresh rate set by SF
-  HWDisplayAttributes display_attributes = {};
-  hw_intf_->GetDisplayAttributes(index, &display_attributes);
   active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
@@ -3745,6 +3747,10 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   }
   DisplayError err = kErrorNone;
   *needs_refresh = false;
+  uint32_t mixer_width = mixer_attributes_.width;
+  uint32_t mixer_height = mixer_attributes_.height;
+  uint32_t display_width = display_attributes_.x_pixels;
+  uint32_t display_height = display_attributes_.y_pixels;
 
   DLOGI("Secure event %d for display %d-%d", secure_event, display_id_, display_type_);
 
@@ -3769,6 +3775,17 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     if (err != kErrorNone) {
       return err;
     }
+
+    // Disable Destination Scalar for TUI Use Case
+    if (hw_panel_info_.mode != kModeCommand) {
+      if ((mixer_width != display_width) || (mixer_height != display_height)) {
+        err = ReconfigureMixer(display_width, display_height);
+        if (err != kErrorNone) {
+          return err;
+        }
+      }
+    }
+
     comp_manager_->GetDefaultQosData(display_comp_ctx_, &cached_qos_data_);
   } else if (secure_event == kTUITransitionPrepare) {
     DisplayState state = state_;
@@ -4197,7 +4214,6 @@ void DisplayBase::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
 }
 
 void DisplayBase::Refresh() {
-  ClientLock lock(disp_mutex_);
   event_handler_->Refresh();
 }
 
