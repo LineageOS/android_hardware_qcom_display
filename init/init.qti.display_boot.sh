@@ -78,6 +78,7 @@ case "$target" in
     #SOC ID for Cape MSM is 530
     #SOC ID for Cape APQ is 531
     #SOC ID for Cape 4g is 540
+    #SOC ID for cape ukee 591
     case "$soc_hwid" in
         457|482|552)
         setprop vendor.gralloc.use_dma_buf_heaps 1
@@ -92,7 +93,7 @@ case "$target" in
         setprop vendor.display.disable_mitigated_fps 1
         setprop vendor.display.disable_cwb_idle_fallback 1
         ;;
-        530|531|540)
+        530|531|540|591)
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_allow_idle_fallback 1
