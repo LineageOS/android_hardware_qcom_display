@@ -27,5 +27,3 @@ ifneq ($(TARGET_IS_HEADLESS),true)
                             vendor.qti.hardware.display.demura-service \
                             modetest
 endif
-
-DISPLAY_MODULES_DRIVER:= msm_drm.ko
