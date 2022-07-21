@@ -83,7 +83,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_sdr_dimming=1 \
     vendor.display.enable_rc_support=1 \
     vendor.display.disable_sdr_histogram=1 \
-    vendor.display.enable_hdr10_gpu_target=1
+    vendor.display.enable_hdr10_gpu_target=1 \
+    debug.sf.predict_hwc_composition_strategy=0
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
