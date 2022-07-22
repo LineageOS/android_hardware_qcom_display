@@ -4284,11 +4284,13 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     }
   }
   if (trigger_refresh) {
-    callbacks_.Refresh(target_display);
-    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
-    if (ret != 0) {
-      DLOGE("WaitForCommitDone failed with error %d", ret);
-      return -EINVAL;
+    for (int i = 0; i < 2; i++) {
+      callbacks_.Refresh(target_display);
+      int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+      if (ret != 0) {
+        DLOGE("WaitForCommitDone failed with error %d", ret);
+        return -EINVAL;
+      }
     }
   }
 
