@@ -40,11 +40,12 @@
 namespace sdm {
 
 enum IPCParams {
-  kIpcParamBacklight,            //!< Send backlight params to SVM
-  kIpcParamDisplayConfigs,       //!< Send display config information to SVM
-  kIpcParamProperties,           //!< Send display properties to SVM
-  kIpcParamSetDemuraBuffer,      //!< Cache the calibration and hfc buffers in composer
-  kIpcParamPanelBoot,            //!< Send the panel boot parameter to SVM
+  kIpcParamBacklight,        //!< Send backlight params to SVM
+  kIpcParamDisplayConfigs,   //!< Send display config information to SVM
+  kIpcParamProperties,       //!< Send display properties to SVM
+  kIpcParamSetDemuraBuffer,  //!< Cache hfc buffers inside sdm composer
+  kIpcParamPanelBoot,        //!< Send the panel boot parameter to SVM
+  kIpcParamSetHFCBuffer,     //!< Send the HFC buffer to SVM
   kIPCParamMax,
 };
 
@@ -98,7 +99,6 @@ struct IPCPanelBootParams {
 };
 
 enum IPCBufferType {
-  kIpcBufferTypeDemuraCalib,
   kIpcBufferTypeDemuraHFC,
   kIpcBufferTypeMax,
 };

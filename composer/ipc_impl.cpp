@@ -230,6 +230,29 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       }
     }
   } break;
+  case kIpcParamSetHFCBuffer: {
+    if (qrtr_client_intf_) {
+      IPCBufferInfo *hfc_buffer = nullptr;
+      uint32_t sz = 0;
+      Command cmd = {};
+      if ((ret = in.GetPayload(hfc_buffer, &sz))) {
+        DLOGE("Failed to get input payload for hfc_buffer error = %d", ret);
+        return ret;
+      }
+      CmdExportDemuraBuffer &cmd_export_demura_buffer = cmd.cmd_export_demura_buf;
+      cmd.id = kCmdExportDemuraBuffers;
+      cmd_export_demura_buffer.demura_mem_info.hfc_mem_hdl = hfc_buffer->mem_handle;
+      cmd_export_demura_buffer.demura_mem_info.hfc_mem_size = hfc_buffer->size;
+      cmd_export_demura_buffer.demura_mem_info.panel_id = hfc_buffer->panel_id;
+
+      DLOGI("Sending hfc params %d", cmd_export_demura_buffer.demura_mem_info.hfc_mem_hdl);
+      ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
+      if (ret != 0) {
+        DLOGE("SendCommand %d failed with %d", cmd.id, ret);
+        return ret;
+      }
+    }
+  } break;
 
   default:
     break;
@@ -284,15 +307,7 @@ int IPCImpl::ProcessExportBuffers(const GenericPayload &in, GenericPayload *out)
         }
       }
 
-      if (buf_type == kIpcBufferTypeDemuraCalib) {
-        demura_mem_info.calib_mem_hdl = export_buf.mem_handle;
-        demura_mem_info.calib_mem_size = export_buf.size;
-        demura_mem_info.calib_payload_size = export_buf.payload_sz;
-        demura_mem_info.panel_id = export_buf.panel_id;
-        demura_mem_info.hfc_mem_hdl = -1;
-        std::snprintf(demura_mem_info.file_name, sizeof demura_mem_info.file_name,
-                      "%s", export_buf.file_name);
-      } else if (buf_type == kIpcBufferTypeDemuraHFC) {
+      if (buf_type == kIpcBufferTypeDemuraHFC) {
         demura_mem_info.hfc_mem_hdl = export_buf.mem_handle;
         demura_mem_info.hfc_mem_size = export_buf.size;
         demura_mem_info.panel_id = export_buf.panel_id;
@@ -300,9 +315,8 @@ int IPCImpl::ProcessExportBuffers(const GenericPayload &in, GenericPayload *out)
       }
       exported_fds.emplace(buf_type, temp_fd);
     }
-    DLOGI("Sending demura calib: mem_hdl %ld, size %d hfc: mem_hdl %ld, size %d panel_id %lu",
-           demura_mem_info.calib_mem_hdl, demura_mem_info.calib_mem_size,
-           demura_mem_info.hfc_mem_hdl, demura_mem_info.hfc_mem_size, demura_mem_info.panel_id);
+    DLOGI("Sending hfc: mem_hdl %ld, size %d panel_id %lu", demura_mem_info.hfc_mem_hdl,
+          demura_mem_info.hfc_mem_size, demura_mem_info.panel_id);
     ret = qrtr_client_intf_->SendCommand(&cmd, sizeof(Command));
     if (ret != 0) {
       DLOGE("SendCommand %d failed with %d", cmd.id, ret);
