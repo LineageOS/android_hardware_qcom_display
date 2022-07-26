@@ -254,11 +254,18 @@ DisplayError HWTVDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     // LP connecter prop N/A for External
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   }
+
+  int64_t retire_fence_fd = -1;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
+
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/);
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
   if (ret) {
     DLOGE("%s failed with error %d", __FUNCTION__, ret);
     return kErrorHardware;
   }
+
+  sync_points->retire_fence = retire_fence;
 
   return kErrorNone;
 }
