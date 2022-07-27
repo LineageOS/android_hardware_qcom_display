@@ -401,8 +401,10 @@ int HWDeviceDRM::Registry::CreateFbId(const LayerBuffer &buffer, uint32_t *fb_id
   buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset, &layout.num_planes);
   ret = master->CreateFbId(layout, fb_id);
   if (ret < 0) {
-    DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
-        layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0], errno);
+    DLOGE("CreateFbId failed. width %d, height %d, format: %s, usage %d, stride %u, "
+          "unaligned_width %d, unaligned_height %d, error %d", layout.width, layout.height,
+          GetFormatString(buf_info.format), buf_info.usage, layout.stride[0],
+          buffer.unaligned_width, buffer.unaligned_height, errno);
   }
 
   return ret;
