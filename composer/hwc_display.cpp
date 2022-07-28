@@ -569,7 +569,12 @@ int HWCDisplay::Init() {
 
   UpdateConfigs();
 
-  tone_mapper_ = new HWCToneMapper(buffer_allocator_);
+  int enable_gpu_tonemapper = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_GPU_TONEMAPPER_PROP, &enable_gpu_tonemapper);
+  // Disable instantiating HWCTonemapper when GPU tonemapping is not used.
+  if (enable_gpu_tonemapper) {
+    tone_mapper_ = new HWCToneMapper(buffer_allocator_);
+  }
 
   display_intf_->GetQsyncFps(&qsync_fps_);
 
