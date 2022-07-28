@@ -4219,7 +4219,6 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
 }
 
 void DisplayBase::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
-  ClientLock lock(disp_mutex_);
   event_handler_->NotifyCwbDone(status, buffer);
 }
 
