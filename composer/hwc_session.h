@@ -409,6 +409,15 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                 const hidl_handle &buf, hwc2_display_t disp_type)
           : callback(cb), cwb_config(cwb_conf), buffer(buf), display_type(disp_type) {}
 
+      ~QueueNode() {
+        if (!buffer) {
+          return;
+        }
+
+        native_handle_close(buffer);
+        native_handle_delete(const_cast<native_handle_t *>(buffer));
+      }
+
       std::weak_ptr<DisplayConfig::ConfigCallback> callback;
       CwbConfig cwb_config = {};
       const native_handle_t *buffer;
@@ -419,10 +428,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     void PerformFenceWaits();
     static void AsyncTask(CWB *cwb);
     static void AsyncFenceWaits(CWB *cwb);
-    void NotifyCWBStatus(int status, QueueNode *cwb_node);
+    void NotifyCWBStatus(int status, shared_ptr<QueueNode> cwb_node);
 
-    std::queue<QueueNode *> queue_;
-    std::queue<pair<shared_ptr<Fence>, QueueNode *>> fence_wait_queue_;
+    std::queue<shared_ptr<QueueNode>> queue_;
+    std::queue<pair<shared_ptr<Fence>, shared_ptr<QueueNode>>> fence_wait_queue_;
 
     std::future<void> future_;
     std::future<void> fence_wait_future_;
