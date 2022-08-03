@@ -1815,8 +1815,9 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
   if (exit_validate) {
     validate_done_ = true;
     client_target_3_1_set_ = false;
-    *needs_commit = true;
-    bypass_drawcycle_ = true;
+    if (bypass_drawcycle_) {
+      *needs_commit = true;
+    }
     return HWC2::Error::None;
   }
 
