@@ -949,11 +949,14 @@ DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
 
 DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
   DisplayBase::PostCommit(hw_layers_info);
-
-  if (pending_brightness_) {
-    Fence::Wait(retire_fence_);
-    SetPanelBrightness(cached_brightness_);
-    pending_brightness_ = false;
+  // Mutex scope
+  {
+    lock_guard<recursive_mutex> obj(brightness_lock_);
+    if (pending_brightness_) {
+      Fence::Wait(retire_fence_);
+      SetPanelBrightness(cached_brightness_);
+      pending_brightness_ = false;
+    }
   }
 
   if (commit_event_enabled_) {
