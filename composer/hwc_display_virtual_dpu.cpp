@@ -175,6 +175,7 @@ HWC2::Error HWCDisplayVirtualDPU::PreValidateDisplay(bool *exit_validate) {
   if (NeedsGPUBypass()) {
     MarkLayersForGPUBypass();
     *exit_validate = true;
+    bypass_drawcycle_ = true;
     return HWC2::Error::None;
   }
 
