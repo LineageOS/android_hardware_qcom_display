@@ -38,8 +38,16 @@
 
 namespace sdm {
 
+int32_t HWInfoInterface::ref_count_ = 0;
+HWInfoInterface* HWInfoInterface::intf_ = nullptr;
+
 DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
 #ifndef TARGET_HEADLESS
+  if (ref_count_ > 0 && intf_) {
+    ref_count_++;
+    *intf = intf_;
+    return kErrorNone;
+  }
 
   *intf = new HWInfoDRM();
 #else
@@ -57,14 +65,23 @@ DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
     error = kErrorCriticalResource;
   }
 
+  if (*intf) {
+    intf_ = *intf;
+    ref_count_++;
+  }
+
   return error;
 }
 
 DisplayError HWInfoInterface::Destroy(HWInfoInterface *intf) {
-  if (intf) {
+  ref_count_ = ref_count_ - 1 >= 0 ? --ref_count_ : 0;
+  DLOGV("refcount: %d", ref_count_);
+
+  if (!ref_count_ && intf) {
     delete intf;
   }
 
+  intf_ = nullptr;
   return kErrorNone;
 }
 
