@@ -1599,6 +1599,7 @@ int HWCSession::DisplayConfigImpl::AllowIdleFallback() {
     DLOGI("enable idle time active_ms:%d inactive_ms:%d",active_ms,inactive_ms);
     hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(active_ms, inactive_ms);
     hwc_session_->is_client_up_ = true;
+    hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->MarkClientActive(true);
     hwc_session_->idle_time_inactive_ms_ = inactive_ms;
     hwc_session_->idle_time_active_ms_ = active_ms;
     return 0;
