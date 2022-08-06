@@ -1398,7 +1398,7 @@ int HWCSession::DisplayConfigImpl::IsSmartPanelConfig(uint32_t disp_id, uint32_t
 }
 
 int HWCSession::DisplayConfigImpl::IsAsyncVDSCreationSupported(bool *supported) {
-  if(hwc_session_->disable_vds_hwc_ && hwc_session_->vds_allow_hwc_) {
+  if(hwc_session_->disable_non_wfd_vds_ && hwc_session_->debug_enable_hwc_vds_) {
     *supported = false;
     return 0;
   }

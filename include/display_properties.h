@@ -150,8 +150,6 @@
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
 #define ENABLE_ASYNC_VDS_CREATION            DISPLAY_PROP("enable_async_vds_creation")
-#define VDS_ALLOW_HWC                        DISPLAY_PROP("vds_allow_hwc")
-#define DISABLE_VDS_HWC                      DISPLAY_PROP("disable_vds_hwc")
 #define ENABLE_HISTOGRAM_INTR                DISPLAY_PROP("enable_hist_intr")
 #define DISABLE_MMRM_PROP                    DISPLAY_PROP("disable_mmrm_prop")
 #define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")
@@ -214,6 +212,8 @@
 // Add all persist.vendor.display.properties above
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
+#define ENABLE_HWC_VDS                       "debug.sf.enable_hwc_vds"
+#define DISABLE_NON_WFD_VDS                  DISPLAY_PROP("disable_non_wfd_vds")
 #define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
 #define WINDOW_RECT_PROP_SECONDARY           DISPLAY_PROP("window_rect_secondary")
 #define ENABLE_WINDOW_RECT_MASK              DISPLAY_PROP("enable_window_rect_mask")
