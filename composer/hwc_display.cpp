@@ -3441,7 +3441,12 @@ void HWCDisplay::HandleFrameDump() {
   {
     std::unique_lock<std::mutex> lock(cwb_mutex_);
     cwb_capture_status_ = kErrorNone;
-    cwb_cv_.wait(lock);
+    if (cwb_cv_.wait_until(
+            lock, std::chrono::system_clock::now() + std::chrono::milliseconds(cwb_wait_ms)) ==
+        std::cv_status::timeout) {
+      DLOGE("CWB wait timed out.");
+      cwb_capture_status_ = kErrorNone ? kErrorTimeOut : cwb_capture_status_;
+    }
     ret = cwb_capture_status_;
   }
 
