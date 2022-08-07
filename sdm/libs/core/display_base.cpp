@@ -779,6 +779,8 @@ DisplayError DisplayBase::ForceToneMapUpdate(LayerStack *layer_stack) {
 
     cached_layer.input_buffer.hist_data = stack_layer->input_buffer.hist_data;
     cached_layer.input_buffer.color_metadata = stack_layer->input_buffer.color_metadata;
+    cached_layer.input_buffer.extended_content_metadata =
+        stack_layer->input_buffer.extended_content_metadata;
     hw_config.left_pipe.lut_info.clear();
     hw_config.right_pipe.lut_info.clear();
   }
