@@ -1081,6 +1081,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
     DLOGI("disable idle time");
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
     is_client_up_ = false;
+    hwc_display_[HWC_DISPLAY_PRIMARY]->MarkClientActive(false);
     async_vds_creation_requested_ = false;
   }
 }
