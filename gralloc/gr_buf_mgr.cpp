@@ -644,9 +644,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   // Allocate memory for MetaData
   AllocData e_data;
   uint64_t custom_content_md_reserved_size = GetCustomContentMetadataSize(format, usage);
-  uint64_t reserved_region_size = ALIGN(descriptor.GetReservedSize(), alignof(size_t));
-
-  e_data.size = static_cast<unsigned int>(GetMetaDataSize(reserved_region_size,
+  e_data.size = static_cast<unsigned int>(GetMetaDataSize(descriptor.GetReservedSize(),
                                                           custom_content_md_reserved_size));
   e_data.handle = data.handle;
   e_data.align = page_size;
@@ -700,10 +698,10 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   metadata->name[nameLength] = '\0';
 
 #ifdef METADATA_V2
-  metadata->reservedSize = reserved_region_size;
+  metadata->reservedSize = descriptor.GetReservedSize();
 #else
   metadata->reservedRegion.size =
-      std::min(reserved_region_size, (uint64_t)RESERVED_REGION_SIZE);
+      std::min(descriptor.GetReservedSize(), (uint64_t)RESERVED_REGION_SIZE);
 #endif
   metadata->crop.top = 0;
   metadata->crop.left = 0;
