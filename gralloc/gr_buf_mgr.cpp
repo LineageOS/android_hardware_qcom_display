@@ -1096,8 +1096,16 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   GraphicsMetadata graphics_metadata = {};
   err = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
-  if (err < 0) {
+  if (err == -ENOTSUP) {
+    return Error::UNSUPPORTED;
+  } else if (err < 0) {
     return Error::BAD_DESCRIPTOR;
+  }
+
+  if (size == 0) {
+    ALOGW("gralloc failed to allocate buffer for size %d format %d AWxAH %dx%d usage %" PRIu64,
+          size, format, alignedw, alignedh, usage);
+    return Error::UNSUPPORTED;
   }
 
   if (testAlloc) {
