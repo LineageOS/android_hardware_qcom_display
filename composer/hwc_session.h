@@ -356,6 +356,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate);
   virtual void VmReleaseDone(hwc2_display_t display);
+  virtual int NotifyCwbDone(hwc2_display_t display, int32_t status, uint64_t handle_id);
 
   int32_t SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled);
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
@@ -391,40 +392,48 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   class CWB {
    public:
     explicit CWB(HWCSession *hwc_session) : hwc_session_(hwc_session) { }
-    void PresentDisplayDone(hwc2_display_t disp_id);
 
     int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                        const CwbConfig &cwb_config, const native_handle_t *buffer,
                        hwc2_display_t display_type);
     bool IsCwbActiveOnDisplay(hwc2_display_t disp_type);
+    int OnCWBDone(hwc2_display_t display_type, int32_t status, uint64_t handle_id);
 
    private:
+    enum CWBNotifiedStatus {
+      kCwbNotifiedFailure = -1,
+      kCwbNotifiedSuccess,
+      kCwbNotifiedNone,
+    };
+
     struct QueueNode {
       QueueNode(std::weak_ptr<DisplayConfig::ConfigCallback> cb, const CwbConfig &cwb_conf,
-                const hidl_handle &buf, hwc2_display_t disp_type)
-          : callback(cb), cwb_config(cwb_conf), buffer(buf), display_type(disp_type) {}
+                const hidl_handle &buf, hwc2_display_t disp_type, uint64_t buf_id)
+          : callback(cb), cwb_config(cwb_conf), buffer(buf), display_type(disp_type),
+            handle_id(buf_id) {}
 
       std::weak_ptr<DisplayConfig::ConfigCallback> callback;
       CwbConfig cwb_config = {};
       const native_handle_t *buffer;
       hwc2_display_t display_type;
+      uint64_t handle_id;
+      CWBNotifiedStatus notified_status = kCwbNotifiedNone;
+      bool request_completed = false;
     };
 
-    void ProcessRequests();
-    void PerformFenceWaits();
-    static void AsyncTask(CWB *cwb);
-    static void AsyncFenceWaits(CWB *cwb);
+    struct DisplayCWBSession{
+      std::deque<QueueNode *> queue;
+      std::mutex lock;
+      std::condition_variable cv;
+      std::future<void> future;
+      bool async_thread_running = false;
+    };
+
+    static void AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t display_type);
+    void ProcessCWBStatus(hwc2_display_t display_type);
     void NotifyCWBStatus(int status, QueueNode *cwb_node);
 
-    std::queue<QueueNode *> queue_;
-    std::queue<pair<shared_ptr<Fence>, QueueNode *>> fence_wait_queue_;
-
-    std::future<void> future_;
-    std::future<void> fence_wait_future_;
-    Locker queue_lock_;
-    Locker fence_queue_lock_;
-    std::mutex mutex_;
-    std::condition_variable cv_;
+    std::map<hwc2_display_t, DisplayCWBSession> display_cwb_session_map_;
     HWCSession *hwc_session_ = nullptr;
   };
 
@@ -632,8 +641,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PerformIdleStatusCallback(hwc2_display_t display);
   DispType GetDisplayConfigDisplayType(int qdutils_disp_type);
   HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
-  void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
-                          HWC2::Error status);
+  void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
   int WaitForCommitDone(hwc2_display_t display, int client_id);
   void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
