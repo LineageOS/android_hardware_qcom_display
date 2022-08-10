@@ -1162,7 +1162,6 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   bool ubwc_enabled = IsUBwcEnabled(format, usage);
   int tile = ubwc_enabled;
   unsigned int mmm_color_format;
-
   // Use of aligned width and aligned height is to calculate the size of buffer,
   // but in case of camera custom format size is being calculated from given width
   // and given height.
@@ -1219,7 +1218,11 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       } else {
         *alignedw = ALIGN((width * bpp), alignment) / bpp;
       }
-      *alignedh = height;
+      if (ubwc_enabled) {
+        *alignedh = ALIGN(height, 16);
+      } else {
+        *alignedh = height;
+      }
     }
 
     if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER) ||
