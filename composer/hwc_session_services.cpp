@@ -1161,7 +1161,7 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
 
   if (!post_future) {  // if queue_ is not empty
     // reject the cwb request if it's made on another display than the currently cwb active display
-    QueueNode *node = queue_.front();
+    shared_ptr<QueueNode> node = queue_.front();
     if (node->display_type != display_type) {
       native_handle_close(buffer);
       native_handle_delete(const_cast<native_handle_t *>(buffer));
@@ -1169,7 +1169,7 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
     }
   }
 
-  QueueNode *node = new QueueNode(callback, cwb_config, buffer, display_type);
+  shared_ptr<QueueNode> node(new QueueNode(callback, cwb_config, buffer, display_type));
   queue_.push(node);
 
   if (post_future) {
@@ -1186,7 +1186,7 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
 
 void HWCSession::CWB::ProcessRequests() {
   while (true) {
-    QueueNode *node = nullptr;
+    shared_ptr<QueueNode> node = nullptr;
     int status = 0;
     HWC2::Error error = HWC2::Error::None;
 
@@ -1290,7 +1290,7 @@ void HWCSession::CWB::ProcessRequests() {
 void HWCSession::CWB::PerformFenceWaits() {
   while (true) {
     shared_ptr<Fence> release_fence = nullptr;
-    QueueNode *cwb_node = nullptr;
+    shared_ptr<QueueNode> cwb_node = nullptr;
     {
       SCOPE_LOCK(fence_queue_lock_);
       if (!fence_wait_queue_.size()) {
@@ -1325,17 +1325,13 @@ void HWCSession::CWB::PerformFenceWaits() {
   }
 }
 
-void HWCSession::CWB::NotifyCWBStatus(int status, QueueNode *cwb_node) {
+void HWCSession::CWB::NotifyCWBStatus(int status, shared_ptr<QueueNode> cwb_node) {
   // Notify client about buffer status and erase the node from pending request queue.
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = cwb_node->callback.lock();
   if (callback) {
     DLOGI("Notify the client about buffer status %d.", status);
     callback->NotifyCWBBufferDone(status, cwb_node->buffer);
   }
-
-  native_handle_close(cwb_node->buffer);
-  native_handle_delete(const_cast<native_handle_t *>(cwb_node->buffer));
-  delete cwb_node;
 }
 
 void HWCSession::CWB::AsyncTask(CWB *cwb) {

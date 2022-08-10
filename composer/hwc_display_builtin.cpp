@@ -423,6 +423,11 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   DTRACE_SCOPED();
 
+  if (bypass_drawcycle_) {
+    bypass_drawcycle_ = false;
+    return status;
+  }
+
   // Proceed only if any resources are available to be allocated for the current display,
   // Otherwise keep doing invalidate
   if (CheckResourceState(&res_exhausted)) {

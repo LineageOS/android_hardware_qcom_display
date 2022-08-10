@@ -958,7 +958,7 @@ DisplayError DisplayBase::HandleNoiseLayer(LayerStack *layer_stack) {
 
   DisplayError error = GetNoisePluginParams(layer_stack);
   if (error) {
-    DLOGE("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
+    DLOGW("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
     return error;
   }
 
@@ -4151,8 +4151,13 @@ void DisplayBase::PrepareForAsyncTransition() {
 std::chrono::system_clock::time_point DisplayBase::WaitUntil() {
   int idle_time_ms = disp_layer_stack_.info.set_idle_time_ms;
   std::chrono::system_clock::time_point timeout_time;
+
+  DLOGV_IF(kTagDisplay, "Off: %d, time: %d, timeout:%d, panel: %s",
+        state_ == kStateOff, idle_time_ms, handle_idle_timeout_,
+        hw_panel_info_.mode == kModeVideo ? "video" : "cmd");
+
   // Indefinite wait if state is off or idle timeout has triggered
-  if (state_ == kStateOff || idle_time_ms == 0 || handle_idle_timeout_) {
+  if (state_ == kStateOff || idle_time_ms <= 0 || handle_idle_timeout_) {
     timeout_time = std::chrono::system_clock::from_time_t(INT_MAX);
   } else {
     std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();

@@ -510,10 +510,19 @@ void DRMPanelFeatureMgr::ResetPanelFeatures(drmModeAtomicReq *req,
   info.prop_id = kDRMPanelFeatureSPRInit;
   info.obj_id = token.crtc_id;
   info.prop_ptr = 0;
-  ApplyDirtyFeature(req, token, info);
 
+  // reset spr if supported
+  uint32_t prop_id = prop_mgr_.GetPropertyId(drm_property_map_[info.prop_id]);
+  if (prop_id) {
+    ApplyDirtyFeature(req, token, info);
+  }
+
+  // reset demura if supported
   info.prop_id = kDRMPanelFeatureDemuraInit;
-  ApplyDirtyFeature(req, token, info);
+  prop_id = prop_mgr_.GetPropertyId(drm_property_map_[info.prop_id]);
+  if (prop_id) {
+    ApplyDirtyFeature(req, token, info);
+  }
 }
 // LCOV_EXCL_STOP
 
