@@ -941,7 +941,7 @@ DisplayError DisplayBase::HandleNoiseLayer(LayerStack *layer_stack) {
 
   DisplayError error = GetNoisePluginParams(layer_stack);
   if (error) {
-    DLOGE("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
+    DLOGW("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
     return error;
   }
 
@@ -1711,6 +1711,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   bool hdr_supported = hw_resource_info.has_hdr;
   bool hdr_plus_supported = false;
+  bool dolby_vision_supported = false;
   HWDisplayInterfaceInfo hw_disp_info = {};
   hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
   if (hw_disp_info.type == kHDMI) {
@@ -1718,12 +1719,14 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   }
 
   // Checking library support for HDR10+
-  comp_manager_->GetHDR10PlusCapability(&hdr_plus_supported);
+  comp_manager_->GetHDRCapability(&hdr_plus_supported, &dolby_vision_supported);
 
   fixed_info->hdr_supported = hdr_supported;
   // For non-builtin displays, check panel capability for HDR10+
   fixed_info->hdr_plus_supported =
       hdr_supported && hw_panel_info_.hdr_plus_enabled && hdr_plus_supported;
+  fixed_info->dolby_vision_supported =
+      hdr_supported && hw_panel_info_.hdr_plus_enabled && dolby_vision_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
@@ -1798,7 +1801,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
         display_type_, teardown);
 
-  if (state == state_ && (pending_power_state_ == kPowerStateNone)) {
+  if (state == state_) {
+    if (pending_power_state_ != kPowerStateNone) {
+      hw_intf_->CancelDeferredPowerMode();
+    }
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
@@ -3123,6 +3129,10 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     uint32_t sdm_layer_index = disp_layer_stack_.info.index.at(i);
     Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
+    if (hw_layer.request.flags.tone_map) {
+      DLOGW("Display %d-%d, GPU Tonemap requested for SDM Layer[%d] HW Layer[%d]", display_id_,
+            display_type_, disp_layer_stack_.info.index.at(i), i);
+    }
 
     hw_layer.input_buffer.planes[0].fd = Sys::dup_(sdm_layer->input_buffer.planes[0].fd);
     hw_layer.input_buffer.planes[0].offset = sdm_layer->input_buffer.planes[0].offset;
@@ -4209,7 +4219,6 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
 }
 
 void DisplayBase::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
-  ClientLock lock(disp_mutex_);
   event_handler_->NotifyCwbDone(status, buffer);
 }
 

@@ -297,7 +297,7 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
     return Error::BAD_BUFFER;
   }
 
-  auto meta_size = GetMetaDataSize(buf->reserved_size);
+  auto meta_size = GetMetaDataSize(buf->reserved_size, buf->custom_content_md_size);
 
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset, hnd->fd,
                              buf->ion_handle_main) != 0) {
@@ -648,7 +648,9 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   // Allocate memory for MetaData
   AllocData e_data;
   uint64_t custom_content_md_reserved_size = GetCustomContentMetadataSize(format, usage);
-  e_data.size = static_cast<unsigned int>(GetMetaDataSize(descriptor.GetReservedSize(),
+  uint64_t reserved_region_size = ALIGN(descriptor.GetReservedSize(), alignof(size_t));
+
+  e_data.size = static_cast<unsigned int>(GetMetaDataSize(reserved_region_size,
                                                           custom_content_md_reserved_size));
   e_data.handle = data.handle;
   e_data.align = page_size;
@@ -690,7 +692,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   }
 
 #ifdef METADATA_V2
-  auto error = ValidateAndMap(hnd, descriptor.GetReservedSize());
+  auto error = ValidateAndMap(hnd, reserved_region_size);
 #else
   auto error = ValidateAndMap(hnd);
 #endif
@@ -705,17 +707,17 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   metadata->name[nameLength] = '\0';
 
 #ifdef METADATA_V2
-  metadata->reservedSize = descriptor.GetReservedSize();
+  metadata->reservedSize = reserved_region_size;
 #else
   metadata->reservedRegion.size =
-      std::min(descriptor.GetReservedSize(), (uint64_t)RESERVED_REGION_SIZE);
+      std::min(reserved_region_size, (uint64_t)RESERVED_REGION_SIZE);
 #endif
   metadata->crop.top = 0;
   metadata->crop.left = 0;
   metadata->crop.right = hnd->width;
   metadata->crop.bottom = hnd->height;
 
-  UnmapAndReset(hnd, descriptor.GetReservedSize());
+  UnmapAndReset(hnd, reserved_region_size);
 
   *handle = hnd;
 

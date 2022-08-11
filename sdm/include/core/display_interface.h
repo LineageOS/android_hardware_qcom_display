@@ -287,19 +287,20 @@ enum FrameTriggerMode {
   @sa DisplayInterface::SetConfig
 */
 struct DisplayConfigFixedInfo {
-  bool underscan = false;              //!< If display support CE underscan.
-  bool secure = false;                 //!< If this display is capable of handling secure content.
-  bool is_cmdmode = false;             //!< If panel is command mode panel.
-  bool hdr_supported = false;          //!< If HDR10 is supported.
-  bool hdr_plus_supported = false;     //!< If HDR10+ is supported.
-  bool hdr_metadata_type_one = false;  //!< Metadata type one obtained from HDR sink
-  uint32_t hdr_eotf = 0;               //!< Electro optical transfer function
-  float max_luminance = 0.0f;          //!< From Panel's peak luminance
-  float average_luminance = 0.0f;      //!< From Panel's average luminance
-  float min_luminance = 0.0f;          //!< From Panel's blackness level
-  bool partial_update = false;         //!< If display supports Partial Update.
-  bool readback_supported = false;     //!< If display supports buffer readback.
-  bool supports_unified_draw = false;  //!< If display support unified drawing methods.
+  bool underscan = false;               //!< If display support CE underscan.
+  bool secure = false;                  //!< If this display is capable of handling secure content.
+  bool is_cmdmode = false;              //!< If panel is command mode panel.
+  bool hdr_supported = false;           //!< If HDR10 is supported.
+  bool hdr_plus_supported = false;      //!< If HDR10+ is supported.
+  bool dolby_vision_supported = false;  //!< If Dolby Vision is supported.
+  bool hdr_metadata_type_one = false;   //!< Metadata type one obtained from HDR sink
+  uint32_t hdr_eotf = 0;                //!< Electro optical transfer function
+  float max_luminance = 0.0f;           //!< From Panel's peak luminance
+  float average_luminance = 0.0f;       //!< From Panel's average luminance
+  float min_luminance = 0.0f;           //!< From Panel's blackness level
+  bool partial_update = false;          //!< If display supports Partial Update.
+  bool readback_supported = false;      //!< If display supports buffer readback.
+  bool supports_unified_draw = false;   //!< If display support unified drawing methods.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
@@ -319,8 +320,8 @@ struct DisplayConfigGroupInfo {
 
   bool operator==(const DisplayConfigGroupInfo& info) const {
     return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) &&
-            (h_total == info.h_total) && (v_total == info.v_total) && (x_dpi == info.x_dpi) &&
-            (y_dpi == info.y_dpi) && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
+            (x_dpi == info.x_dpi) && (y_dpi == info.y_dpi) && (is_yuv == info.is_yuv) &&
+            (smart_panel == info.smart_panel));
   }
 };
 

@@ -115,7 +115,6 @@ class DisplayIPCVmCallbackImpl : public IPCVmCallbackIntf {
   virtual ~DisplayIPCVmCallbackImpl() {}
 
  private:
-  IPCExportBufOutParams export_buf_out_params_ = {};
   BufferAllocator *buffer_allocator_ {};
   int *cb_hnd_out_ = nullptr;
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;

@@ -569,7 +569,12 @@ int HWCDisplay::Init() {
 
   UpdateConfigs();
 
-  tone_mapper_ = new HWCToneMapper(buffer_allocator_);
+  int enable_gpu_tonemapper = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_GPU_TONEMAPPER_PROP, &enable_gpu_tonemapper);
+  // Disable instantiating HWCTonemapper when GPU tonemapping is not used.
+  if (enable_gpu_tonemapper) {
+    tone_mapper_ = new HWCToneMapper(buffer_allocator_);
+  }
 
   display_intf_->GetQsyncFps(&qsync_fps_);
 
@@ -1434,6 +1439,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   }
   dump_output_to_file_ = dump_output_to_file;
   output_buffer_base_ = buffer;
+  output_buffer_cwb_config_ = cwb_config;
 
   return HWC2::Error::None;
 }
@@ -1716,6 +1722,8 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
                                            float *out_max_luminance,
                                            float *out_max_average_luminance,
                                            float *out_min_luminance) {
+  int32_t supported_types[static_cast<int32_t>(Hdr::HDR10_PLUS)];
+
   if (out_num_types == nullptr || out_max_luminance == nullptr ||
       out_max_average_luminance == nullptr || out_min_luminance == nullptr) {
     return HWC2::Error::BadParameter;
@@ -1732,26 +1740,29 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
   uint32_t num_types = 0;
   if (fixed_info.hdr_plus_supported) {
-    num_types = UINT32(Hdr::HDR10_PLUS) - 1;
-  } else {
-    num_types = UINT32(Hdr::HLG) - 1;
+    supported_types[num_types] = static_cast<int32_t>(Hdr::HDR10_PLUS);
+    num_types++;
   }
 
-  // We support HDR10, HLG and HDR10_PLUS.
+  if (fixed_info.dolby_vision_supported) {
+    supported_types[num_types] = static_cast<int32_t>(Hdr::DOLBY_VISION);
+    num_types++;
+  }
+
+  if (fixed_info.hdr_supported) {
+    supported_types[num_types] = static_cast<int32_t>(Hdr::HDR10);
+    num_types++;
+  }
+
+  supported_types[num_types] = static_cast<int32_t>(Hdr::HLG);
+  num_types++;
+
   if (out_types == nullptr) {
     *out_num_types = num_types;
   } else {
     uint32_t max_out_types = std::min(*out_num_types, num_types);
-    int32_t type = static_cast<int32_t>(Hdr::DOLBY_VISION);
     for (int32_t i = 0; i < max_out_types; i++) {
-      while (type == static_cast<int32_t>(Hdr::DOLBY_VISION) /* Skip list */) {
-        // Skip the type
-        type++;
-      }
-      if (type > (num_types + 1)) {
-        break;
-      }
-      out_types[i] = type++;
+      out_types[i] = supported_types[i];
     }
     *out_max_luminance = fixed_info.max_luminance;
     *out_max_average_luminance = fixed_info.average_luminance;
@@ -1922,18 +1933,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     DLOGI("Changing active config to %d", UINT32(pending_first_commit_config_));
     pending_first_commit_config_ = false;
     SetActiveConfig(pending_first_commit_config_index_);
-  }
-
-  if (pending_fb_reconfig_) {
-    hwc2_config_t current_config = 0;
-    GetActiveConfig(&current_config);
-    DisplayConfigVariableInfo current_config_info = {};
-    GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
-    // Set fb config if new resolution differs
-    if (SetFrameBufferResolution(current_config_info.x_pixels, current_config_info.y_pixels) != 0) {
-      DLOGE("Failed to set FB reolution for %d-%d", sdm_id_, type_);
-    }
-    pending_fb_reconfig_ = false;
   }
 
   return status;
@@ -3042,7 +3041,9 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   // Set fb config if new resolution differs
   if (info.x_pixels != current_config_info.x_pixels ||
       info.y_pixels != current_config_info.y_pixels) {
-    pending_fb_reconfig_ = true;
+    if (SetFrameBufferResolution(info.x_pixels, info.y_pixels)) {
+      return HWC2::Error::BadParameter;
+    }
   }
 
   return HWC2::Error::None;

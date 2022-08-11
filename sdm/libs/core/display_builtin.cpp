@@ -2310,13 +2310,15 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   HWResourceInfo hw_resource_info = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   bool hdr_plus_supported = false;
+  bool dolby_vision_supported = false;
 
   // Checking library support for HDR10+
-  comp_manager_->GetHDR10PlusCapability(&hdr_plus_supported);
+  comp_manager_->GetHDRCapability(&hdr_plus_supported, &dolby_vision_supported);
 
   fixed_info->hdr_supported = hw_resource_info.has_hdr;
   // Built-in displays always support HDR10+ when the target supports HDR
   fixed_info->hdr_plus_supported = hw_resource_info.has_hdr && hdr_plus_supported;
+  fixed_info->dolby_vision_supported = hw_resource_info.has_hdr && dolby_vision_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
@@ -2518,8 +2520,15 @@ void DisplayIPCVmCallbackImpl::ExportHFCBuffer() {
   buffer_info_hfc_.buffer_config.width = hfc_buffer_width_;
   buffer_info_hfc_.buffer_config.height = hfc_buffer_height_;
   buffer_info_hfc_.buffer_config.format = kFormatRGB888;
-  buffer_info_hfc_.buffer_config.trusted_ui = true;
   buffer_info_hfc_.buffer_config.buffer_count = 1;
+  std::bitset<kBufferPermMax> buf_perm;
+  buf_perm.set(kBufferPermRead);
+  buf_perm.set(kBufferPermWrite);
+  buffer_info_hfc_.buffer_config.access_control.insert(
+      std::make_pair(kBufferClientUnTrustedVM, buf_perm));
+  buffer_info_hfc_.buffer_config.access_control.insert(
+      std::make_pair(kBufferClientTrustedVM, buf_perm));
+
   int ret = buffer_allocator_->AllocateBuffer(&buffer_info_hfc_);
   if (ret != 0) {
     DLOGE("Fail to allocate hfc buffer");
@@ -2527,53 +2536,29 @@ void DisplayIPCVmCallbackImpl::ExportHFCBuffer() {
   }
 
   GenericPayload in;
-  IPCExportBufInParams *export_buf_in_params = nullptr;
-  ret = in.CreatePayload<IPCExportBufInParams>(export_buf_in_params);
+  IPCBufferInfo *export_buf_in_params = nullptr;
+  ret = in.CreatePayload<IPCBufferInfo>(export_buf_in_params);
   if (ret) {
     DLOGE("failed to create IPCExportBufInParams payload. Error:%d", ret);
     buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
     return;
   }
 
-  IPCBufferInfo hfc_buf;
-  hfc_buf.fd = buffer_info_hfc_.alloc_buffer_info.fd;
-  hfc_buf.size = buffer_info_hfc_.alloc_buffer_info.size;
-  hfc_buf.panel_id = panel_id_;
-  export_buf_in_params->buffers.emplace(kIpcBufferTypeDemuraHFC, hfc_buf);
+  export_buf_in_params->size = buffer_info_hfc_.alloc_buffer_info.size;
+  export_buf_in_params->panel_id = panel_id_;
+  export_buf_in_params->mem_handle = buffer_info_hfc_.alloc_buffer_info.mem_handle;
 
-  DLOGI("Allocated hfc buffer fd %d size %d panel id :%x", hfc_buf.fd, hfc_buf.size,
-        hfc_buf.panel_id);
-
-  GenericPayload out;
-  IPCExportBufOutParams *export_buf_out_params = nullptr;
-  ret = out.CreatePayload<IPCExportBufOutParams>(export_buf_out_params);
-  if (ret) {
-    DLOGE("failed to create IPCExportBufOutParams payload. Error:%d", ret);
-    buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
-    return;
-  }
-
-  if ((ret = ipc_intf_->ProcessOps(kIpcOpsExportBuffers, in, &out))) {
+  DLOGI("Allocated hfc buffer mem_handle %d size %d panel id :%x", export_buf_in_params->mem_handle,
+        export_buf_in_params->size, export_buf_in_params->panel_id);
+  if ((ret = ipc_intf_->SetParameter(kIpcParamSetHFCBuffer, in))) {
     DLOGE("Failed to export demura buffers, error = %d", ret);
     buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
     return;
   }
-  export_buf_out_params_.exported_fds = export_buf_out_params->exported_fds;
 }
 
 void DisplayIPCVmCallbackImpl::FreeExportBuffer() {
   lock_guard<recursive_mutex> obj(cb_mutex_);
-  if (export_buf_out_params_.exported_fds.empty()) {
-    DLOGW("No HFC buffer to Free");
-    return;
-  }
-
-  for (auto export_fd : export_buf_out_params_.exported_fds) {
-    if (export_fd.second) {
-      Sys::close_(export_fd.second);
-    }
-  }
-  export_buf_out_params_.exported_fds.clear();
   buffer_allocator_->FreeBuffer(&buffer_info_hfc_);
   DLOGI("Free hfc export buffer and fd");
 }
