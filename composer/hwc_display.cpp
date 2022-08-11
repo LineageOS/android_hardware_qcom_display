@@ -52,6 +52,10 @@
 
 namespace sdm {
 
+#ifdef POWER_MODE_POST_HOOK
+extern bool postSetDevicePowerMode(HWC2::PowerMode mode);
+#endif
+
 uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
 
 bool NeedsToneMap(const LayerStack &layer_stack) {
@@ -1017,6 +1021,12 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   // Update release fence.
   release_fence_ = release_fence;
   current_power_mode_ = mode;
+
+#ifdef POWER_MODE_POST_HOOK
+  if (!postSetDevicePowerMode(mode)) {
+    DLOGE("HWComposer: Device post SetPowerMode hook failed");
+  }
+#endif
 
   // Close the release fences in synchronous power updates
   if (!async_power_mode_) {

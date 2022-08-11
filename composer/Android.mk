@@ -70,6 +70,12 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  gl_layer_stitch_impl.cpp
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
+
+ifneq ($(TARGET_COMPOSER_POWER_MODE_POST_HOOK),)
+	LOCAL_CFLAGS += -DPOWER_MODE_POST_HOOK
+	LOCAL_SRC_FILES += ../../../../../$(TARGET_COMPOSER_POWER_MODE_POST_HOOK)
+endif
+
 ifneq ($(TARGET_HAS_LOW_RAM),true)
   ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),bengal_32)
     LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service-32bit.xml
