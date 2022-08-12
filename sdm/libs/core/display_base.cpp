@@ -1915,9 +1915,15 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   }
 
   if ((pending_power_state_ == kPowerStateNone) && (!first_cycle_ || display_type_ == kHDMI)) {
-    CacheRetireFence();
     SyncPoints sync = {};
-    sync.retire_fence = retire_fence_;
+    if (draw_method_ == kDrawDefault || display_type_ == kVirtual) {
+      // Wait on current retire fence.
+      sync.retire_fence = sync_points.retire_fence;
+    } else {
+      // For displays in unified draw, wait on cached retire fence in steady state.
+      comp_manager_->GetRetireFence(display_comp_ctx_, &retire_fence_);
+      sync.retire_fence = retire_fence_;
+    }
     WaitForCompletion(&sync);
   }
 
