@@ -113,6 +113,7 @@ struct HWDisplayInfo {
                                                //!< device.
   bool is_wb_ubwc_supported = true;            //!< check hardware wb ubwc support
   bool is_reserved = false;                    //!< check if currently reserved by any display
+  uint32_t max_linewidth = 0;                  //!< max width supported by connector
 };
 
 /*! @brief Information on all displays as a map with display_id as key.
