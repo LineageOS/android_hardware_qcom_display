@@ -168,6 +168,7 @@ HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
      current_power_mode_ == HWC2::PowerMode::DozeSuspend)) || CheckResourceState(&res_exhausted)) {
     MarkLayersForGPUBypass();
     *exit_validate = true;
+    bypass_drawcycle_ = true;
     return status;
   }
 

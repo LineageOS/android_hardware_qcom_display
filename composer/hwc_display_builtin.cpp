@@ -256,6 +256,7 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   if (display_paused_ || CheckResourceState(&res_exhausted)) {
     MarkLayersForGPUBypass();
     *exit_validate = true;
+    bypass_drawcycle_ = true;
     return status;
   }
 
