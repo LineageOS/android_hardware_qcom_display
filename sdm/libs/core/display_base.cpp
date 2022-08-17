@@ -1410,7 +1410,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   }
 
   if (needs_validate_) {
-    DLOGE("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
+    DLOGW("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
           display_type_);
     validated_ = false;
     return kErrorNotValidated;
