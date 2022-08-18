@@ -675,7 +675,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool draw_method_set_ = false;
   bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
-  static constexpr unsigned int cwb_wait_ms = 100;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
