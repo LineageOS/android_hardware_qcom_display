@@ -51,8 +51,6 @@ class HWInfoInterface {
   virtual DisplayError GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) = 0;
   virtual DisplayError GetPanelBootParamString(std::string *panel_boot_param_string) = 0;
  protected:
-  static int32_t ref_count_;
-  static HWInfoInterface *intf_;
   virtual ~HWInfoInterface() { }
 };
 
