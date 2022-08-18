@@ -1231,9 +1231,8 @@ void HWCSession::CWB::ProcessRequests() {
       // Mutex scope
       {
         SCOPE_LOCK(locker);
-        auto ret = hwc_display->GetReadbackBufferFenceForClient(kCWBClientExternal, &release_fence);
-        if (!release_fence || ret == kCWBReleaseFenceNotAvailable ||
-            ret == kCWBReleaseFenceUnknownError) {
+        error = hwc_display->GetReadbackBufferFence(&release_fence);
+        if (error != HWC2::Error::None) {
           status = -1;
         }
       }
