@@ -1258,15 +1258,6 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   }
 
   if (!override_mode) {
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    bool needs_validation = false;
-    {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-      needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
-                          mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
-                          active_builtin_disp_id < HWCCallbacks::kNumDisplays);
-
-    }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
@@ -3264,13 +3255,12 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
     if (disconnect) {
       hwc2_display_t client_id = map_info.client_id;
       bool is_valid_pluggable_display = false;
-      {
-        SCOPE_LOCK(locker_[client_id]);
-        auto &hwc_display = hwc_display_[client_id];
-        if (hwc_display) {
-          is_valid_pluggable_display = true;
-        }
+      auto &hwc_display = hwc_display_[client_id];
+      if (hwc_display) {
+        is_valid_pluggable_display = true;
+        hwc_display->Abort();
       }
+
       DestroyDisplay(&map_info);
       if (enable_primary_reconfig_req_ && is_valid_pluggable_display) {
         hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
@@ -3995,7 +3985,14 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
       {
         std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
         resource_ready_ = false;
-        hotplug_cv_.wait(caller_lock);
+
+        const uint32_t min_vsync_period_ms = 100;
+        auto timeout = std::chrono::system_clock::now() +
+                         std::chrono::milliseconds(min_vsync_period_ms);
+        if (hotplug_cv_.wait_until(caller_lock, timeout) == std::cv_status::timeout) {
+          DLOGW("hotplug timeout");
+        }
+
         if (active_display_id_ == active_builtin_id && needs_active_builtin_reconfig &&
             cached_retire_fence_) {
           Fence::Wait(cached_retire_fence_);
