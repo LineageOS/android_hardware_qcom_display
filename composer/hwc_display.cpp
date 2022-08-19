@@ -3646,4 +3646,8 @@ void HWCDisplay::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
            status);
 }
 
+void HWCDisplay::Abort() {
+  display_intf_->Abort();
+}
+
 } //namespace sdm
