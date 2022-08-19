@@ -22,6 +22,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __DEMURA_INTF_H__
 #define __DEMURA_INTF_H__
 
@@ -53,6 +60,8 @@ struct DemuraInputConfig {
 const std::string kDemuraFeatureParamActive = "Active";
 const std::string kDemuraFeatureParamCorrectionBuffer = "CorrectionBuffer";
 const std::string kDemuraFeatureParamPanelId = "PanelId";
+const std::string kDemuraFeatureParamPendingReconfig = "PendingReconfig";
+const std::string kDemuraFeatureParamSprPattern = "SprPattern";
 
 using DemuraIntf = GenericIntf<const std::string&, const std::string&, GenericPayload>;
 }  // namespace sdm

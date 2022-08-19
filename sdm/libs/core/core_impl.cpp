@@ -162,6 +162,8 @@ DisplayError CoreImpl::Deinit() {
     delete vm_cb_intf_;
   }
 
+  if (pm_intf_)
+    pm_intf_->Deinit();
   ReleaseDemuraResources();
   ColorManagerProxy::Deinit();
 

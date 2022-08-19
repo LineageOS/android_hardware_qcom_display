@@ -141,6 +141,19 @@ class MemBuf {
   */
   virtual int Import(int64_t memparcel_hdl, const VmParams &vm_params, int *import_fd) = 0;
 
+  /*! @brief Allocate a file descriptor which represents a suggestion from
+      userspace that a large amount of memory will be needed in the near
+      future. If the kernel decides to honor this suggestion, there is no
+      guarantee of exclusive access to this memory by the requesting process
+      Closing the file descriptor indicates the memory is no longer required.
+
+    @param[in] size - The requested size of memory to be made free.
+    @param[in] name - A unique name for debug purposes.
+
+    @return fd on success otherwise errno
+  */
+
+  virtual int MemorySizeHint(uint64_t size, const std::string& name) = 0;
   virtual ~MemBuf() { }
 
   static int GetInstance(MemBuf **mem_buf_hnd);

@@ -265,8 +265,8 @@ bool CanAllocateZSLForSecureCamera();
 
 uint64_t GetCustomContentMetadataSize(int format, uint64_t usage);
 uint64_t GetMetaDataSize(uint64_t reserved_region_size, uint64_t custom_content_md_region_size = 0);
-void UnmapAndReset(private_handle_t *handle, uint64_t reserved_region_size = 0);
-int ValidateAndMap(private_handle_t *handle, uint64_t reserved_region_size = 0);
+void UnmapAndReset(private_handle_t *handle);
+int ValidateAndMap(private_handle_t *handle);
 Error GetColorSpaceFromColorMetaData(ColorMetaData color_metadata, uint32_t *color_space);
 Error GetMetaDataByReference(void *buffer, int64_t type, void **out);
 Error GetMetaDataValue(void *buffer, int64_t type, void *in);

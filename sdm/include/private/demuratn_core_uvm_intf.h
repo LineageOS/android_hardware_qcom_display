@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
+#ifndef __DEMURATN_CORE_UVM_INTF_H__
+#define __DEMURATN_CORE_UVM_INTF_H__
+
+#include <private/generic_intf.h>
+#include <private/generic_payload.h>
+
+namespace sdm {
+
+enum DemuraTnCoreUvmParams {
+  /* Getter: bool */
+  kDemuraTnCoreUvmParamInitReady,
+  /* Getter/Setter: bool */
+  kDemuraTnCoreUvmParamEnable,
+  kDemuraTnCoreUvmParamsMax = 2048,
+  kDemuraTnCoreUvmPrivParamsStart = 2049,
+  kDemuraTnCoreUvmPrivParamsEnd = 4096,
+};
+
+enum DemuraTnCoreUvmOps {
+  /* No public op is supported for now */
+  kDemuraTnCoreUvmOpsMax = 2048,
+  kDemuraTnCoreUvmOpsPrivOpsStart = 2049,
+  kDemuraTnCoreUvmOpsPrivOpsEnd = 4096,
+};
+
+using DemuraTnCoreUvmIntf = GenericIntf<DemuraTnCoreUvmParams, DemuraTnCoreUvmOps, GenericPayload>;
+}  // namespace sdm
+#endif  // __DEMURATN_CORE_UVM_INTF_H__

@@ -1,8 +1,6 @@
 /*
 * Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -24,6 +22,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __DISPLAY_BUILTIN_H__
 #define __DISPLAY_BUILTIN_H__
 
@@ -34,6 +39,7 @@
 #include <core/ipc_interface.h>
 #include <private/extension_interface.h>
 #include <private/spr_intf.h>
+#include <private/demuratn_core_uvm_fact_intf.h>
 #include <private/panel_feature_property_intf.h>
 #include <private/panel_feature_factory_intf.h>
 #include <private/hw_events_interface.h>
@@ -223,6 +229,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetupSPR();
   DisplayError SetupDemura();
   DisplayError SetupDemuraLayer();
+  DisplayError SetupDemuraTn();
+  DisplayError EnableDemuraTn(bool enable);
   DisplayError BuildLayerStackStats(LayerStack *layer_stack) override;
   void UpdateDisplayModeParams();
   void HandleQsyncPostCommit();
@@ -280,7 +288,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool enhance_idle_time_ = false;
   int idle_time_ms_ = 0;
   struct timespec idle_timer_start_;
-  std::unique_ptr<DemuraIntf> demura_ = nullptr;
+  std::shared_ptr<DemuraIntf> demura_ = nullptr;
+  bool demuratn_enabled_ = false;
+  std::shared_ptr<DemuraTnCoreUvmIntf> demuratn_ = nullptr;
   Layer demura_layer_ = {};
   bool demura_intended_ = false;
   bool enable_dpps_dyn_fps_ = false;

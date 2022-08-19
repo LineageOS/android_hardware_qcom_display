@@ -332,6 +332,7 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
 
   bool skip_commit = false;
   {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
     skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
                   !pending_refresh_ && !vsync_source && (cwb_buffer_map_.size() == 0)
                   && !needs_validation;
@@ -775,15 +776,18 @@ void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_
 }
 
 void HWCDisplayBuiltIn::HandleFrameCapture() {
-  DisplayError ret = kErrorNone;
+  auto ret = kCWBReleaseFenceErrorNone;
   {
     std::unique_lock<std::mutex> lock(cwb_mutex_);
-    cwb_capture_status_ = kErrorNone;
-    cwb_cv_.wait(lock);
-    ret = cwb_capture_status_;
+    auto &cwb_resp = cwb_capture_status_map_[kCWBClientColor];
+    // If CWB request status is not notified, then need to wait for the notification.
+    if (cwb_resp.status == kCWBReleaseFenceNotChecked) {
+      cwb_cv_.wait(lock);
+    }
+    ret = cwb_resp.status;
   }
 
-  frame_capture_status_ = ret;
+  frame_capture_status_ = (ret == kCWBReleaseFenceWaitTimedOut) ? -ETIME : (ret) ? -1 : 0;
   frame_capture_buffer_queued_ = false;
 
   DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d",frame_capture_buffer_queued_);

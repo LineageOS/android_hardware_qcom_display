@@ -127,6 +127,23 @@ enum CWBClient {
   kCWBClientComposer,   // Client to HWC i.e. SurfaceFlinger
 };
 
+enum CWBReleaseFenceError {
+  kCWBReleaseFenceErrorNone,
+  kCWBReleaseFenceSignaled = kCWBReleaseFenceErrorNone,
+  kCWBReleaseFenceWaitTimedOut,
+  kCWBReleaseFenceNotAvailable,
+  kCWBReleaseFenceNotChecked,
+  kCWBReleaseFencePending,
+  kCWBReleaseFenceUnknownError,
+};
+
+struct CWBCaptureResponse {
+  uint64_t handle_id = 0;
+  CWBClient client = kCWBClientNone;
+  CWBReleaseFenceError status = kCWBReleaseFenceErrorNone;
+  std::shared_ptr<Fence> release_fence = nullptr;
+};
+
 struct TransientRefreshRateInfo {
   uint32_t transient_vsync_period;
   int64_t vsync_applied_time;
@@ -245,6 +262,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
                                         shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,
                                         CWBClient client);
+  virtual CWBReleaseFenceError GetReadbackBufferFenceForClient(CWBClient client,
+                                                               shared_ptr<Fence> *release_fence);
   virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence);
   virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
   // Captures frame output in the buffer specified by output_buffer_info. The API is
@@ -655,7 +674,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<uint64_t, CWBClient> cwb_buffer_map_ = {};
   std::mutex cwb_mutex_;
   std::condition_variable cwb_cv_;
-  DisplayError cwb_capture_status_ = kErrorNone;
+  std::map<CWBClient, CWBCaptureResponse> cwb_capture_status_map_;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
@@ -675,6 +694,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool draw_method_set_ = false;
   bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
+  static constexpr unsigned int cwb_wait_ms = 100;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

@@ -664,7 +664,7 @@ int HWCDisplay::Deinit() {
 HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
   if (disable_sdr_histogram_)
-    layer->IgnoreSdrContentMetadata(true);
+    layer->IgnoreSdrHistogramMetadata(true);
 
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
@@ -3161,6 +3161,7 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     return kErrorParameters;
   }
 
+  std::unique_lock<std::mutex> lock(cwb_mutex_);
   if (!cwb_buffer_map_.size() && !display_intf_->HandleCwbTeardown()) {
     *needs_refresh = false;
     return kErrorNone;
@@ -3341,18 +3342,6 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   CwbTapPoint &tap_point = config.tap_point;
 
   DisplayError error = kErrorNone;
-  uint32_t buffer_width = 0, buffer_height = 0;
-  error = display_intf_->GetCwbBufferResolution(&cwb_config, &buffer_width,
-                                                &buffer_height);
-  if (error) {
-    DLOGE("Configuring CWB Buffer allocation failed.");
-    if (error == kErrorParameters) {
-      return HWC2::Error::BadParameter;
-    } else {
-      return HWC2::Error::Unsupported;
-    }
-  }
-
   error = display_intf_->CaptureCwb(output_buffer, config);
   if (error) {
     DLOGE("CaptureCwb failed");
@@ -3363,7 +3352,13 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
     }
   }
 
-  cwb_buffer_map_.emplace(output_buffer.handle_id, client);
+  {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
+    cwb_buffer_map_.emplace(output_buffer.handle_id, client);
+    if (cwb_capture_status_map_[client].handle_id == output_buffer.handle_id) {
+      cwb_capture_status_map_.erase(client);
+    }
+  }
 
   DLOGV_IF(kTagClient, "CWB config from client: tap_point %d, CWB ROI Rect(%f %f %f %f), "
            "PU_as_CWB_ROI %d, Cwb full rect : (%f %f %f %f)", tap_point,
@@ -3375,30 +3370,98 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
-  auto status = HWC2::Error::None;
+CWBReleaseFenceError HWCDisplay::GetReadbackBufferFenceForClient(CWBClient client,
+                                                                shared_ptr<Fence> *release_fence) {
+  if (client == kCWBClientNone) {
+    DLOGE("Invalid CWB client(%d) as argument detected!", client);
+    return kCWBReleaseFenceUnknownError;
+  }
 
-  CWBClient client = kCWBClientNone;
+  if (!release_fence) {
+    DLOGE("Null storage for shared pointer of release_fence argument detected, for client: %d",
+          client);
+    return kCWBReleaseFenceUnknownError;
+  }
 
-  if (layer_stack_.output_buffer != nullptr) {
-    uint64_t handle_id = layer_stack_.output_buffer->handle_id;
-    const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
-    if (map_cwb_buffer != cwb_buffer_map_.end()) {
-      client = map_cwb_buffer->second;
+  auto status = kCWBReleaseFenceErrorNone;
+  uint64_t handle_id = 0;
+
+  *release_fence = nullptr;
+  {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
+    auto &cwb_resp = cwb_capture_status_map_[client];
+
+    if (cwb_resp.handle_id != 0) {
+      // If this function is called after either PostCommitLayerStack or NotifyCwbDone call,
+      // then release fence can be successfully retrieved from cwb_capture_status_map_.
+      handle_id = cwb_resp.handle_id;
+      *release_fence = cwb_resp.release_fence;
+      status = cwb_resp.status;
+    } else if (layer_stack_.output_buffer != nullptr) {
+      // If this function is called before both PostCommitLayerStack and NotifyCwbDone call,
+      // then release fence may be retrieved directly from layer_stack_.output_buffer.
+      const auto map_cwb_buffer = cwb_buffer_map_.find(layer_stack_.output_buffer->handle_id);
+      if (map_cwb_buffer != cwb_buffer_map_.end() && client == map_cwb_buffer->second) {
+        handle_id = layer_stack_.output_buffer->handle_id;
+        display_intf_->GetOutputBufferAcquireFence(release_fence);
+        status = kCWBReleaseFenceNotChecked;
+      }
+    } else {
+      // If this function is called too early, then just need to check that cwb request is
+      // persisting, which helps to decide the return status.
+      for (auto [id, cl] : cwb_buffer_map_) {
+        if (cl == client) {
+          handle_id = id;
+          break;
+        }
+      }
+    }
+
+    if (*release_fence != nullptr) {
+      // If release fence is successfully retrieved, then no need to keep buffer-client map
+      // for this fence any more.
+      cwb_buffer_map_.erase(handle_id);
+      cwb_capture_status_map_.erase(client);
     }
   }
 
-  if (client == kCWBClientExternal) {
-    display_intf_->GetOutputBufferAcquireFence(release_fence);
-    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
-  } else if (client != kCWBClientNone && layer_stack_.output_buffer->release_fence) {
-    *release_fence = layer_stack_.output_buffer->release_fence;
-    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
-    DLOGI("Successfully retrieved readback buffer fence for cwb client %d",
-          client);
+  if (handle_id != 0) {
+    if (*release_fence == nullptr) {
+      // If this function is called before commit call or during prepare call, and layer_stack
+      // output_buffer is configured, then need to call this function again after few
+      // milliseconds, such that commit could execute during this period to get updated
+      // release fence.
+      DLOGV_IF(kTagQDCM, "Need to wait for release fence, and retry to get it for client:%d, "
+               "buffer_id: %u", client, handle_id);
+      status = kCWBReleaseFencePending;
+    }
   } else {
-    DLOGE("Failed to retrieve readback buffer fence");
-    return HWC2::Error::Unsupported;
+    DLOGV_IF(kTagQDCM, "There is no anymore readback buffer fence available for client = %d.",
+             client);
+    status = kCWBReleaseFenceNotAvailable;
+  }
+
+  // Add logs out of sync locked section instead of inline at status update location to avoid
+  // unnecessary increment in latency for execution of another resource dependent threads.
+  if (status == kCWBReleaseFenceNotChecked || status == kCWBReleaseFenceWaitTimedOut) {
+    DLOGV_IF(kTagQDCM, "Fence is available, but either fence wait is timed-out, or "
+             "CWB Manager is not yet notified for client:%d, buffer_id: %u", client, handle_id);
+  } else if (status == kCWBReleaseFenceUnknownError) {
+    DLOGE("CWB Manager notified unknown error for client:%d, buffer_id: %u", client, handle_id);
+  }
+
+  return status;
+}
+
+HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
+  auto status = HWC2::Error::None;
+  auto error = GetReadbackBufferFenceForClient(kCWBClientComposer, release_fence);
+
+  // if return status is HWC2::Error::None and *release_fence is nullptr, then need to
+  // retry to get release fence, else if *release_fence is not nullptr too, that means release
+  // fence is retrieved successfully, else there is no any valid release fence available.
+  if (error == kCWBReleaseFenceNotAvailable || error == kCWBReleaseFenceUnknownError) {
+    status = HWC2::Error::Unsupported;
   }
 
   return status;
@@ -3408,24 +3471,42 @@ void HWCDisplay::HandleFrameOutput() {
   // Block on output buffer fence if client is internal.
   // External clients will wait on their thread.
   CWBClient client = kCWBClientNone;
+  uint64_t handle_id = 0;
 
-  if (layer_stack_.output_buffer != nullptr) {
-    uint64_t handle_id = layer_stack_.output_buffer->handle_id;
-    const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
-    if (map_cwb_buffer != cwb_buffer_map_.end()) {
-      client = map_cwb_buffer->second;
+  {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
+    if (layer_stack_.output_buffer != nullptr) {
+      handle_id = layer_stack_.output_buffer->handle_id;
+      const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
+      if (map_cwb_buffer != cwb_buffer_map_.end()) {
+        client = map_cwb_buffer->second;
+        auto &cwb_resp = cwb_capture_status_map_[client];
+        cwb_resp.handle_id = handle_id;
+        cwb_resp.client = client;
+        display_intf_->GetOutputBufferAcquireFence(&cwb_resp.release_fence);
+        cwb_resp.status = kCWBReleaseFenceNotChecked; // CWB request status is not yet notified
+      } else {
+        for (auto& [_, ccs] : cwb_capture_status_map_) {
+          if (ccs.handle_id == handle_id) {
+            client = ccs.client;
+            break;
+          }
+        }
+      }
+    } else {
+      for (auto& [_, ccs] : cwb_capture_status_map_) {
+        if (ccs.handle_id != 0) {
+          client = ccs.client;
+          handle_id = ccs.handle_id;
+          break;
+        }
+      }
     }
-  }
-
-  if (client != kCWBClientNone && client != kCWBClientExternal) {
-    auto &fence = layer_stack_.output_buffer->release_fence;
-    display_intf_->GetOutputBufferAcquireFence(&fence);
   }
 
   if (client == kCWBClientColor) {
     DLOGV_IF(kTagQDCM, "frame_capture_buffer_queued_ is in use. Handle frame capture.");
     HandleFrameCapture();
-    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
   } else if (client == kCWBClientFrameDump) {
     DLOGV_IF(kTagQDCM, "dump_output_to_file is in use. Handle frame dump.");
     HandleFrameDump();
@@ -3437,15 +3518,23 @@ void HWCDisplay::HandleFrameDump() {
     return;
   }
 
-  DisplayError ret = kErrorNone;
+  auto ret = kCWBReleaseFenceErrorNone;
   {
     std::unique_lock<std::mutex> lock(cwb_mutex_);
-    cwb_capture_status_ = kErrorNone;
-    cwb_cv_.wait(lock);
-    ret = cwb_capture_status_;
+    auto &cwb_resp = cwb_capture_status_map_[kCWBClientFrameDump];
+    // If CWB request status is not notified, then need to wait for the notification.
+    if (cwb_resp.status == kCWBReleaseFenceNotChecked) {
+      if (cwb_cv_.wait_until(
+              lock, std::chrono::system_clock::now() + std::chrono::milliseconds(cwb_wait_ms)) ==
+        std::cv_status::timeout) {
+        DLOGE("CWB wait timed out.");
+        cwb_resp.status = kCWBReleaseFenceWaitTimedOut;
+      }
+    }
+    ret = cwb_resp.status;
   }
 
-  if (ret != kErrorNone) {
+  if (ret != kCWBReleaseFenceErrorNone) {
     DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
   }
 
@@ -3466,7 +3555,6 @@ void HWCDisplay::HandleFrameDump() {
     output_buffer_info_ = {};
     output_buffer_base_ = nullptr;
     output_buffer_cwb_config_ = {};
-    cwb_buffer_map_.erase(layer_stack_.output_buffer->handle_id);
   } else {
     const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
     HWC2::Error err = SetReadbackBuffer(handle, nullptr, output_buffer_cwb_config_,
@@ -3475,7 +3563,6 @@ void HWCDisplay::HandleFrameDump() {
       munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size);
       buffer_allocator_->FreeBuffer(&output_buffer_info_);
       output_buffer_info_ = {};
-      return;
     }
   }
 }
@@ -3526,32 +3613,37 @@ void HWCDisplay::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
   CWBClient client = kCWBClientNone;
   uint64_t handle_id = buffer.handle_id;
 
-  const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
-  if (map_cwb_buffer == cwb_buffer_map_.end()) {
-    DLOGI("CWB Buffer not found in map");
-    return;
-  }
+  {
+    std::unique_lock<std::mutex> lock(cwb_mutex_);
 
-  client = map_cwb_buffer->second;
-
-  switch (client) {
-    case kCWBClientFrameDump:
-    case kCWBClientColor:
-      {
-        std::unique_lock<std::mutex> lock(cwb_mutex_);
-        if (!status) {
-          cwb_capture_status_ = kErrorNone;
-        } else {
-          cwb_capture_status_ = kErrorTimeOut;
-        }
-        cwb_cv_.notify_one();
-      }
-      break;
-    case kCWBClientExternal:
-    default:
-      DLOGV_IF(kTagClient, "CWB notified for client = %d", client);
+    const auto map_cwb_buffer = cwb_buffer_map_.find(handle_id);
+    if (map_cwb_buffer == cwb_buffer_map_.end()) {
+      DLOGV_IF(kTagClient, "CWB Buffer(id = %u) not found in buffer-client map", handle_id);
       return;
+    }
+    client = map_cwb_buffer->second;
+
+    auto &cwb_cap_status = cwb_capture_status_map_[client];
+    cwb_cap_status.handle_id = handle_id;
+    cwb_cap_status.client = client;
+    cwb_cap_status.release_fence = buffer.release_fence;
+
+    if (!status) {
+      cwb_cap_status.status = kCWBReleaseFenceSignaled;
+    } else if (status == -ETIME) {
+      cwb_cap_status.status = kCWBReleaseFenceWaitTimedOut;
+    } else {
+      cwb_cap_status.status = kCWBReleaseFenceUnknownError;
+    }
+    cwb_buffer_map_.erase(handle_id);
+    if (client == kCWBClientFrameDump || client == kCWBClientColor) {
+      cwb_cv_.notify_one();
+    }
   }
+
+  DLOGV_IF(kTagClient, "CWB notified for client = %d with buffer = %u, return status = %s(%d)",
+           client, handle_id, (!status) ? "Handled" : (status == -ETIME) ? "Timedout" : "Error",
+           status);
 }
 
 } //namespace sdm
