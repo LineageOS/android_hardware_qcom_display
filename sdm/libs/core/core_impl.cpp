@@ -162,9 +162,9 @@ DisplayError CoreImpl::Deinit() {
     delete vm_cb_intf_;
   }
 
+  ReleaseDemuraResources();
   if (pm_intf_)
     pm_intf_->Deinit();
-  ReleaseDemuraResources();
   ColorManagerProxy::Deinit();
 
   comp_mgr_.Deinit();
