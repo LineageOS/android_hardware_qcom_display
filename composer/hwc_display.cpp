@@ -20,7 +20,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -3602,4 +3602,8 @@ void HWCDisplay::MarkClientActive(bool is_client_up) {
   is_client_up_ = is_client_up;
 }
 
-}  // namespace sdm
+void HWCDisplay::Abort() {
+  display_intf_->Abort();
+}
+
+} //namespace sdm
