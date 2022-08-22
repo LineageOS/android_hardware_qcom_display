@@ -170,6 +170,7 @@ enum struct DRMProperty {
   SDE_SSPP_LAYOUT,
   DSPP_RC_MASK_V1,
   DSPP_CAPABILITIES,
+  HBM,
 
   // Insert above
   MAX

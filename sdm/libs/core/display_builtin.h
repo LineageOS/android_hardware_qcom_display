@@ -158,6 +158,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError ReconfigureDisplay();
   DisplayError CreatePanelfeatures();
 
+  virtual DisplayError GetHbm(bool *enable);
+  virtual DisplayError SetHbm(bool enable);
+
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
   bool CanSkipDisplayPrepare(LayerStack *layer_stack);

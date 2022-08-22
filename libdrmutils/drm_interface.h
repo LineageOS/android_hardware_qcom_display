@@ -417,6 +417,12 @@ enum struct DRMOps {
    *      uint32_t - colorspace value bit-mask
    */
   CONNECTOR_SET_COLORSPACE,
+  /*
+   * Op: Sets hbm state on connector
+   * Arg: uint32_t - Connector ID
+   *     uint32_t - hbm state
+   */
+  CONNECTOR_SET_HBM,
 };
 
 enum struct DRMRotation {
@@ -1094,6 +1100,8 @@ class DRMManagerInterface {
    * [input]: panel feature info data
    */
   virtual void SetPanelFeature(const DRMPanelFeatureInfo &info) = 0;
+
+  virtual int GetConnectorProperty(uint32_t conn_id, const std::string &property_name, uint64_t *values) = 0;
 };
 
 }  // namespace sde_drm

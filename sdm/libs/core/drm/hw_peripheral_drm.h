@@ -76,6 +76,9 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path);
 
+  virtual DisplayError GetHbm(bool *enable);
+  virtual DisplayError SetHbm(bool enable);
+
  private:
   void InitDestScaler();
   void SetDestScalarData(const HWLayersInfo &hw_layer_info);
