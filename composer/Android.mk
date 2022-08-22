@@ -23,6 +23,7 @@ LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils lib
                                  libsdmcore libqservice libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libgrallocutils libui \
                                  libgpu_tonemapper libEGL libGLESv2 libGLESv3 \
+                                 vendor.lineage.livedisplay@2.0 \
                                  vendor.qti.hardware.display.composer@3.0 \
                                  android.hardware.graphics.composer@2.1 \
                                  android.hardware.graphics.composer@2.2 \
@@ -39,6 +40,11 @@ LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils lib
 ifeq ($(TARGET_USES_FOD_ZPOS), true)
 LOCAL_CFLAGS                  += -DFOD_ZPOS
 endif
+
+LIVEDISPLAY_SRC := \
+    livedisplay/SunlightEnhancement.cpp \
+    livedisplay/service.cpp
+
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \
@@ -67,7 +73,8 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  gl_color_convert.cpp \
                                  gl_color_convert_impl.cpp \
                                  gl_layer_stitch.cpp \
-                                 gl_layer_stitch_impl.cpp
+                                 gl_layer_stitch_impl.cpp \
+                                 $(LIVEDISPLAY_SRC)
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 ifneq ($(TARGET_HAS_LOW_RAM),true)

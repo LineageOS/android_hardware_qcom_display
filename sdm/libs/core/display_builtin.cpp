@@ -1376,4 +1376,28 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::SetHbm(bool enable) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  DisplayError err = hw_intf_->SetHbm(enable);
+  if (err) {
+    DLOGE("Failed to set hbm state to %d", enable);
+  } else {
+    DLOGI_IF(kTagDisplay, "Setting hbm state to %d", enable);
+  }
+  return err;
+}
+
+DisplayError DisplayBuiltIn::GetHbm(bool *enable) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  DisplayError err = hw_intf_->GetHbm(enable);
+  if (err) {
+    DLOGE("Failed to get hbm state");
+  } else {
+    DLOGI_IF(kTagDisplay, "Getting hbm state %d", *enable);
+  }
+  return err;
+}
+
 }  // namespace sdm

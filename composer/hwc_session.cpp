@@ -3685,4 +3685,12 @@ void HWCSession::SetCpuPerfHintLargeCompCycle() {
   }
 }
 
+int32_t HWCSession::GetHbmState(bool *state) {
+  return CallDisplayFunction(HWC_DISPLAY_PRIMARY, &HWCDisplay::GetHbm, state);
+}
+
+int32_t HWCSession::SetHbmState(bool state) {
+  return CallDisplayFunction(HWC_DISPLAY_PRIMARY, &HWCDisplay::SetHbm, state);
+}
+
 }  // namespace sdm

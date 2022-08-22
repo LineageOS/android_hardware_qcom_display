@@ -169,6 +169,9 @@ class DisplayBase : public DisplayInterface {
   }
   QSyncMode active_qsync_mode_ = kQSyncModeNone;
 
+  virtual DisplayError GetHbm(bool *enable) { return kErrorNotSupported; }
+  virtual DisplayError SetHbm(bool enable) { return kErrorNotSupported; }
+
  protected:
   const char *kBt2020Pq = "bt2020_pq";
   const char *kBt2020Hlg = "bt2020_hlg";

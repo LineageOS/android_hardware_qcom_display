@@ -360,6 +360,17 @@ void DRMConnectorManager::GetConnectorList(std::vector<uint32_t> *conn_ids) {
   }
 }
 
+int DRMConnectorManager::GetProperty(uint32_t conn_id, const std::string &property_name, uint64_t *values) {
+  lock_guard<mutex> lock(lock_);
+  auto it = connector_pool_.find(conn_id);
+  if (it == connector_pool_.end()) {
+    DRM_LOGE("Invalid connector id %d", conn_id);
+    return -ENODEV;
+  }
+
+  return it->second->GetProperty(property_name, values);
+}
+
 static bool IsTVConnector(uint32_t type) {
   return (type == DRM_MODE_CONNECTOR_TV || type == DRM_MODE_CONNECTOR_HDMIA ||
           type == DRM_MODE_CONNECTOR_HDMIB || type == DRM_MODE_CONNECTOR_DisplayPort ||
@@ -968,6 +979,22 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       }
     } break;
 
+    case DRMOps::CONNECTOR_SET_HBM: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::HBM)) {
+        return;
+      }
+      int drm_hbm_status = va_arg(args, int);
+      uint32_t hbm_status = static_cast<uint32_t>(drm_hbm_status);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::HBM);
+      int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, hbm_status);
+      if (ret < 0) {
+        DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d hbm status %d ret %d",
+                 obj_id, prop_id, hbm_status, ret);
+      } else {
+        DRM_LOGD("Connector %d: Setting HBM status %d", obj_id, hbm_status);
+      }
+    } break;
+
     default:
       DRM_LOGE("Invalid opcode %d to set on connector %d", code, obj_id);
       break;
@@ -1036,6 +1063,21 @@ void DRMConnector::Dump() {
         drm_connector_->modes[i].vdisplay, drm_connector_->modes[i].vsync_start,
         drm_connector_->modes[i].vsync_end, drm_connector_->modes[i].vtotal);
   }
+}
+
+int DRMConnector::GetProperty(const std::string &property_name, uint64_t *values) {
+  DRMProperty prop_enum = prop_mgr_.GetPropertyEnum(property_name);
+  uint32_t prop_id = prop_mgr_.GetPropertyId(prop_enum);
+  drmModePropertyRes *info = drmModeGetProperty(fd_, prop_id);
+  if (!info) {
+    return -EINVAL;
+  }
+
+  // TODO: provide custom parser
+  *values = info->values[0];
+
+  drmModeFreeProperty(info);
+  return 0;
 }
 
 }  // namespace sde_drm

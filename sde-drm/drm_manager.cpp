@@ -405,4 +405,8 @@ void DRMManager::SetPanelFeature(const DRMPanelFeatureInfo &info) {
   }
 }
 
+int DRMManager::GetConnectorProperty(uint32_t conn_id, const std::string &property_name, uint64_t *values) {
+  return conn_mgr_->GetProperty(conn_id, property_name, values);
+}
+
 }  // namespace sde_drm

@@ -888,4 +888,25 @@ int HWPeripheralDRM::SetPanelFeature(const PanelFeaturePropertyInfo &feature_inf
 
   return ret;
 }
+
+DisplayError HWPeripheralDRM::GetHbm(bool *enable) {
+  uint64_t status;
+  int ret = drm_mgr_intf_->GetConnectorProperty(token_.conn_id, "HBM", &status);
+  if (ret < 0) {
+    DLOGE("Failed to get hbm status, ret %d", ret);
+    return kErrorParameters;
+  }
+  *enable = static_cast<bool>(status);
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::SetHbm(bool enable) {
+  int ret = drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HBM, token_.conn_id, enable);
+  if (ret) {
+    DLOGE("Failed to set hbm status %d, ret %d", enable, ret);
+    return kErrorUndefined;
+  }
+  return kErrorNone;
+}
+
 }  // namespace sdm

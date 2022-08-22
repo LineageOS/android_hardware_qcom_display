@@ -134,6 +134,9 @@ class HWDeviceDRM : public HWInterface {
   }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
 
+  virtual DisplayError SetHbm(bool enable) { return kErrorNotSupported; }
+  virtual DisplayError GetHbm(bool *enable) { return kErrorNotSupported; }
+
   enum {
     kHWEventVSync,
     kHWEventBlank,

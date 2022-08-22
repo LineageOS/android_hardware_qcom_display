@@ -150,6 +150,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual bool HasReadBackBufferSupport();
   virtual bool IsDisplayIdle();
 
+  virtual HWC2::Error SetHbm(bool state) override;
+  virtual HWC2::Error GetHbm(bool *state) override;
+
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
@@ -235,6 +238,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool disable_dyn_fps_ = false;
   bool enhance_idle_time_ = false;
   bool force_reset_validate_ = false;
+
+  std::mutex hbm_mutex_;
 
   // NULL display
   DisplayNull display_null_;

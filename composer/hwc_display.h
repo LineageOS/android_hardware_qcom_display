@@ -436,6 +436,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual bool IsDisplayIdle() { return false; };
   virtual HWC2::Error GetClientTargetProperty(ClientTargetProperty *out_client_target_property);
 
+  virtual HWC2::Error SetHbm(bool enable) { return HWC2::Error::None; }
+  virtual HWC2::Error GetHbm(bool *enable) { return HWC2::Error::None; }
+
  protected:
   static uint32_t throttling_refresh_rate_;
   // Maximum number of layers supported by display manager.

@@ -951,6 +951,9 @@ class DisplayInterface {
   */
   virtual DisplayError ClearLUTs() = 0;
 
+  virtual DisplayError SetHbm(bool enable) = 0;
+  virtual DisplayError GetHbm(bool *enable) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

@@ -133,6 +133,9 @@ class HWInterface {
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
 
+  virtual DisplayError GetHbm(bool *enable) = 0;
+  virtual DisplayError SetHbm(bool enable) = 0;
+
  protected:
   virtual ~HWInterface() { }
 };

@@ -62,6 +62,8 @@ class DRMConnector {
   void SetSkipConnectorReload(bool skip_reload) { skip_connector_reload_ = skip_reload; };
   void Dump();
 
+  int GetProperty(const std::string &property_name, uint64_t *values);
+
  private:
   void ParseProperties();
   void ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info);
@@ -96,6 +98,8 @@ class DRMConnectorManager {
   void GetConnectorList(std::vector<uint32_t> *conn_ids);
   int GetPossibleEncoders(uint32_t connector_id, std::set<uint32_t> *possible_encoders);
   ~DRMConnectorManager() {}
+
+  int GetProperty(uint32_t conn_id, const std::string &property_name, uint64_t *values);
 
  private:
   int fd_ = -1;

@@ -67,6 +67,8 @@ class DRMManager : public DRMManagerInterface {
   virtual void GetPanelFeature(DRMPanelFeatureInfo *info);
   virtual void SetPanelFeature(const DRMPanelFeatureInfo &info);
 
+  virtual int GetConnectorProperty(uint32_t conn_id, const std::string &property_name, uint64_t *values);
+
   DRMPlaneManager *GetPlaneMgr();
   DRMConnectorManager *GetConnectorMgr();
   DRMEncoderManager *GetEncoderMgr();

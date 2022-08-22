@@ -300,6 +300,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
       const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
       VsyncPeriodChangeTimeline *out_timeline);
 
+  int32_t SetHbmState(bool state);
+  int32_t GetHbmState(bool *state);
+
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];

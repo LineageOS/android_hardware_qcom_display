@@ -1677,4 +1677,22 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   }
 }
 
+HWC2::Error HWCDisplayBuiltIn::GetHbm(bool *state) {
+  std::unique_lock<decltype(hbm_mutex_)> lk(hbm_mutex_);
+  DisplayError ret = display_intf_->GetHbm(state);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetHbm(bool state) {
+  std::unique_lock<decltype(hbm_mutex_)> lk(hbm_mutex_);
+  DisplayError ret = display_intf_->SetHbm(state);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

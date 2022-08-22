@@ -42,12 +42,20 @@
 
 namespace sdm {
 
+android::status_t DisplayInit(HWCSession *hwc_session);
+
 void HWCSession::StartServices() {
   int error = DisplayConfig::DeviceInterface::RegisterDevice(this);
   if (error) {
     DLOGW("Could not register IDisplayConfig as service (%d).", error);
   } else {
     DLOGI("IDisplayConfig service registration completed.");
+  }
+
+  if (DisplayInit(this) != android::OK) {
+    DLOGW("Could not register livedisplay service.");
+  } else {
+    DLOGI("livedisplay service registration completed.");
   }
 }
 

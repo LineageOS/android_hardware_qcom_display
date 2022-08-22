@@ -123,6 +123,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetDisplayElapseTime(uint64_t))
   MAKE_NO_OP(ClearLUTs())
 
+  MAKE_NO_OP(SetHbm(bool))
+  MAKE_NO_OP(GetHbm(bool *))
+
   void SetActive(bool active) { active_ = active; }
   bool IsActive() { return active_; }
 
