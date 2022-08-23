@@ -644,6 +644,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
   int WaitForCommitDone(hwc2_display_t display, int client_id);
+  int WaitForCommitDoneAsync(hwc2_display_t display, int client_id);
   void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
   int WaitForVmRelease(hwc2_display_t display, int timeout_ms);
   void GetVirtualDisplayList();
@@ -716,6 +717,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   Locker primary_display_lock_;
   std::map <hwc2_display_t, sdm::DisplayType> map_active_displays_;
   vector<HWDisplayInfo> virtual_display_list_ = {};
+  bool tui_start_success_ = false;
+  std::future<int> commit_done_future_;
 };
 }  // namespace sdm
 
