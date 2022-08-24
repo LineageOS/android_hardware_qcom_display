@@ -60,9 +60,8 @@
 #define NON_GPU_USAGE_MASK                                                                        \
     (BufferUsage::COMPOSER_CLIENT_TARGET | BufferUsage::COMPOSER_OVERLAY |                        \
      BufferUsage::COMPOSER_CURSOR | BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT |     \
-     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | BufferUsage::CPU_READ_MASK |        \
-     BufferUsage::CPU_WRITE_MASK | GRALLOC_USAGE_PRIVATE_CDSP |                                   \
-     GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
+     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | GRALLOC_USAGE_PRIVATE_CDSP |        \
+     GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY | GRALLOC_USAGE_PRIVATE_VIDEO_HW)
 
 #define DEBUG 0
 
@@ -1409,9 +1408,9 @@ int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                                     info.height, info.layer_count, /* depth */
                                                     info.format, 1, tile_mode, adreno_usage, 1);
   if (ret != 0) {
-    ALOGE("%s Graphics metadata init failed", __FUNCTION__);
+    ALOGW("%s Graphics metadata init failed", __FUNCTION__);
     *size = 0;
-    return -EINVAL;
+    return -ENOTSUP;
   }
   // Call adreno api with the metadata blob to get buffer size
   *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
