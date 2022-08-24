@@ -875,7 +875,6 @@ void HWCSession::NotifyConcurrencyFps(const float fps, DisplayConcurrencyType ty
 
   if(concurrency_begin) {
     NotifyFpsMitigation(target_display, attributes, concurrency);
-    callbacks_.Refresh(target_display);
     int ret = WaitForCommitDone(target_display, kClientConcurrency);
     if (ret != 0) {
       DLOGE("WaitForCommitDone failed with error %d for %d", ret, kClientConcurrency);
@@ -1081,6 +1080,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
     DLOGI("disable idle time");
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
     is_client_up_ = false;
+    hwc_display_[HWC_DISPLAY_PRIMARY]->MarkClientActive(false);
     async_vds_creation_requested_ = false;
   }
 }
@@ -1290,7 +1290,7 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   int support = 0;
   auto status = GetDozeSupport(display, &support);
   if (status != HWC2_ERROR_NONE) {
-    DLOGE("Failed to get doze support Error = %d", status);
+    DLOGW("Failed to get doze support Error = %d", status);
     return INT32(status);
   }
 
@@ -1387,7 +1387,7 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
 
   if (display >= HWCCallbacks::kNumDisplays || (hwc_display_[display] == nullptr)) {
     // display may come as -1  from VTS test case
-    DLOGE("Invalid Display %d ", UINT32(display));
+    DLOGW("Invalid Display %d ", UINT32(display));
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -4025,6 +4025,7 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   int timeout_ms = -1;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    callbacks_.Refresh(display);
     clients_waiting_for_commit_[display].set(client_id);
     locker_[display].Wait();
     if (commit_error_[display] != 0) {
@@ -4150,7 +4151,6 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     hwc_display_[target_display]->SetQSyncMode(kQSyncModeNone);
   }
 
-  callbacks_.Refresh(target_display);
   int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
   if (ret != 0) {
     DLOGE("WaitForCommitDone failed with error = %d", ret);
@@ -4238,8 +4238,6 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   }
 
   if (needs_refresh) {
-    callbacks_.Refresh(target_display);
-
     DLOGI("Waiting for device unassign");
     int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
     if (ret != 0) {
@@ -4302,7 +4300,6 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   }
   if (trigger_refresh) {
     for (int i = 0; i < 2; i++) {
-      callbacks_.Refresh(target_display);
       int ret = WaitForCommitDone(target_display, kClientTrustedUI);
       if (ret != 0) {
         DLOGE("WaitForCommitDone failed with error %d", ret);
@@ -4389,7 +4386,7 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
   if (!needs_refresh) {
     return HWC2::Error::None;
   }
-  callbacks_.Refresh(display);
+
   // Wait until concurrent WB teardown is complete
   int error = WaitForCommitDone(display, kClientTeardownCWB);
   if (error != 0) {

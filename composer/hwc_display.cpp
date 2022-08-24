@@ -2896,7 +2896,7 @@ HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
                                 vsync_period_change_constraints->desiredTimeNanos);
 
   out_timeline->refreshRequired = true;
-  if (info.x_pixels != fb_width_ || info.y_pixels != fb_height_) {
+  if (is_client_up_ && (info.x_pixels != fb_width_ || info.y_pixels != fb_height_)) {
     out_timeline->refreshRequired = false;
     fb_width_ = info.x_pixels;
     fb_height_ = info.y_pixels;
@@ -3570,6 +3570,10 @@ DisplayError HWCDisplay::NotifyFpsMitigation(const float fps,
                                              bool concurrency_begin) {
   event_handler_->NotifyConcurrencyFps(fps, concurrency, concurrency_begin);
   return kErrorNone;
+}
+
+void HWCDisplay::MarkClientActive(bool is_client_up) {
+  is_client_up_ = is_client_up;
 }
 
 }  // namespace sdm

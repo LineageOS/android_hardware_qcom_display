@@ -442,8 +442,6 @@ int HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
-
   // Wait until partial update control is complete
   int error = WaitForCommitDone(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
   if (error != 0) {
@@ -634,7 +632,6 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     }
   }
   if (needs_refresh) {
-    callbacks_.Refresh(active_builtin_disp_id);
     int ret = WaitForCommitDone(active_builtin_disp_id, kClientIdlepowerCollapse);
     if (ret != 0) {
       DLOGW("%s Idle PC failed with error %d", enable ? "Enable" : "Disable", ret);
@@ -1599,6 +1596,7 @@ int HWCSession::DisplayConfigImpl::AllowIdleFallback() {
     DLOGI("enable idle time active_ms:%d inactive_ms:%d",active_ms,inactive_ms);
     hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(active_ms, inactive_ms);
     hwc_session_->is_client_up_ = true;
+    hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->MarkClientActive(true);
     hwc_session_->idle_time_inactive_ms_ = inactive_ms;
     hwc_session_->idle_time_active_ms_ = active_ms;
     return 0;
