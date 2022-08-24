@@ -100,10 +100,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.high_fps_early_gl_phase_offset_ns=-2000000 \
     debug.sf.disable_client_composition_cache=1 \
     debug.sf.enable_gl_backpressure=1 \
-    debug.sf.enable_hwc_vds=1 \
     debug.sf.enable_advanced_sf_phase_offset=1 \
     debug.sf.predict_hwc_composition_strategy=0 \
-    vendor.display.vds_allow_hwc=0 \
     vendor.display.enable_async_vds_creation=1 \
     vendor.display.enable_rounded_corner=1 \
     vendor.display.disable_3d_adaptive_tm=1 \
@@ -133,6 +131,16 @@ endif
 
 ifneq ($(PLATFORM_VERSION), 10)
     PRODUCT_PROPERTY_OVERRIDES +=  vendor.display.enable_async_powermode=0
+endif
+
+ifeq ($(TARGET_BOARD_PLATFORM),parrot)
+PRODUCT_PROPERTY_OVERRIDES += \
+    debug.sf.enable_hwc_vds=false \
+    vendor.display.vds_allow_hwc=true
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    debug.sf.enable_hwc_vds=1 \
+    vendor.display.vds_allow_hwc=0
 endif
 
 #Set WCG properties
