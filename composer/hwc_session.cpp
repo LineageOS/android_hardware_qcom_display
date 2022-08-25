@@ -884,7 +884,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
     SEQUENCE_CANCEL_SCOPE_LOCK(locker_[target_display]);
   }
 
-  PostCommitUnlocked(target_display, *out_retire_fence, status);
+  PostCommitUnlocked(target_display, *out_retire_fence);
 
   return INT32(status);
 }
@@ -904,14 +904,11 @@ void HWCSession::PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &ret
   }
 }
 
-void HWCSession::PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
-                                    HWC2::Error status) {
+void HWCSession::PostCommitUnlocked(hwc2_display_t display,
+                                    const shared_ptr<Fence> &retire_fence) {
   HandlePendingPowerMode(display, retire_fence);
   HandlePendingHotplug(display, retire_fence);
   HandlePendingRefresh();
-  if (status != HWC2::Error::NotValidated) {
-    cwb_.PresentDisplayDone(display);
-  }
   display_ready_.set(UINT32(display));
   std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
   if (!resource_ready_) {
@@ -1271,8 +1268,6 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
       return INT32(error);
-    } else if (mode == HWC2::PowerMode::Off && cwb_.IsCwbActiveOnDisplay(display)) {
-      cwb_.PresentDisplayDone(display);
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
@@ -3409,8 +3404,6 @@ void HWCSession::PerformDisplayPowerReset() {
                                                    true /* teardown */);
       if (status != HWC2::Error::None) {
         DLOGE("Power off for display = %d failed with error = %d", INT32(display), status);
-      } else if (cwb_.IsCwbActiveOnDisplay(display)) {
-        cwb_.PresentDisplayDone(display);
       }
     }
   }
@@ -4488,7 +4481,7 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
       SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
       PostCommitLocked(display, *out_retire_fence);
     }
-    PostCommitUnlocked(display, *out_retire_fence, status);
+    PostCommitUnlocked(display, *out_retire_fence);
   }
 
   return status;
