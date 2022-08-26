@@ -998,7 +998,7 @@ void HWCDisplay::PostPowerMode() {
 }
 
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
-  DLOGV("display = %" PRId64 ", mode = %s", id_, to_string(mode).c_str());
+  DLOGI("display = %" PRId64 ", mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
   bool flush_on_error = flush_on_error_;
 
