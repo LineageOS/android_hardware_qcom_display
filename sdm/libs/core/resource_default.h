@@ -131,6 +131,9 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
     return kErrorNotSupported;
   }
+  virtual bool ToneMapQueryRequested(Handle display_ctx) {
+    return false;
+  }
   virtual DisplayError PreCommit(Handle display_ctx);
   virtual bool HandleCwbTeardown(Handle display_ctx) {
     return false;
