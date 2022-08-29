@@ -2238,6 +2238,10 @@ DisplayError HWCDisplay::GetMixerResolution(uint32_t *x_pixels, uint32_t *y_pixe
   return display_intf_->GetMixerResolution(x_pixels, y_pixels);
 }
 
+uint32_t HWCDisplay::GetAvailableMixerCount() {
+  return display_intf_->GetAvailableMixerCount();
+}
+
 void HWCDisplay::GetPanelResolution(uint32_t *x_pixels, uint32_t *y_pixels) {
   DisplayConfigVariableInfo display_config;
   uint32_t active_index = 0;

@@ -499,4 +499,9 @@ void DRMManager::GetInitialDemuraInfo(std::vector<uint32_t> *initial_demura_plan
     plane_mgr_->GetPlaneIdsFromDescriptions(frl, initial_demura_planes);
   }
 }
+
+uint32_t DRMManager::GetCrtcCount() {
+  return crtc_mgr_->GetCrtcCount();
+}
+
 }  // namespace sde_drm

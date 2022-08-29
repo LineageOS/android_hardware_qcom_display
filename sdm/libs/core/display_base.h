@@ -245,6 +245,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer);
   virtual void Refresh();
   virtual bool HandleCwbTeardown();
+  virtual uint32_t GetAvailableMixerCount();
 
  protected:
   struct DisplayMutex {

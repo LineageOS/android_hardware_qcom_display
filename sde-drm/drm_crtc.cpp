@@ -1019,4 +1019,8 @@ void DRMCrtc::ClearVotesCache() {
   tmp_prop_val_map_.erase(prop_mgr_.GetPropertyId(DRMProperty::DRAM_IB));
 }
 
+uint32_t DRMCrtcManager::GetCrtcCount() {
+  return crtc_pool_.size();
+}
+
 }  // namespace sde_drm

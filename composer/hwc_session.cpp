@@ -3074,14 +3074,16 @@ int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
     DLOGW("Skipped pluggable display handling in null-display mode");
     return 0;
   }
-  hwc2_display_t virtual_display_index =
-      (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+
+  hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
   std::bitset<kSecureMax> secure_sessions = 0;
+
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
     Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
     hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
   }
+
   if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
     // Defer hotplug handling.
     DLOGI("Marking hotplug pending...");
@@ -3132,6 +3134,19 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   int status = 0;
   std::vector<hwc2_display_t> pending_hotplugs = {};
   hwc2_display_t client_id = 0;
+
+  static constexpr uint32_t min_mixer_count = 2;
+  uint32_t available_mixer_count = 0;
+  hwc2_display_t active_builtin = GetActiveBuiltinDisplay();
+
+  if (active_builtin < HWCCallbacks::kNumDisplays) {
+    Locker::ScopeLock lock_a(locker_[active_builtin]);
+    available_mixer_count = hwc_display_[active_builtin]->GetAvailableMixerCount();
+  }
+
+  if (available_mixer_count < min_mixer_count) {
+    return -EAGAIN;
+  }
 
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;

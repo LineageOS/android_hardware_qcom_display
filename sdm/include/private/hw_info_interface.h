@@ -50,6 +50,8 @@ class HWInfoInterface {
                        std::map<uint32_t, uint8_t> *required_demura_fetch_cnt) = 0;
   virtual DisplayError GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) = 0;
   virtual DisplayError GetPanelBootParamString(std::string *panel_boot_param_string) = 0;
+  virtual uint32_t GetMaxMixerCount() = 0;
+
  protected:
   static int32_t ref_count_;
   static HWInfoInterface *intf_;

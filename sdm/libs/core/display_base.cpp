@@ -4295,4 +4295,17 @@ bool DisplayBase::HandleCwbTeardown() {
   return comp_manager_->HandleCwbTeardown(display_comp_ctx_);
 }
 
+uint32_t DisplayBase::GetAvailableMixerCount() {
+  uint32_t max_count = hw_info_intf_->GetMaxMixerCount();
+  uint32_t cur_count = comp_manager_->GetMixerCount();
+
+  DLOGV("max mixer count: %d, currently used: %d", max_count, cur_count);
+  if (!max_count || max_count < cur_count) {
+    DLOGW("invalid mixer count, returing max");
+    return 0xff;
+  }
+
+  return max_count - cur_count;
+}
+
 }  // namespace sdm

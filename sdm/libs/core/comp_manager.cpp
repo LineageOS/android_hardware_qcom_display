@@ -1004,4 +1004,10 @@ bool CompManager::HandleCwbTeardown(Handle display_ctx) {
   return resource_intf_->HandleCwbTeardown(display_comp_ctx->display_resource_ctx);
 }
 
+uint32_t CompManager::GetMixerCount() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+
+  return resource_intf_->GetMixerCount();
+}
+
 }  // namespace sdm

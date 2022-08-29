@@ -1124,4 +1124,8 @@ DisplayError HWInfoDRM::GetPanelBootParamString(std::string *panel_boot_param_st
   return kErrorNone;
 }
 
+uint32_t HWInfoDRM::GetMaxMixerCount() {
+  return drm_mgr_intf_->GetCrtcCount();
+}
+
 }  // namespace sdm
