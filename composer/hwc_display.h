@@ -683,6 +683,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::mutex cwb_mutex_;
   std::condition_variable cwb_cv_;
   std::map<CWBClient, CWBCaptureResponse> cwb_capture_status_map_;
+  static constexpr unsigned int kCwbWaitMs = 100;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
@@ -702,7 +703,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool draw_method_set_ = false;
   bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
-  static constexpr unsigned int cwb_wait_ms = 100;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
