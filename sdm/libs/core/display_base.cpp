@@ -3961,6 +3961,16 @@ void DisplayBase::ProcessPowerEvent() {
   cv_.notify_one();
 }
 
+void DisplayBase::Abort() {
+  std::unique_lock<std::mutex> lck(power_mutex_);
+
+  if (display_type_ == kHDMI && first_cycle_) {
+    DLOGI("Abort!");
+    transition_done_ = true;
+    cv_.notify_one();
+  }
+}
+
 void DisplayBase::CacheRetireFence() {
   if (draw_method_ == kDrawDefault) {
     retire_fence_ = disp_layer_stack_.info.retire_fence;

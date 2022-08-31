@@ -515,6 +515,7 @@ class HWCDisplay : public DisplayEventHandler {
                              int *active_config_index, uint32_t *num_configs);
   virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
                              int active_config_index, uint32_t num_configs) {};
+  virtual void Abort();
 
  protected:
   static uint32_t throttling_refresh_rate_;
