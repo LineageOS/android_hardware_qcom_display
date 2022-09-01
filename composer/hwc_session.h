@@ -77,6 +77,7 @@
 #include <unordered_map>
 #include <string>
 #include <memory>
+#include <atomic>
 #include <core/display_interface.h>
 
 #include "hwc_callbacks.h"
@@ -130,19 +131,29 @@ typedef DisplayConfig::DisplayType DispType;
 class HWCUEventListener {
  public:
   virtual ~HWCUEventListener() {}
-  virtual void UEventHandler(const char *uevent_data, int length) = 0;
+  virtual void UEventHandler(int connected) = 0;
+
+  int connected = -1;
+  int hpd_bpp_ = 0;
+  int hpd_pattern_ = 0;
+  std::atomic<int> uevent_counter_ = 0;
 };
 
 class HWCUEvent {
  public:
   HWCUEvent();
-  static void UEventThread(HWCUEvent *hwc_event);
+  static void UEventThreadTop(HWCUEvent *hwc_event);
+  static void UEventThreadBottom(HWCUEvent *hwc_event);
   void Register(HWCUEventListener *uevent_listener);
   inline bool InitDone() { return init_done_; }
 
  private:
   std::mutex mutex_;
   std::condition_variable caller_cv_;
+
+  std::mutex evt_mutex_;
+  std::condition_variable evt_cv_;
+
   HWCUEventListener *uevent_listener_ = nullptr;
   bool init_done_ = false;
 };
@@ -578,7 +589,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 #endif
 
   // Uevent handler
-  virtual void UEventHandler(const char *uevent_data, int length);
+  virtual void UEventHandler(int connected);
 
   // service methods
   void StartServices();
@@ -676,8 +687,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool hdmi_is_primary_ = false;
   bool is_composer_up_ = false;
   std::mutex mutex_lum_;
-  int hpd_bpp_ = 0;
-  int hpd_pattern_ = 0;
   static bool pending_power_mode_[HWCCallbacks::kNumDisplays];
   static int null_display_mode_;
   HotPlugEvent pending_hotplug_event_ = kHotPlugNone;
