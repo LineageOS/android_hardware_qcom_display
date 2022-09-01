@@ -382,6 +382,7 @@ static bool GetDRMonemapLutTypeFromPPFeatureID(DRMPPFeatureID id, DRMTonemapLutT
 DRMPlaneManager::DRMPlaneManager(int fd) : fd_(fd) {}
 
 void DRMPlaneManager::Init() {
+  lock_guard<mutex> lock(lock_);
   drmModePlaneRes *resource = drmModeGetPlaneResources(fd_);
   if (!resource) {
     return;
@@ -408,10 +409,12 @@ void DRMPlaneManager::Init() {
 }
 
 void DRMPlaneManager::DumpByID(uint32_t id) {
+  lock_guard<mutex> lock(lock_);
   plane_pool_.at(id)->Dump();
 }
 
 void DRMPlaneManager::Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req, va_list args) {
+  lock_guard<mutex> lock(lock_);
   auto it = plane_pool_.find(obj_id);
   if (it == plane_pool_.end()) {
     DRM_LOGE("Invalid plane id %d", obj_id);
@@ -437,12 +440,14 @@ void DRMPlaneManager::Perform(DRMOps code, drmModeAtomicReq *req, uint32_t obj_i
 }
 
 void DRMPlaneManager::DumpAll() {
+  lock_guard<mutex> lock(lock_);
   for (uint32_t i = 0; i < plane_pool_.size(); i++) {
     plane_pool_[i]->Dump();
   }
 }
 
 void DRMPlaneManager::GetPlanesInfo(DRMPlanesInfo *info) {
+  lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     info->push_back(std::make_pair(plane.first, plane.second->GetPlaneTypeInfo()));
   }
@@ -467,6 +472,7 @@ void DRMPlaneManager::UnsetUnusedResources(uint32_t crtc_id, bool is_commit, drm
 }
 
 void DRMPlaneManager::RetainPlanes(uint32_t crtc_id) {
+  lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     uint32_t assigned_crtc = 0;
     plane.second->GetAssignedCrtc(&assigned_crtc);
@@ -495,6 +501,7 @@ void DRMPlaneManager::PostCommit(uint32_t crtc_id, bool success) {
 }
 
 void DRMPlaneManager::SetScalerLUT(const DRMScalerLUTInfo &lut_info) {
+  lock_guard<mutex> lock(lock_);
   if (lut_info.dir_lut_size) {
     drmModeCreatePropertyBlob(fd_, reinterpret_cast<void *>(lut_info.dir_lut),
                               lut_info.dir_lut_size, &dir_lut_blob_id_);
@@ -510,6 +517,7 @@ void DRMPlaneManager::SetScalerLUT(const DRMScalerLUTInfo &lut_info) {
 }
 
 void DRMPlaneManager::UnsetScalerLUT() {
+  lock_guard<mutex> lock(lock_);
   if (dir_lut_blob_id_) {
     drmModeDestroyPropertyBlob(fd_, dir_lut_blob_id_);
     dir_lut_blob_id_ = 0;
