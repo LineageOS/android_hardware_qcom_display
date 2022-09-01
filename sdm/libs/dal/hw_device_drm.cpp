@@ -636,7 +636,6 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(&token_);
   hw_dest_scaler_blocks_used_ -= dest_scaler_blocks_used_;
-  reset_planes_luts_ = true;
   return err;
 }
 
