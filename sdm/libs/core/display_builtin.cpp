@@ -809,6 +809,24 @@ DisplayError DisplayBuiltIn::EnableDemuraTn(bool enable) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::RetrieveDemuraTnFiles() {
+  int ret = 0;
+  GenericPayload payload;
+
+  if (!demuratn_ || !demuratn_enabled_) {
+    DLOGE("demuratn_ %pK demuratn_enabled_ %d", demuratn_.get(), demuratn_enabled_);
+    return kErrorUndefined;
+  }
+
+  ret = demuratn_->SetParameter(kDemuraTnCoreUvmParamRetrieveFiles, payload);
+  if (ret) {
+    DLOGE("SetParameter for RetrieveFiles failed ret %d", ret);
+    return kErrorUndefined;
+  }
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;

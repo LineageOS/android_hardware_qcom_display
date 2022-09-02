@@ -634,6 +634,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t HandleTUITransition(int disp_id, int event);
   android::status_t GetDisplayPortId(uint32_t display, int *port_id);
   android::status_t UpdateTransferTime(const android::Parcel *input_parcel);
+  android::status_t RetrieveDemuraTnFiles(const android::Parcel *input_parcel);
 
   // Internal methods
   void HandleSecureSession();

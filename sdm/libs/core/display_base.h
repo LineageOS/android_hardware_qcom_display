@@ -200,6 +200,9 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   DisplayError SetPPConfig(void *payload, size_t size);
   DisplayError SetDimmingEnable(int int_enabled);
   DisplayError SetDimmingMinBl(int min_bl);
+  DisplayError RetrieveDemuraTnFiles() {
+    return kErrorNotSupported;
+  }
   void ScreenRefresh();
   virtual bool CheckResourceState(bool *res_exhausted);
   virtual bool GameEnhanceSupported();

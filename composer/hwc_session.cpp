@@ -2084,6 +2084,17 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = UpdateTransferTime(input_parcel);
     } break;
 
+    case qService::IQService::RETRIEVE_DEMURATN_FILES : {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      status = RetrieveDemuraTnFiles(input_parcel);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -2103,6 +2114,23 @@ android::status_t HWCSession::UpdateTransferTime(const android::Parcel *input_pa
   uint32_t transfer_time = UINT32(input_parcel->readInt32());
   return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::UPDATE_TRANSFER_TIME,
                                                     transfer_time);
+}
+
+android::status_t HWCSession::RetrieveDemuraTnFiles(const android::Parcel *input_parcel) {
+  auto display_id = static_cast<int>(input_parcel->readInt32());
+
+  int disp_idx = GetDisplayIndex(display_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display_id);
+    return -EINVAL;
+  }
+
+  auto err = CallDisplayFunction(static_cast<hwc2_display_t>(disp_idx),
+                                 &HWCDisplay::RetrieveDemuraTnFiles);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  return 0;
 }
 
 android::status_t HWCSession::getComposerStatus() {

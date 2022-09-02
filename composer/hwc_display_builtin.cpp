@@ -1568,6 +1568,18 @@ HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::RetrieveDemuraTnFiles() {
+  DLOGV("Display ID: %" PRId64, id_);
+  DisplayError error = display_intf_->RetrieveDemuraTnFiles();
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. error = %d",error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  return HWC2::Error::None;
+}
+
 void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
   if (!cpu_hint_) {
     return;

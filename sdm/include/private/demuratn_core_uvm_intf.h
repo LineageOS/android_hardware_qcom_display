@@ -16,6 +16,8 @@ enum DemuraTnCoreUvmParams {
   kDemuraTnCoreUvmParamInitReady,
   /* Getter/Setter: bool */
   kDemuraTnCoreUvmParamEnable,
+  /* Setter: none */
+  kDemuraTnCoreUvmParamRetrieveFiles,
   kDemuraTnCoreUvmParamsMax = 2048,
   kDemuraTnCoreUvmPrivParamsStart = 2049,
   kDemuraTnCoreUvmPrivParamsEnd = 4096,
