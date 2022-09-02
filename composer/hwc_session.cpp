@@ -4015,9 +4015,11 @@ int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
   commit_done_future_ = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
                                       return session->WaitForCommitDone(display, client_id);
                                      }, this, display, client_id);
-  auto ret = (commit_done_future_.wait_for(span) == std::future_status::timeout) ?
-             -EINVAL : commit_done_future_.get();
-  return ret;
+  if (commit_done_future_.wait_for(span) == std::future_status::timeout) {
+    DLOGW("WaitForCommitDoneAsync timed out");
+    return -ETIMEDOUT;
+  }
+  return commit_done_future_.get();
 }
 
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
@@ -4153,7 +4155,9 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
 
   int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
   if (ret != 0) {
-    DLOGE("WaitForCommitDone failed with error = %d", ret);
+    if (ret != -ETIMEDOUT) {
+      DLOGE("WaitForCommitDone failed with error = %d", ret);
+    }
     return -EINVAL;
   }
 
@@ -4241,7 +4245,9 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
     DLOGI("Waiting for device unassign");
     int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
     if (ret != 0) {
-      DLOGE("Device unassign failed with error %d", ret);
+      if (ret != -ETIMEDOUT) {
+        DLOGE("Device unassign failed with error %d", ret);
+      }
       tui_start_success_ = false;
       return -EINVAL;
     }
@@ -4300,9 +4306,11 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   }
   if (trigger_refresh) {
     for (int i = 0; i < 2; i++) {
-      int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+      int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
       if (ret != 0) {
-        DLOGE("WaitForCommitDone failed with error %d", ret);
+        if (ret != -ETIMEDOUT) {
+          DLOGE("WaitForCommitDone failed with error %d", ret);
+        }
         return -EINVAL;
       }
     }
