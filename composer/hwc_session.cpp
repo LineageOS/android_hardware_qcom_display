@@ -3964,7 +3964,15 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
       {
         std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
         resource_ready_ = false;
-        hotplug_cv_.wait(caller_lock);
+        if (hotplug_cv_.wait_for(caller_lock, std::chrono::seconds(5))
+            == std::cv_status::timeout) {
+          if (!client_connected_) {
+            DLOGW("Client is not connected!");
+            break;
+          } else {
+            continue;
+          }
+        }
         if (active_display_id_ == active_builtin_id && needs_active_builtin_reconfig &&
             cached_retire_fence_) {
           Fence::Wait(cached_retire_fence_);
