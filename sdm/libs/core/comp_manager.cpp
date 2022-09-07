@@ -857,7 +857,10 @@ void CompManager::NeedsValidate(Handle display_ctx, bool *needs_validate) {
     return;
   }
 
-  resource_intf_->Perform(ResourceInterface::kCmdNeedsValidate, needs_validate);
+  DisplayCompositionContext *display_comp_ctx =
+        reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  resource_intf_->Perform(ResourceInterface::kCmdNeedsValidate,
+                          display_comp_ctx->display_resource_ctx, needs_validate);
 }
 
 DisplayError CompManager::SetBacklightLevel(Handle display_ctx,

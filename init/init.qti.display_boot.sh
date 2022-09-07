@@ -140,7 +140,7 @@ case "$target" in
         setprop vendor.display.disable_mitigated_fps 1
         setprop vendor.display.secure_preview_buffer_format 420_sp
         setprop vendor.gralloc.secure_preview_buffer_format 420_sp
-        setprop vendor.display.disable_vds_hwc 1
+        setprop vendor.display.disable_non_wfd_vds 1
         ;;
     esac
     ;;
