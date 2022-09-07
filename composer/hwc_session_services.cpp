@@ -446,6 +446,8 @@ int HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
+  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
+
   // Wait until partial update control is complete
   int error = WaitForCommitDone(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
   if (error != 0) {
@@ -636,6 +638,7 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     }
   }
   if (needs_refresh) {
+    callbacks_.Refresh(active_builtin_disp_id);
     int ret = WaitForCommitDone(active_builtin_disp_id, kClientIdlepowerCollapse);
     if (ret != 0) {
       DLOGW("%s Idle PC failed with error %d", enable ? "Enable" : "Disable", ret);
