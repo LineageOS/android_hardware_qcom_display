@@ -1405,6 +1405,13 @@ class DRMManagerInterface {
   * [output]: List of plane ids that were used for Demura
   */
   virtual void GetInitialDemuraInfo(std::vector<uint32_t> *initial_demura_planes) = 0;
+
+  /*
+  * Get the total number of crtc supported
+  * [return]: crtc count
+  */
+  virtual uint32_t GetCrtcCount() = 0;
+
 };
 
 }  // namespace sde_drm

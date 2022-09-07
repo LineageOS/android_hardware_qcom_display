@@ -245,6 +245,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   virtual void NotifyCwbDone(int32_t status, const LayerBuffer& buffer);
   virtual void Refresh();
   virtual bool HandleCwbTeardown();
+  virtual uint32_t GetAvailableMixerCount();
 
  protected:
   struct DisplayMutex {
@@ -335,6 +336,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   void PrepareForAsyncTransition();
   virtual void IdleTimeout() {}
   std::chrono::system_clock::time_point WaitUntil();
+  virtual void Abort();
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;

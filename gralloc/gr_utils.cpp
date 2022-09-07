@@ -60,9 +60,8 @@
 #define NON_GPU_USAGE_MASK                                                                        \
     (BufferUsage::COMPOSER_CLIENT_TARGET | BufferUsage::COMPOSER_OVERLAY |                        \
      BufferUsage::COMPOSER_CURSOR | BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT |     \
-     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | BufferUsage::CPU_READ_MASK |        \
-     BufferUsage::CPU_WRITE_MASK | GRALLOC_USAGE_PRIVATE_CDSP |                                   \
-     GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
+     BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | GRALLOC_USAGE_PRIVATE_CDSP |        \
+     GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY | GRALLOC_USAGE_PRIVATE_VIDEO_HW)
 
 #define DEBUG 0
 
@@ -1162,7 +1161,6 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   bool ubwc_enabled = IsUBwcEnabled(format, usage);
   int tile = ubwc_enabled;
   unsigned int mmm_color_format;
-
   // Use of aligned width and aligned height is to calculate the size of buffer,
   // but in case of camera custom format size is being calculated from given width
   // and given height.
@@ -1219,7 +1217,11 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       } else {
         *alignedw = ALIGN((width * bpp), alignment) / bpp;
       }
-      *alignedh = height;
+      if (ubwc_enabled) {
+        *alignedh = ALIGN(height, 16);
+      } else {
+        *alignedh = height;
+      }
     }
 
     if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER) ||
@@ -1409,9 +1411,9 @@ int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                                     info.height, info.layer_count, /* depth */
                                                     info.format, 1, tile_mode, adreno_usage, 1);
   if (ret != 0) {
-    ALOGE("%s Graphics metadata init failed", __FUNCTION__);
+    ALOGW("%s Graphics metadata init failed", __FUNCTION__);
     *size = 0;
-    return -EINVAL;
+    return -ENOTSUP;
   }
   // Call adreno api with the metadata blob to get buffer size
   *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);

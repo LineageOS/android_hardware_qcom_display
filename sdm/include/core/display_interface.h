@@ -1314,6 +1314,18 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelFeatureInfo(PanelFeatureInfo *info) = 0;
 
+  /*! @brief Method to Abort DP connection
+
+    @return \link void \endlink
+  */
+  virtual void Abort() = 0;
+
+  /*! @brief Method to Get the free mixer count
+
+    @return \link free mixer count \endlink
+  */
+  virtual uint32_t GetAvailableMixerCount() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

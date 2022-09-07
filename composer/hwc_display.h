@@ -252,6 +252,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) { return 0; };
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
+  virtual uint32_t GetAvailableMixerCount();
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual void GetRealPanelResolution(uint32_t *width, uint32_t *height);
   virtual void Dump(std::ostringstream *os);
@@ -515,6 +516,7 @@ class HWCDisplay : public DisplayEventHandler {
                              int *active_config_index, uint32_t *num_configs);
   virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
                              int active_config_index, uint32_t num_configs) {};
+  virtual void Abort();
 
  protected:
   static uint32_t throttling_refresh_rate_;

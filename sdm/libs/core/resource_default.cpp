@@ -388,6 +388,10 @@ std::string ResourceDefault::Dump() {
   return "";
 }
 
+uint32_t ResourceDefault::GetMixerCount() {
+  return 0;
+}
+
 DisplayError ResourceDefault::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);

@@ -1410,7 +1410,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   }
 
   if (needs_validate_) {
-    DLOGE("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
+    DLOGW("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
           display_type_);
     validated_ = false;
     return kErrorNotValidated;
@@ -3961,6 +3961,16 @@ void DisplayBase::ProcessPowerEvent() {
   cv_.notify_one();
 }
 
+void DisplayBase::Abort() {
+  std::unique_lock<std::mutex> lck(power_mutex_);
+
+  if (display_type_ == kHDMI && first_cycle_) {
+    DLOGI("Abort!");
+    transition_done_ = true;
+    cv_.notify_one();
+  }
+}
+
 void DisplayBase::CacheRetireFence() {
   if (draw_method_ == kDrawDefault) {
     retire_fence_ = disp_layer_stack_.info.retire_fence;
@@ -4283,6 +4293,19 @@ bool DisplayBase::HandleCwbTeardown() {
   }
 
   return comp_manager_->HandleCwbTeardown(display_comp_ctx_);
+}
+
+uint32_t DisplayBase::GetAvailableMixerCount() {
+  uint32_t max_count = hw_info_intf_->GetMaxMixerCount();
+  uint32_t cur_count = comp_manager_->GetMixerCount();
+
+  DLOGV("max mixer count: %d, currently used: %d", max_count, cur_count);
+  if (!max_count || max_count < cur_count) {
+    DLOGW("invalid mixer count, returing max");
+    return 0xff;
+  }
+
+  return max_count - cur_count;
 }
 
 }  // namespace sdm

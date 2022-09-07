@@ -137,6 +137,7 @@ class ResourceDefault : public ResourceInterface {
   }
   virtual void HandleSkipValidate(Handle display_ctx);
   virtual std::string Dump();
+  virtual uint32_t GetMixerCount();
 
  private:
   enum PipeOwner {

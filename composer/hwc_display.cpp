@@ -998,7 +998,7 @@ void HWCDisplay::PostPowerMode() {
 }
 
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
-  DLOGV("display = %" PRId64 ", mode = %s", id_, to_string(mode).c_str());
+  DLOGI("display = %" PRId64 ", mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
   bool flush_on_error = flush_on_error_;
 
@@ -2238,6 +2238,10 @@ DisplayError HWCDisplay::GetMixerResolution(uint32_t *x_pixels, uint32_t *y_pixe
   return display_intf_->GetMixerResolution(x_pixels, y_pixels);
 }
 
+uint32_t HWCDisplay::GetAvailableMixerCount() {
+  return display_intf_->GetAvailableMixerCount();
+}
+
 void HWCDisplay::GetPanelResolution(uint32_t *x_pixels, uint32_t *y_pixels) {
   DisplayConfigVariableInfo display_config;
   uint32_t active_index = 0;
@@ -3167,6 +3171,11 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     return kErrorNone;
   }
 
+  if (!cwb_buffer_map_.size()) {
+    *needs_refresh = false;
+    return kErrorNone;
+  }
+
   for (auto itr = cwb_buffer_map_.begin(); itr != cwb_buffer_map_.end(); itr++) {
     if (itr->second == kCWBClientFrameDump) {
       dump_frame_count_ = 0;
@@ -3184,8 +3193,8 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
       frame_capture_buffer_queued_ = false;
       frame_capture_status_ = 0;
     }
-    cwb_buffer_map_.erase(itr->first);
   }
+  cwb_buffer_map_.clear();
 
   *needs_refresh = true;
   return kErrorNone;
@@ -3483,7 +3492,6 @@ void HWCDisplay::HandleFrameOutput() {
         auto &cwb_resp = cwb_capture_status_map_[client];
         cwb_resp.handle_id = handle_id;
         cwb_resp.client = client;
-        display_intf_->GetOutputBufferAcquireFence(&cwb_resp.release_fence);
         cwb_resp.status = kCWBReleaseFenceNotChecked; // CWB request status is not yet notified
       } else {
         for (auto& [_, ccs] : cwb_capture_status_map_) {
@@ -3638,12 +3646,22 @@ void HWCDisplay::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
     cwb_buffer_map_.erase(handle_id);
     if (client == kCWBClientFrameDump || client == kCWBClientColor) {
       cwb_cv_.notify_one();
+    } else if (client == kCWBClientExternal && event_handler_) {
+      // Clear the backup data like release fence and status corresponding to handle id,
+      // when successfully notified to client.
+      if (!event_handler_->NotifyCwbDone(id_, status, handle_id)) {
+        cwb_capture_status_map_.erase(client);
+      }
     }
   }
 
   DLOGV_IF(kTagClient, "CWB notified for client = %d with buffer = %u, return status = %s(%d)",
            client, handle_id, (!status) ? "Handled" : (status == -ETIME) ? "Timedout" : "Error",
            status);
+}
+
+void HWCDisplay::Abort() {
+  display_intf_->Abort();
 }
 
 } //namespace sdm

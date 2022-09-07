@@ -123,6 +123,7 @@ class DRMCrtcManager {
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
   void GetCrtcList(std::vector<uint32_t> *crtc_ids);
+  uint32_t GetCrtcCount();
 
  private:
   int fd_ = -1;

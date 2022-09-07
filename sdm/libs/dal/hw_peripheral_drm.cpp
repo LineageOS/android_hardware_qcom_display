@@ -259,13 +259,13 @@ DisplayError HWPeripheralDRM::Commit(HWLayersInfo *hw_layers_info) {
   SetVMReqState();
 
   DisplayError error = HWDeviceDRM::Commit(hw_layers_info);
+  shared_ptr<Fence> cwb_fence = Fence::Create(INT(cwb_fence_fd), "cwb_fence");
   if (error != kErrorNone) {
     return error;
   }
 
   if (has_fence) {
-    hw_layers_info->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd),
-                                                                      "release_cwb");
+    hw_layers_info->output_buffer->release_fence = cwb_fence;
   }
 
   CacheDestScalarData();
@@ -807,7 +807,7 @@ void HWPeripheralDRM::GetHWPanelMaxBrightness() {
   std::string brightness_node(brightness_base_path_ + "max_brightness");
   int fd = Sys::open_(brightness_node.c_str(), O_RDONLY);
   if (fd < 0) {
-    DLOGE("Failed to open max brightness node = %s, error = %s", brightness_node.c_str(),
+    DLOGW("Failed to open max brightness node = %s, error = %s", brightness_node.c_str(),
           strerror(errno));
     return;
   }
@@ -816,7 +816,7 @@ void HWPeripheralDRM::GetHWPanelMaxBrightness() {
     hw_panel_info_.panel_max_brightness = static_cast<float>(atof(value));
     DLOGI_IF(kTagDriverConfig, "Max brightness = %f", hw_panel_info_.panel_max_brightness);
   } else {
-    DLOGE("Failed to read max brightness. error = %s", strerror(errno));
+    DLOGW("Failed to read max brightness. error = %s", strerror(errno));
   }
 
   Sys::close_(fd);

@@ -139,6 +139,7 @@ class ResourceInterface {
   virtual bool HandleCwbTeardown(Handle display_ctx) = 0;
   virtual void HandleSkipValidate(Handle display_ctx) = 0;
   virtual std::string Dump() = 0;
+  virtual uint32_t GetMixerCount() = 0;
 };
 
 }  // namespace sdm

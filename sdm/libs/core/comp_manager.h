@@ -161,6 +161,7 @@ class CompManager : public CwbCallback {
   virtual void NotifyCwbDone(int32_t display_id, int32_t status, const LayerBuffer& buffer);
   virtual void TriggerRefresh(int32_t display_id);
   std::string Dump();
+  uint32_t GetMixerCount();
 
  private:
   static const int kMaxThermalLevel = 3;

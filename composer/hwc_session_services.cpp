@@ -446,8 +446,6 @@ int HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
-
   // Wait until partial update control is complete
   int error = WaitForCommitDone(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
   if (error != 0) {
@@ -638,7 +636,6 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     }
   }
   if (needs_refresh) {
-    callbacks_.Refresh(active_builtin_disp_id);
     int ret = WaitForCommitDone(active_builtin_disp_id, kClientIdlepowerCollapse);
     if (ret != 0) {
       DLOGW("%s Idle PC failed with error %d", enable ? "Enable" : "Disable", ret);
@@ -1086,13 +1083,18 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
+  if (!hwc_session_) {
+    DLOGE("HWC Session is not established!");
+    return -1;
+  }
+
   auto err = hwc_session_->CheckWbAvailability();
   if (err != HWC2::Error::None) {
     return -1;
   }
 
   hwc2_display_t disp_type = HWC_DISPLAY_PRIMARY;
-  int dpy_index;
+  int dpy_index = -1;
   if (disp_id == UINT32(DisplayConfig::DisplayType::kPrimary)) {
     dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_PRIMARY);
   } else if (disp_id == UINT32(DisplayConfig::DisplayType::kExternal)) {
@@ -1111,11 +1113,18 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
+  if (dpy_index >= HWCCallbacks::kNumDisplays) {
+    DLOGW("Display index (%d) for display(%d) is out of bound for "
+          "maximum displays supported(%d).", dpy_index, disp_id, HWCCallbacks::kNumDisplays);
+    return -1;
+  }
+
   // Mutex scope
   {
     SCOPE_LOCK(hwc_session_->locker_[disp_type]);
     if (!hwc_session_->hwc_display_[dpy_index]) {
-      DLOGE("Display is not created yet.");
+      DLOGE("Display is not created yet with display index = %d and display id = %d!",
+            dpy_index, disp_id);
       return -1;
     }
   }
@@ -1138,178 +1147,141 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
 int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                                     const CwbConfig &cwb_config, const native_handle_t *buffer,
                                     hwc2_display_t display_type) {
-  SCOPE_LOCK(queue_lock_);
+  HWC2::Error error = HWC2::Error::None;
+  auto& session_map = display_cwb_session_map_[display_type];
+  QueueNode *node = nullptr;
+  uint64_t node_handle_id = 0;
+  void *hdl = const_cast<native_handle_t *>(buffer);
+  auto err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::BUFFER_ID,
+                                       &node_handle_id);
+  if (err != gralloc::Error::NONE || node_handle_id == 0) {
+    error = HWC2::Error::BadLayer;
+    DLOGE("Buffer handle id retrieval failed!");
+  }
 
-  // Ensure that async task runs only until all queued CWB requests have been fulfilled.
-  // If cwb queue is empty, async task has not either started or async task has finished
-  // processing previously queued cwb requests. Start new async task on such a case as
-  // currently running async task will automatically desolve without processing more requests.
-  bool post_future = !queue_.size();
-
-  if (!post_future) {  // if queue_ is not empty
-    // reject the cwb request if it's made on another display than the currently cwb active display
-    QueueNode *node = queue_.front();
-    if (node->display_type != display_type) {
-      native_handle_close(buffer);
-      native_handle_delete(const_cast<native_handle_t *>(buffer));
-      return -1;
+  if (error == HWC2::Error::None) {
+    node = new QueueNode(callback, cwb_config, buffer, display_type, node_handle_id);
+    if (node) {
+      // Keep CWB request handling related resources in a requested display context.
+      std::unique_lock<std::mutex> lock(session_map.lock);
+      // Ensure that async task runs only until all queued CWB requests have been fulfilled.
+      // If cwb queue is empty, async task has not either started or async task has finished
+      // processing previously queued cwb requests. Start new async task on such a case as
+      // currently running async task will automatically desolve without processing more requests.
+      session_map.queue.push_back(node);
+    } else {
+      error = HWC2::Error::BadParameter;
+      DLOGE("Unable to allocate node for CWB request(handle id: %lu)!", node_handle_id);
     }
   }
 
-  QueueNode *node = new QueueNode(callback, cwb_config, buffer, display_type);
-  queue_.push(node);
+  if (error == HWC2::Error::None) {
+    SCOPE_LOCK(hwc_session_->locker_[display_type]);
+    // Get display instance using display type.
+    HWCDisplay *hwc_display = hwc_session_->hwc_display_[display_type];
+    if (!hwc_display) {
+      error = HWC2::Error::BadDisplay;
+    } else {
+      // Send CWB request to CWB Manager
+      error = hwc_display->SetReadbackBuffer(buffer, nullptr, cwb_config, kCWBClientExternal);
+    }
+  }
 
-  if (post_future) {
+  if (error == HWC2::Error::None) {
+    DLOGV_IF(kTagCwb, "Successfully configured CWB buffer(handle id: %lu).", node_handle_id);
+  } else {
+    // Need to close and delete the cloned native handle on CWB request rejection/failure and
+    // if node is created and pushed, then need to remove from queue.
+    native_handle_close(buffer);
+    native_handle_delete(const_cast<native_handle_t *>(buffer));
+    std::unique_lock<std::mutex> lock(session_map.lock);
+    // If current node is pushed in the queue, then need to remove it again on error.
+    if (node && node == session_map.queue.back()) {
+      session_map.queue.pop_back();
+    }
+    return -1;
+  }
+
+  std::unique_lock<std::mutex> lock(session_map.lock);
+  if (!session_map.async_thread_running && !session_map.queue.empty()) {
+    session_map.async_thread_running = true;
     // No need to do future.get() here for previously running async task. Async method will
     // guarantee to exit after cwb for all queued requests is indeed complete i.e. the respective
     // fences have signaled and client is notified through registered callbacks. This will make
-    // sure that the new async task does not concurrently work with previous task. Let async running
-    // thread dissolve on its own.
-    future_ = std::async(HWCSession::CWB::AsyncTask, this);
+    // sure that the new async task does not concurrently work with previous task. Let async
+    // running thread dissolve on its own.
+    // Check, If thread is not running, then need to re-execute the async thread.
+    session_map.future = std::async(HWCSession::CWB::AsyncTaskToProcessCWBStatus,
+                                    this, display_type);
+  }
+
+  if (node) {
+    node->request_completed = true;
   }
 
   return 0;
 }
 
-void HWCSession::CWB::ProcessRequests() {
-  while (true) {
-    QueueNode *node = nullptr;
-    int status = 0;
-    HWC2::Error error = HWC2::Error::None;
 
-    // Mutex scope
-    // Just check if there is a next cwb request queued, exit the thread if nothing is pending.
-    // Do not keep mutex locked so that client can freely queue more jobs to the current thread.
-    {
-      SCOPE_LOCK(queue_lock_);
-      if (!queue_.size()) {
-        DLOGI("CWB buffer is empty. No pending CWB requests found.");
-        break;
-      }
+int HWCSession::CWB::OnCWBDone(hwc2_display_t display_type, int32_t status, uint64_t handle_id) {
+  auto& session_map = display_cwb_session_map_[display_type];
 
-      node = queue_.front();
+  {
+    std::unique_lock<std::mutex> lock(session_map.lock);
+    // No need to notify to the client, if there is no any pending CWB request in queue.
+    if (session_map.queue.empty()) {
+      return -1;
     }
 
-    HWCDisplay *hwc_display = hwc_session_->hwc_display_[node->display_type];
-    Locker &locker = hwc_session_->locker_[node->display_type];
-
-    // Configure cwb parameters, trigger refresh, wait for commit, get the release fence and
-    // wait for fence to signal.
-
-    // Mutex scope
-    // Wait for previous commit to finish before configuring next buffer.
-    {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker);
-
-      error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
-                                             kCWBClientExternal);
-      if (error == HWC2::Error::None) {
-        DLOGI("Successfully configured CWB buffer.");
-      } else if (error == HWC2::Error::NoResources || error == HWC2::Error::Unsupported ||
-                 error == HWC2::Error::BadDisplay) {  // if cwb request is made either when another
-        // display/client is performing CWB or when CWB tearing down then notify warning status -2.
-        status = -2;
-      } else {  // notify error status -1 to the CWB client
-        status = -1;
-      }
-    }
-
-    if (error != HWC2::Error::BadDisplay) {  // Don't wait if CWB requested on powered-off display.
-      hwc_session_->callbacks_.Refresh(node->display_type);
-
-      // Mutex scope
-      // Wait for the signal from commit thread to retrieve the CWB release fence
-      {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cv_.wait(lock);
-      }
-    }
-
-    if (!status) {
-      std::lock_guard<std::mutex> lock(command_seq_mutex_);
-      shared_ptr<Fence> release_fence = nullptr;
-      // Mutex scope
-      {
-        SCOPE_LOCK(locker);
-        auto ret = hwc_display->GetReadbackBufferFenceForClient(kCWBClientExternal, &release_fence);
-        if (!release_fence || ret == kCWBReleaseFenceNotAvailable ||
-            ret == kCWBReleaseFenceUnknownError) {
-          status = -1;
+    for (auto& node : session_map.queue) {
+      if (node->notified_status == kCwbNotifiedNone) {
+        // Need to wait for other notification, when notified handle id does not match with
+        // available first non-notified node buffer handle id in queue.
+        if (node->handle_id == handle_id) {
+          node->notified_status = (status) ? kCwbNotifiedFailure : kCwbNotifiedSuccess;
+          session_map.cv.notify_one();
+          return 0;
+        } else {
+          //Just skip notifying to client on not matching handle_id.
+          return -1;
         }
-      }
-      if (!status) {
-        bool is_waiting = true;
-        {
-          SCOPE_LOCK(fence_queue_lock_);
-          // check whether fence wait is going on in another async thread.
-          is_waiting = static_cast<bool>(fence_wait_queue_.size());
-          // push current cwb request's release fence in the fence wait queue.
-          DLOGI("Pushing release fence in fenece wait queue.");
-          fence_wait_queue_.push({release_fence, node});
-        }
-        if (!is_waiting) {  // incase of empty fence wait queue, create a new async thread
-          DLOGI("Creating AsyncFenceWaits async thread.");
-          // to perform fence wait on the cwb release fence.
-          fence_wait_future_ = std::async(HWCSession::CWB::AsyncFenceWaits, this);
-        }
-      }
-    }
-
-    if (status) {  // for erroneous status, notify the cwb client.
-      NotifyCWBStatus(status, node);
-    }
-
-    // Mutex scope
-    // Make sure to exit here, if queue becomes empty after erasing current node from queue,
-    // so that the current async task does not operate concurrently with a new future task.
-    {
-      SCOPE_LOCK(queue_lock_);
-      queue_.pop();
-      DLOGI("Remove current CWB request from the pending request queue.");
-
-      if (!queue_.size()) {
-        DLOGI("No pending cwb requests found in the queue.");
-        break;
       }
     }
   }
+
+  return -1;
 }
 
-void HWCSession::CWB::PerformFenceWaits() {
-  while (true) {
-    shared_ptr<Fence> release_fence = nullptr;
+void HWCSession::CWB::AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t display_type) {
+  cwb->ProcessCWBStatus(display_type);
+}
+
+void HWCSession::CWB::ProcessCWBStatus(hwc2_display_t display_type) {
+  auto& session_map = display_cwb_session_map_[display_type];
+  while(true) {
     QueueNode *cwb_node = nullptr;
     {
-      SCOPE_LOCK(fence_queue_lock_);
-      if (!fence_wait_queue_.size()) {
-        DLOGI("CWB fence queue is empty. No pending release fence to wait on.");
+      std::unique_lock<std::mutex> lock(session_map.lock);
+      // Exit thread in case of no pending CWB request in queue.
+      if (session_map.queue.empty()) {
+        // Update thread exiting status.
+        session_map.async_thread_running = false;
         break;
       }
 
-      release_fence = fence_wait_queue_.front().first;
-      cwb_node = fence_wait_queue_.front().second;
-    }
-
-    int status = 0;
-    if (release_fence >= 0) {
-      status = Fence::Wait(release_fence);
-    } else {
-      DLOGE("CWB release fence could not be retrieved.");
-      status = -1;
-    }
-
-    NotifyCWBStatus(status, cwb_node);
-
-    {
-      SCOPE_LOCK(fence_queue_lock_);
-      fence_wait_queue_.pop();
-      DLOGI("Remove current release fence from the pending fence wait queue.");
-
-      if (!fence_wait_queue_.size()) {
-        DLOGI("CWB fence queue is empty. No pending release fence to wait on.");
-        break;
+      cwb_node = session_map.queue.front();
+      if (!cwb_node->request_completed) {
+        // Need to continue to recheck until node specific client call completes.
+        continue;
+      } else if (cwb_node->notified_status == kCwbNotifiedNone) {
+        // Wait for the signal for availability of CWB notified node.
+        session_map.cv.wait(lock);
       }
+      session_map.queue.pop_front();
     }
+
+    // Notify to client, when notification is received successfully for expected input buffer.
+    NotifyCWBStatus(cwb_node->notified_status , cwb_node);
   }
 }
 
@@ -1326,26 +1298,14 @@ void HWCSession::CWB::NotifyCWBStatus(int status, QueueNode *cwb_node) {
   delete cwb_node;
 }
 
-void HWCSession::CWB::AsyncTask(CWB *cwb) {
-  cwb->ProcessRequests();
-}
-
-void HWCSession::CWB::AsyncFenceWaits(CWB *cwb) {
-  cwb->PerformFenceWaits();
-}
-
-void HWCSession::CWB::PresentDisplayDone(hwc2_display_t disp_id) {
-  if (disp_id == HWC_DISPLAY_VIRTUAL) {
-    return;
-  }
-
-  std::unique_lock<std::mutex> lock(mutex_);
-  cv_.notify_one();
+int HWCSession::NotifyCwbDone(hwc2_display_t display, int32_t status, uint64_t handle_id) {
+    return cwb_.OnCWBDone(display, status, handle_id);
 }
 
 bool HWCSession::CWB::IsCwbActiveOnDisplay(hwc2_display_t disp_type) {
-  SCOPE_LOCK(queue_lock_);
-  return (queue_.size() && queue_.front()->display_type == disp_type) ? true : false;
+  std::unique_lock<std::mutex> lock(display_cwb_session_map_[disp_type].lock);
+  auto &queue = display_cwb_session_map_[disp_type].queue;
+  return (queue.size() && (queue.front()->display_type == disp_type)) ? true : false;
 }
 
 int HWCSession::DisplayConfigImpl::SetQsyncMode(uint32_t disp_id, DisplayConfig::QsyncMode mode) {
