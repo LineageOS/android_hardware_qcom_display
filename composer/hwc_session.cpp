@@ -3295,8 +3295,6 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   // Wait until all commands are flushed.
   std::lock_guard<std::mutex> hwc_lock(command_seq_mutex_);
-
-  SetPowerMode(client_id, static_cast<int32_t>(HWC2::PowerMode::Off));
   {
     SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
