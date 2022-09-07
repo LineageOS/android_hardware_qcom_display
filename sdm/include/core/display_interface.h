@@ -1314,8 +1314,6 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelFeatureInfo(PanelFeatureInfo *info) = 0;
 
-  virtual void Abort() = 0;
-
  protected:
   virtual ~DisplayInterface() { }
 };

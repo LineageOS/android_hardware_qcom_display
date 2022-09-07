@@ -80,7 +80,6 @@ class DisplayNull : public DisplayInterface {
   virtual void ScreenRefresh() { }
   virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
   virtual bool HandleCwbTeardown() { return false; }
-  virtual void Abort() {};
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))
