@@ -3483,6 +3483,7 @@ void HWCDisplay::HandleFrameOutput() {
         auto &cwb_resp = cwb_capture_status_map_[client];
         cwb_resp.handle_id = handle_id;
         cwb_resp.client = client;
+        display_intf_->GetOutputBufferAcquireFence(&cwb_resp.release_fence);
         cwb_resp.status = kCWBReleaseFenceNotChecked; // CWB request status is not yet notified
       } else {
         for (auto& [_, ccs] : cwb_capture_status_map_) {
@@ -3637,12 +3638,6 @@ void HWCDisplay::NotifyCwbDone(int32_t status, const LayerBuffer& buffer) {
     cwb_buffer_map_.erase(handle_id);
     if (client == kCWBClientFrameDump || client == kCWBClientColor) {
       cwb_cv_.notify_one();
-    } else if (client == kCWBClientExternal && event_handler_) {
-      // Clear the backup data like release fence and status corresponding to handle id,
-      // when successfully notified to client.
-      if (!event_handler_->NotifyCwbDone(id_, status, handle_id)) {
-        cwb_capture_status_map_.erase(client);
-      }
     }
   }
 
