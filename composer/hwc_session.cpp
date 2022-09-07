@@ -4031,16 +4031,6 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
                              vsync_period_change_constraints, out_timeline);
 }
 
-int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
-  std::chrono::milliseconds span(5000);
-  commit_done_future_ = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
-                                      return session->WaitForCommitDone(display, client_id);
-                                     }, this, display, client_id);
-  auto ret = (commit_done_future_.wait_for(span) == std::future_status::timeout) ?
-             -EINVAL : commit_done_future_.get();
-  return ret;
-}
-
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   shared_ptr<Fence> retire_fence = nullptr;
   int timeout_ms = -1;
@@ -4185,7 +4175,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     hwc_display_[target_display]->SetQSyncMode(kQSyncModeNone);
   }
 
-  int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
+  int ret = WaitForCommitDone(target_display, kClientTrustedUI);
   if (ret != 0) {
     DLOGE("WaitForCommitDone failed with error = %d", ret);
     return -EINVAL;
@@ -4234,17 +4224,11 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     }
     tui_state_transition_[disp_id] = true;
   }
-
-  tui_start_success_ = true;
   return 0;
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   // Hold this lock so that any deferred hotplug events will not be handled during the commit
   // and will be handled at the end of TUITransitionPrepare.
-  if (!tui_start_success_) {
-    DLOGI("Bailing out TUI end");
-    return -EINVAL;
-  }
   SCOPE_LOCK(pluggable_handler_lock_);
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   bool needs_refresh = false;
@@ -4279,10 +4263,9 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
 
   if (needs_refresh) {
     DLOGI("Waiting for device unassign");
-    int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
+    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
     if (ret != 0) {
       DLOGE("Device unassign failed with error %d", ret);
-      tui_start_success_ = false;
       return -EINVAL;
     }
   }
@@ -4351,8 +4334,6 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     // Do hotplug handling in a different thread to avoid blocking TUI thread.
     std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();
   }
-  // Reset tui session state variable.
-  tui_start_success_ = false;
   DLOGI("End of TUI session on display %d", disp_id);
   return 0;
 }
