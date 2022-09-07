@@ -3167,11 +3167,6 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     return kErrorNone;
   }
 
-  if (!cwb_buffer_map_.size()) {
-    *needs_refresh = false;
-    return kErrorNone;
-  }
-
   for (auto itr = cwb_buffer_map_.begin(); itr != cwb_buffer_map_.end(); itr++) {
     if (itr->second == kCWBClientFrameDump) {
       dump_frame_count_ = 0;
@@ -3189,8 +3184,8 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
       frame_capture_buffer_queued_ = false;
       frame_capture_status_ = 0;
     }
+    cwb_buffer_map_.erase(itr->first);
   }
-  cwb_buffer_map_.clear();
 
   *needs_refresh = true;
   return kErrorNone;
