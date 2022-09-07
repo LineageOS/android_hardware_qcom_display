@@ -4232,7 +4232,6 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
-    tui_state_transition_[disp_id] = true;
   }
   return 0;
 }
@@ -4249,11 +4248,6 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   if (target_display != qdutils::DISPLAY_PRIMARY && target_display != qdutils::DISPLAY_BUILTIN_2) {
     DLOGE("Display %" PRIu64 " not supported", target_display);
     return -ENOTSUP;
-  }
-
-  if (!tui_state_transition_[disp_id]) {
-    DLOGE("Display %d tui transition state is not valid.", disp_id);
-    return -EINVAL;
   }
 
   {
@@ -4292,7 +4286,6 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
-    tui_state_transition_[disp_id] = false;
   }
 
   return TUITransitionUnPrepare(disp_id);
