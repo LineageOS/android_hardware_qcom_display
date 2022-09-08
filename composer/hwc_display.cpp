@@ -3402,7 +3402,14 @@ CWBReleaseFenceError HWCDisplay::GetReadbackBufferFenceForClient(CWBClient clien
       // If this function is called after either PostCommitLayerStack or NotifyCwbDone call,
       // then release fence can be successfully retrieved from cwb_capture_status_map_.
       handle_id = cwb_resp.handle_id;
-      *release_fence = cwb_resp.release_fence;
+      if (cwb_resp.status == kCWBReleaseFenceNotChecked) {
+        // if status is updated as kCWBReleaseFenceNotChecked, which means the commit is over
+        // and status got updated in PostCommitLayerStack->HandleFrameOutput. It indicates
+        // that release fence is available.
+        display_intf_->GetOutputBufferAcquireFence(release_fence);
+      } else {
+        *release_fence = cwb_resp.release_fence;
+      }
       status = cwb_resp.status;
     } else if (layer_stack_.output_buffer != nullptr) {
       // If this function is called before both PostCommitLayerStack and NotifyCwbDone call,
@@ -3462,13 +3469,17 @@ CWBReleaseFenceError HWCDisplay::GetReadbackBufferFenceForClient(CWBClient clien
 
 HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
   auto status = HWC2::Error::None;
+  // Get the release fence for kCWBClientComposer only, because this function is designed for
+  // accessing through composer interface, for which, it is following standard prototype and
+  // return type provided by HWC2+ interface. According to HWC2+ interface, only two supported
+  // return types are provided, where one is HWC2::Error::None and another is
+  // HWC2::Error::Unsupported.
   auto error = GetReadbackBufferFenceForClient(kCWBClientComposer, release_fence);
 
-  // if return status is HWC2::Error::None and *release_fence is nullptr, then need to
-  // retry to get release fence, else if *release_fence is not nullptr too, that means release
-  // fence is retrieved successfully, else there is no any valid release fence available.
-  if (error == kCWBReleaseFenceNotAvailable || error == kCWBReleaseFenceUnknownError) {
+  // if release fence is null pointer, then just return with error.
+  if (release_fence && *release_fence == nullptr) {
     status = HWC2::Error::Unsupported;
+    DLOGW("Readback buffer fence is not available! CWBReleaseFenceError: %d", error);
   }
 
   return status;
