@@ -4117,7 +4117,7 @@ DisplayError DisplayBase::SetPPConfig(void *payload, size_t size) {
 DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
   struct sde_drm::DRMPPFeatureInfo info = {};
   GenericPayload payload;
-  bool *bl_ctrl = nullptr;
+  uint64_t *bl_ctrl = nullptr;
 
   int ret = payload.CreatePayload(bl_ctrl);
   if (ret || !bl_ctrl) {
@@ -4125,13 +4125,13 @@ DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
     return kErrorUndefined;
   }
 
-  *bl_ctrl = int_enabled? true : false;
+  *bl_ctrl = int_enabled > 0 ? 1 : 0;
   info.object_type = DRM_MODE_OBJECT_CONNECTOR;
   info.id = sde_drm::kFeatureDimmingDynCtrl;
   info.type = sde_drm::kPropRange;
   info.version = 0;
   info.payload = bl_ctrl;
-  info.payload_size = sizeof(bool);
+  info.payload_size = sizeof(uint64_t);
   info.is_event = false;
 
   DLOGV_IF(kTagDisplay, "Display %d-%d set dimming enable %d", display_id_,
@@ -4142,7 +4142,7 @@ DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
 DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
   struct sde_drm::DRMPPFeatureInfo info = {};
   GenericPayload payload;
-  int *bl = nullptr;
+  uint64_t *bl = nullptr;
 
   int ret = payload.CreatePayload(bl);
   if (ret || !bl) {
@@ -4150,13 +4150,13 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
     return kErrorUndefined;
   }
 
-  *bl = min_bl;
+  *bl = min_bl > 0 ? min_bl : 0;
   info.object_type = DRM_MODE_OBJECT_CONNECTOR;
   info.id = sde_drm::kFeatureDimmingMinBl;
   info.type = sde_drm::kPropRange;
   info.version = 0;
   info.payload = bl;
-  info.payload_size = sizeof(int);
+  info.payload_size = sizeof(uint64_t);
   info.is_event = false;
 
   DLOGV_IF(kTagDisplay, "Display %d-%d set dimming min_bl %d", display_id_,
