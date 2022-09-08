@@ -174,7 +174,7 @@ int HWCDisplayBuiltIn::Init() {
   }
 
   int vsyncs = 0;
-  HWCDebugHandler::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &vsyncs);
+  HWCDebugHandler::Get()->GetProperty(TRANSIENT_FPS_CYCLE_COUNT, &vsyncs);
   if (vsyncs > 0) {
     SetVsyncsApplyRateChange(UINT32(vsyncs));
   }
