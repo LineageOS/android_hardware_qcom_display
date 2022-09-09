@@ -3165,36 +3165,34 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     return kErrorParameters;
   }
 
-  std::unique_lock<std::mutex> lock(cwb_mutex_);
-  if (!cwb_buffer_map_.size() && !display_intf_->HandleCwbTeardown()) {
-    *needs_refresh = false;
-    return kErrorNone;
-  }
+  if (!display_intf_->HandleCwbTeardown()) {
+    bool pending_cwb_request = false;
+    {
+      std::unique_lock<std::mutex> lock(cwb_mutex_);
+      pending_cwb_request = !!cwb_buffer_map_.size();
+    }
 
-  if (!cwb_buffer_map_.size()) {
-    *needs_refresh = false;
-    return kErrorNone;
-  }
-
-  for (auto itr = cwb_buffer_map_.begin(); itr != cwb_buffer_map_.end(); itr++) {
-    if (itr->second == kCWBClientFrameDump) {
+    if (!pending_cwb_request) {
       dump_frame_count_ = 0;
+      dump_frame_index_ = 0;
       dump_output_to_file_ = false;
-      // Unmap and Free buffer
-      if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
-        DLOGW("unmap failed with err %d", errno);
+      if (output_buffer_base_ != nullptr) {
+        if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+          DLOGW("unmap failed with err %d", errno);
+        }
       }
-      if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+
+      if (buffer_allocator_ && buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
         DLOGW("FreeBuffer failed");
       }
       output_buffer_info_ = {};
       output_buffer_base_ = nullptr;
-    } else if (itr->second == kCWBClientColor) {
       frame_capture_buffer_queued_ = false;
       frame_capture_status_ = 0;
+      *needs_refresh = false;
+      return kErrorNone;
     }
   }
-  cwb_buffer_map_.clear();
 
   *needs_refresh = true;
   return kErrorNone;
