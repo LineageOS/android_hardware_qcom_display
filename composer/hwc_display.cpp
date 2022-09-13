@@ -3394,6 +3394,9 @@ CWBReleaseFenceError HWCDisplay::GetReadbackBufferFenceForClient(CWBClient clien
   uint64_t handle_id = 0;
 
   *release_fence = nullptr;
+  // If release fence is available, then try to get it first and keep it out of lock to avoid
+  // deadlock with GetOutputBufferAcquireFence call, and validate it later with handle id.
+  display_intf_->GetOutputBufferAcquireFence(release_fence);
   {
     std::unique_lock<std::mutex> lock(cwb_mutex_);
     auto &cwb_resp = cwb_capture_status_map_[client];
@@ -3402,22 +3405,17 @@ CWBReleaseFenceError HWCDisplay::GetReadbackBufferFenceForClient(CWBClient clien
       // If this function is called after either PostCommitLayerStack or NotifyCwbDone call,
       // then release fence can be successfully retrieved from cwb_capture_status_map_.
       handle_id = cwb_resp.handle_id;
-      if (cwb_resp.status == kCWBReleaseFenceNotChecked) {
-        // if status is updated as kCWBReleaseFenceNotChecked, which means the commit is over
-        // and status got updated in PostCommitLayerStack->HandleFrameOutput. It indicates
-        // that release fence is available.
-        display_intf_->GetOutputBufferAcquireFence(release_fence);
-      } else {
+      if (cwb_resp.status != kCWBReleaseFenceNotChecked) {
         *release_fence = cwb_resp.release_fence;
       }
       status = cwb_resp.status;
     } else if (layer_stack_.output_buffer != nullptr) {
       // If this function is called before both PostCommitLayerStack and NotifyCwbDone call,
-      // then release fence may be retrieved directly from layer_stack_.output_buffer.
+      // then handle_id may be retrieved directly from layer_stack_.output_buffer corresponding
+      // to available release fence.
       const auto map_cwb_buffer = cwb_buffer_map_.find(layer_stack_.output_buffer->handle_id);
       if (map_cwb_buffer != cwb_buffer_map_.end() && client == map_cwb_buffer->second) {
         handle_id = layer_stack_.output_buffer->handle_id;
-        display_intf_->GetOutputBufferAcquireFence(release_fence);
         status = kCWBReleaseFenceNotChecked;
       }
     } else {
@@ -3429,6 +3427,8 @@ CWBReleaseFenceError HWCDisplay::GetReadbackBufferFenceForClient(CWBClient clien
           break;
         }
       }
+      // Avoid to return old release fence, in case of too early call of this function.
+      *release_fence = nullptr;
     }
 
     if (*release_fence != nullptr) {
@@ -3477,7 +3477,7 @@ HWC2::Error HWCDisplay::GetReadbackBufferFence(shared_ptr<Fence> *release_fence)
   auto error = GetReadbackBufferFenceForClient(kCWBClientComposer, release_fence);
 
   // if release fence is null pointer, then just return with error.
-  if (release_fence && *release_fence == nullptr) {
+  if (!release_fence || *release_fence == nullptr) {
     status = HWC2::Error::Unsupported;
     DLOGW("Readback buffer fence is not available! CWBReleaseFenceError: %d", error);
   }
