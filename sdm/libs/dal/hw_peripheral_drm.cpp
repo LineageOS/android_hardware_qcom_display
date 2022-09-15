@@ -739,9 +739,15 @@ DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
   std::string brightness_node(brightness_base_path_ + "brightness");
   int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
   if (fd < 0) {
+    if (connector_info_.backlight_type != "dcs") {
+      DLOGW("Failed to open node = %s, error = %s ", brightness_node.c_str(),
+          strerror(errno));
+      return kErrorFileDescriptor;
+    } else {
     DLOGE("Failed to open node = %s, error = %s ", brightness_node.c_str(),
           strerror(errno));
     return kErrorFileDescriptor;
+    }
   }
 
   int32_t bytes = snprintf(buffer, kMaxSysfsCommandLength, "%d\n", level);
@@ -774,9 +780,15 @@ DisplayError HWPeripheralDRM::GetPanelBrightness(int *level) {
   std::string brightness_node(brightness_base_path_ + "brightness");
   int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
   if (fd < 0) {
+    if (connector_info_.backlight_type != "dcs") {
+      DLOGW("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
+             strerror(errno));
+      return kErrorFileDescriptor;
+    } else {
     DLOGE("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
            strerror(errno));
     return kErrorFileDescriptor;
+    }
   }
 
   if (Sys::pread_(fd, value, sizeof(value), 0) > 0) {
@@ -807,16 +819,22 @@ void HWPeripheralDRM::GetHWPanelMaxBrightness() {
   std::string brightness_node(brightness_base_path_ + "max_brightness");
   int fd = Sys::open_(brightness_node.c_str(), O_RDONLY);
   if (fd < 0) {
+    if (connector_info_.backlight_type != "dcs") {
     DLOGW("Failed to open max brightness node = %s, error = %s", brightness_node.c_str(),
           strerror(errno));
     return;
+  } else {
+    DLOGE("Failed to open max brightness node = %s, error = %s", brightness_node.c_str(),
+          strerror(errno));
+    return;
+    }
   }
 
   if (Sys::pread_(fd, value, sizeof(value), 0) > 0) {
     hw_panel_info_.panel_max_brightness = static_cast<float>(atof(value));
     DLOGI_IF(kTagDriverConfig, "Max brightness = %f", hw_panel_info_.panel_max_brightness);
   } else {
-    DLOGW("Failed to read max brightness. error = %s", strerror(errno));
+    DLOGE("Failed to read max brightness. error = %s", strerror(errno));
   }
 
   Sys::close_(fd);

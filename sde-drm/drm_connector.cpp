@@ -672,6 +672,7 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   const string has_cwb_dither = "has_cwb_dither=";
   const string max_os_brightness = "max os brightness=";
   const string max_panel_backlight = "max panel backlight=";
+  const string backlight_type = "backlight type=";
 
   while (std::getline(stream, line)) {
     if (line.find(pixel_formats) != string::npos) {
@@ -711,6 +712,10 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
       info->max_os_brightness = std::stoi(string(line, max_os_brightness.length()));
     } else if (line.find(max_panel_backlight) != string::npos) {
       info->max_panel_backlight = std::stoi(string(line, max_panel_backlight.length()));
+    } else if (line.find(backlight_type) != string::npos) {
+      if (string(line, backlight_type.length()) == "dcs") {
+        info->backlight_type = string(line, backlight_type.length());
+      }
     }
 
   }
