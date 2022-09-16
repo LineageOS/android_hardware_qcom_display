@@ -661,6 +661,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int WaitForVmRelease(hwc2_display_t display, int timeout_ms);
   void GetVirtualDisplayList();
   HWC2::Error CheckWbAvailability();
+  bool IsHWDisplayConnected(hwc2_display_t client_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
