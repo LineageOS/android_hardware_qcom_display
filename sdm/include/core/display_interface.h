@@ -1274,6 +1274,12 @@ class DisplayInterface {
   */
   virtual DisplayError SetDimmingMinBl(int min_bl) = 0;
 
+  /*! @brief Method to retrieve demuratn feature files from TVM.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError RetrieveDemuraTnFiles() = 0;
+
   /*! @brief Method to handle secure events after the successful transition.
 
     @param[in] secure_event \link SecureEvent \endlink

@@ -124,6 +124,7 @@ public:
       DUMP_CODE_COVERAGE = 56,                 // Dump the code coverage data for userspace projects
       UPDATE_TRANSFER_TIME = 57,               // Update transfer time
       SET_JITTER_CONFIG = 58,                  // Watchdog TE Jitter Configuration
+      RETRIEVE_DEMURATN_FILES = 59,            // Retrieve DemuraTn files from TVM
       COMMAND_LIST_END = 400,
     };
 
