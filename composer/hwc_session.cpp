@@ -4479,11 +4479,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     }
   }
   if (trigger_refresh) {
-    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
-    if (ret != 0) {
-      DLOGE("WaitForCommitDone failed with error %d", ret);
-      return -EINVAL;
-    }
+    callbacks_.Refresh(target_display);
   }
 
   if (pending_hotplug_event_ == kHotPlugEvent) {
