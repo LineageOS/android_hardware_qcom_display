@@ -1580,6 +1580,20 @@ HWC2::Error HWCDisplayBuiltIn::RetrieveDemuraTnFiles() {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetDemuraState(int state) {
+  DLOGV("Display ID: %" PRId64 " state: %d", id_, state);
+  DisplayError error = display_intf_->SetDemuraState(state);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. state = %d, error = %d", state, error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  callbacks_->Refresh(id_);
+
+  return HWC2::Error::None;
+}
+
 void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
   if (!cpu_hint_) {
     return;

@@ -315,6 +315,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
   int32_t GetClientTargetProperty(hwc2_display_t display,
                                   HwcClientTargetProperty *outClientTargetProperty);
+  int32_t SetDemuraState(hwc2_display_t display, int32_t state);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,

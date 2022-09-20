@@ -192,6 +192,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
                                uint32_t min_refresh_rate);
   DisplayError UpdateTransferTime(uint32_t transfer_time) override;
   DisplayError RetrieveDemuraTnFiles() override;
+  DisplayError SetDemuraState(int state) override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;

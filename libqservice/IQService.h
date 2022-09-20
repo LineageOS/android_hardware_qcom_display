@@ -125,6 +125,7 @@ public:
       UPDATE_TRANSFER_TIME = 57,               // Update transfer time
       SET_JITTER_CONFIG = 58,                  // Watchdog TE Jitter Configuration
       RETRIEVE_DEMURATN_FILES = 59,            // Retrieve DemuraTn files from TVM
+      SET_DEMURA_STATE = 60,                   // Enable/disable demura feature
       COMMAND_LIST_END = 400,
     };
 
