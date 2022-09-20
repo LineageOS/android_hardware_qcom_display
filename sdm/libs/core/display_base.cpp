@@ -2540,6 +2540,9 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
   }
 
   LayerRect &roi = cwb_config->cwb_roi;
+  // Set cwb full rect as per window rect.
+  cwb_config->cwb_full_rect.right -= (window_rect_.left + window_rect_.right);
+  cwb_config->cwb_full_rect.bottom -= (window_rect_.top + window_rect_.bottom);
   LayerRect &full_frame = cwb_config->cwb_full_rect;
   uint32_t cwb_roi_supported = 0;  // Check whether CWB ROI is supported.
   IsSupportedOnDisplay(kCwbCrop, &cwb_roi_supported);
@@ -2581,7 +2584,8 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
     DLOGI_IF(kTagDisplay, "Client provided invalid ROI. Going for Full frame CWB.");
     roi = full_frame;
   }
-
+  // Reposition CWB ROI as per window rect.
+  roi = Reposition(roi, window_rect_.left, window_rect_.top);
   DLOGI_IF(kTagDisplay, "Cwb_config: tap_point %d, CWB ROI Rect(%f %f %f %f), PU_as_CWB_ROI %d",
            tap_point, roi.left, roi.top, roi.right, roi.bottom, pu_as_cwb_roi);
 
