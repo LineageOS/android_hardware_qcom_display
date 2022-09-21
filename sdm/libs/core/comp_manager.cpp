@@ -383,6 +383,9 @@ DisplayError CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_la
     display_comp_ctx->constraints.idle_timeout = true;
   }
 
+  display_comp_ctx->constraints.tonemapping_query_mandatory =
+        resource_intf_->ToneMapQueryRequested(display_comp_ctx->display_resource_ctx);
+
   DisplayError error = display_comp_ctx->strategy->Start(disp_layer_stack,
                                                          &display_comp_ctx->max_strategies,
                                                          &display_comp_ctx->constraints);

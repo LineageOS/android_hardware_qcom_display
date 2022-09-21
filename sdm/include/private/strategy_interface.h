@@ -46,6 +46,7 @@ struct StrategyConstraints {
 
   bool idle_timeout = false;
   bool gpu_fallback_mode = false;  //!< This flag forces GPU composition strategy.
+  bool tonemapping_query_mandatory = false;  //!< This flag forces a strategy with tonemapping query
 };
 
 class StrategyInterface {
