@@ -370,6 +370,9 @@ struct CwbConfig {
   LayerRect cwb_full_rect = {};                      //!< Same as Output buffer Rect (unaligned).
   CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;  //!< Client specified tap point for CWB.
   void *dither_info = nullptr;                       //!< Pointer to the cwb dither setting.
+  bool avoid_refresh = false;                        //!< Whether to avoid additional refresh for
+                                                     //!< CWB Request, by default refresh occurs
+                                                     //!< for each CWB request to process it.
 };
 
 class LayerBufferObject {
