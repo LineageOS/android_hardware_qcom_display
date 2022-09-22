@@ -3234,10 +3234,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
     available_mixer_count = hwc_display_[active_builtin]->GetAvailableMixerCount();
   }
 
-  if (available_mixer_count < min_mixer_count) {
-    return -EAGAIN;
-  }
-
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;
 
@@ -3254,6 +3250,12 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
     if (display_used != map_info_pluggable_.end()) {
       // Display is already used in a slot.
       continue;
+    }
+
+    if (available_mixer_count < min_mixer_count) {
+      DLOGI("mixers not available: available: %d, min: %d",
+            available_mixer_count, min_mixer_count);
+      return -EAGAIN;
     }
 
     // Count active pluggable display slots and slots with no commits.
@@ -3734,13 +3736,17 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id,
     return;
   }
 
+  static constexpr uint32_t min_mixer_count = 2;
+  uint32_t available_mixer_count = 0;
   std :: bitset < kSecureMax > secure_sessions = 0;
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
     Locker::ScopeLock lock_d(locker_[active_builtin_disp_id]);
     hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+    available_mixer_count = hwc_display_[active_builtin_disp_id]->GetAvailableMixerCount();
   }
 
-  if (secure_sessions.any() || active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
+  if (secure_sessions.any() || active_builtin_disp_id >= HWCCallbacks::kNumDisplays ||
+      available_mixer_count < min_mixer_count) {
     return;
   }
 
