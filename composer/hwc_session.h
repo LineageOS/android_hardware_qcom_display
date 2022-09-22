@@ -434,7 +434,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     };
 
     struct DisplayCWBSession{
-      std::deque<QueueNode *> queue;
+      std::deque<std::shared_ptr<QueueNode>> queue;
       std::mutex lock;
       std::condition_variable cv;
       std::future<void> future;
@@ -443,7 +443,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
     static void AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t display_type);
     void ProcessCWBStatus(hwc2_display_t display_type);
-    void NotifyCWBStatus(int status, QueueNode *cwb_node);
+    void NotifyCWBStatus(int status, std::shared_ptr<QueueNode> cwb_node);
 
     std::map<hwc2_display_t, DisplayCWBSession> display_cwb_session_map_;
     HWCSession *hwc_session_ = nullptr;

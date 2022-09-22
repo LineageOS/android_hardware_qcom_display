@@ -1149,7 +1149,7 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
                                     hwc2_display_t display_type) {
   HWC2::Error error = HWC2::Error::None;
   auto& session_map = display_cwb_session_map_[display_type];
-  QueueNode *node = nullptr;
+  std::shared_ptr<QueueNode> node = nullptr;
   uint64_t node_handle_id = 0;
   void *hdl = const_cast<native_handle_t *>(buffer);
   auto err = gralloc::GetMetaDataValue(hdl, (int64_t)StandardMetadataType::BUFFER_ID,
@@ -1160,15 +1160,29 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
   }
 
   if (error == HWC2::Error::None) {
-    node = new QueueNode(callback, cwb_config, buffer, display_type, node_handle_id);
+    node = std::make_shared<QueueNode>(callback, cwb_config, buffer, display_type, node_handle_id);
     if (node) {
       // Keep CWB request handling related resources in a requested display context.
       std::unique_lock<std::mutex> lock(session_map.lock);
+
+      // Iterate over the queue to avoid duplicate node of same buffer, because that
+      // buffer is already present in queue.
+      for (auto& qnode : session_map.queue) {
+        if (qnode->handle_id == node_handle_id) {
+          error = HWC2::Error::BadParameter;
+          DLOGW("CWB Buffer with handle id %lu is already available in Queue for processing!",
+                node_handle_id);
+          break;
+        }
+      }
+
       // Ensure that async task runs only until all queued CWB requests have been fulfilled.
       // If cwb queue is empty, async task has not either started or async task has finished
       // processing previously queued cwb requests. Start new async task on such a case as
       // currently running async task will automatically desolve without processing more requests.
-      session_map.queue.push_back(node);
+      if (error == HWC2::Error::None) {
+        session_map.queue.push_back(node);
+      }
     } else {
       error = HWC2::Error::BadParameter;
       DLOGE("Unable to allocate node for CWB request(handle id: %lu)!", node_handle_id);
@@ -1242,8 +1256,10 @@ int HWCSession::CWB::OnCWBDone(hwc2_display_t display_type, int32_t status, uint
           session_map.cv.notify_one();
           return 0;
         } else {
-          //Just skip notifying to client on not matching handle_id.
-          return -1;
+          // Continue to check on not matching handle_id, to update the status of any matching
+          // node, because if notification for particular handle_id skip, then it will not update
+          // again and notification thread will wait for skipped node forever.
+          continue;
         }
       }
     }
@@ -1259,7 +1275,7 @@ void HWCSession::CWB::AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t displ
 void HWCSession::CWB::ProcessCWBStatus(hwc2_display_t display_type) {
   auto& session_map = display_cwb_session_map_[display_type];
   while(true) {
-    QueueNode *cwb_node = nullptr;
+    std::shared_ptr<QueueNode> cwb_node = nullptr;
     {
       std::unique_lock<std::mutex> lock(session_map.lock);
       // Exit thread in case of no pending CWB request in queue.
@@ -1276,6 +1292,13 @@ void HWCSession::CWB::ProcessCWBStatus(hwc2_display_t display_type) {
       } else if (cwb_node->notified_status == kCwbNotifiedNone) {
         // Wait for the signal for availability of CWB notified node.
         session_map.cv.wait(lock);
+        if (cwb_node->notified_status == kCwbNotifiedNone) {
+          // If any other node notified before front node, then need to continue to wait
+          // for front node, such that further client notification will be done in sequential
+          // manner.
+          DLOGW("CWB request is notified out of sequence.");
+          continue;
+        }
       }
       session_map.queue.pop_front();
     }
@@ -1283,9 +1306,10 @@ void HWCSession::CWB::ProcessCWBStatus(hwc2_display_t display_type) {
     // Notify to client, when notification is received successfully for expected input buffer.
     NotifyCWBStatus(cwb_node->notified_status , cwb_node);
   }
+  DLOGI("CWB queue is empty. Display: %d", display_type);
 }
 
-void HWCSession::CWB::NotifyCWBStatus(int status, QueueNode *cwb_node) {
+void HWCSession::CWB::NotifyCWBStatus(int status, std::shared_ptr<QueueNode> cwb_node) {
   // Notify client about buffer status and erase the node from pending request queue.
   std::shared_ptr<DisplayConfig::ConfigCallback> callback = cwb_node->callback.lock();
   if (callback) {
@@ -1295,7 +1319,6 @@ void HWCSession::CWB::NotifyCWBStatus(int status, QueueNode *cwb_node) {
 
   native_handle_close(cwb_node->buffer);
   native_handle_delete(const_cast<native_handle_t *>(cwb_node->buffer));
-  delete cwb_node;
 }
 
 int HWCSession::NotifyCwbDone(hwc2_display_t display, int32_t status, uint64_t handle_id) {
