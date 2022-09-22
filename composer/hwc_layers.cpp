@@ -1115,6 +1115,10 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
         layer_->update_mask.set(kContentMetadata);
       }
     }
+  } else if (layer_buffer->extended_content_metadata) {
+    // Buffer switch scenario - cleanup old metadata
+    layer_buffer->extended_content_metadata = nullptr;
+    layer_->update_mask.set(kContentMetadata);
   }
 
   if (!ignore_sdr_histogram_md_ ||
@@ -1141,10 +1145,11 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
     }
   }
 
+  layer_buffer->timestamp_data.valid = false;
+
   int timestamp_set = qtigralloc::getMetadataState(handle, QTI_VIDEO_TS_INFO);
   if (timestamp_set > 0) {
     VideoTimestampInfo timestamp_info = {};
-    layer_buffer->timestamp_data.valid = false;
     int err = static_cast<int>(qtigralloc::get(handle, QTI_VIDEO_TS_INFO, &timestamp_info));
 
     if (!err && timestamp_info.enable) {
