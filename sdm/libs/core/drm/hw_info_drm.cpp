@@ -87,6 +87,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <set>
 
 #include "hw_info_drm.h"
 
@@ -891,6 +892,7 @@ DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
         ((0 == iter.first) || (iter.first > INT32_MAX)) ? -1 : (int32_t)(iter.first);
     switch (iter.second.type) {
       case DRM_MODE_CONNECTOR_DSI:
+      case DRM_MODE_CONNECTOR_eDP:
         hw_info.display_type = kBuiltIn;
         break;
       case DRM_MODE_CONNECTOR_TV:
@@ -945,6 +947,7 @@ DisplayError HWInfoDRM::GetMaxDisplaysSupported(const DisplayType type, int32_t 
     return kErrorUndefined;
   }
 
+  int conn_type = -1;
   int32_t max_displays_builtin = 0;
   int32_t max_displays_tmds = 0;
   int32_t max_displays_virtual = 0;
@@ -955,7 +958,16 @@ DisplayError HWInfoDRM::GetMaxDisplaysSupported(const DisplayType type, int32_t 
         max_displays_builtin++;
         break;
       case DRM_MODE_ENCODER_TMDS:
-        max_displays_tmds++;
+        // TMDS encoder can be eDP or DisplayPort connector
+        // count eDP as builtin display while DisplayPort as pluggable display.
+        conn_type = GetConnectorTypeforTMDS(iter.first, iter.second);
+        if (conn_type == -1) {
+          return kErrorUndefined;
+        } else if (conn_type == DRM_MODE_CONNECTOR_eDP) {
+          max_displays_builtin++;
+        } else {
+          max_displays_tmds++;
+        }
         break;
       case DRM_MODE_ENCODER_VIRTUAL:
         max_displays_virtual++;
@@ -1002,4 +1014,30 @@ DisplayError HWInfoDRM::GetMaxDisplaysSupported(const DisplayType type, int32_t 
   return kErrorNone;
 }
 
+int HWInfoDRM::GetConnectorTypeforTMDS(uint32_t encoder_id, sde_drm::DRMEncoderInfo info) {
+  sde_drm::DRMConnectorsInfo conns_info = {};
+  int drm_err = drm_mgr_intf_->GetConnectorsInfo(&conns_info);
+  if (drm_err) {
+    DLOGE("DRM Driver error %d while getting max displays' supported", drm_err);
+    return -1;
+  }
+
+  for (auto &conn : conns_info) {
+    sde_drm::DRMConnectorInfo &info = conn.second;
+    if (info.type == DRM_MODE_CONNECTOR_eDP) {
+      std::set<uint32_t> possible_encoders;
+      drm_err = drm_mgr_intf_->GetPossibleEncoders(conn.first, &possible_encoders);
+      if (drm_err) {
+        DLOGE("DRM Driver error %d while retrieving possible encoders for connector %d",
+               drm_err, conn.first);
+        return -1;
+      }
+      if (possible_encoders.find(encoder_id) != possible_encoders.end()) {
+        return DRM_MODE_CONNECTOR_eDP;
+      }
+    }
+  }
+
+  return DRM_MODE_CONNECTOR_DisplayPort;
+}
 }  // namespace sdm

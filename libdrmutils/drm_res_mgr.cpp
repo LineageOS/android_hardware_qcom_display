@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <errno.h>
 
 #include "drm_master.h"
@@ -46,8 +82,9 @@ mutex DRMResMgr::s_lock;
 static bool GetConnector(int dev_fd, drmModeRes *res, drmModeConnector **connector) {
   for (auto i = 0; i < res->count_connectors; i++) {
     drmModeConnector *conn = drmModeGetConnector(dev_fd, res->connectors[i]);
-    if (conn && conn->connector_type == DRM_MODE_CONNECTOR_DSI && conn->count_modes &&
-        conn->connection == DRM_MODE_CONNECTED) {
+    if (conn && (conn->connector_type == DRM_MODE_CONNECTOR_DSI ||
+        conn->connector_type == DRM_MODE_CONNECTOR_eDP)
+        && conn->count_modes && conn->connection == DRM_MODE_CONNECTED) {
       *connector = conn;
       DRM_LOGI("Found connector %d", conn->connector_id);
       return true;
@@ -60,7 +97,9 @@ static bool GetConnector(int dev_fd, drmModeRes *res, drmModeConnector **connect
 static bool GetEncoder(int dev_fd, drmModeConnector *conn, drmModeEncoder **encoder) {
   for (auto i = 0; i < conn->count_encoders; i++) {
     drmModeEncoder *enc = drmModeGetEncoder(dev_fd, conn->encoders[i]);
-    if (enc && enc->encoder_type == DRM_MODE_ENCODER_DSI) {
+    if (enc && (enc->encoder_type == DRM_MODE_ENCODER_DSI ||
+        (conn->connector_type == DRM_MODE_CONNECTOR_eDP &&
+        enc->encoder_type == DRM_MODE_ENCODER_TMDS))) {
       *encoder = enc;
       DRM_LOGI("Found encoder %d", enc->encoder_id);
       return true;
