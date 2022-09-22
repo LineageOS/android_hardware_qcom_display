@@ -4022,6 +4022,14 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
 int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
   std::chrono::milliseconds span(5000);
+  if (commit_done_future_.valid()) {
+    std::future_status status = commit_done_future_.wait_for(std::chrono::milliseconds(0));
+    if (status != std::future_status::ready) {
+      // Previous task is stuck. Bail out early.
+      return -ETIMEDOUT;
+    }
+  }
+
   commit_done_future_ = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
                                       return session->WaitForCommitDone(display, client_id);
                                      }, this, display, client_id);
