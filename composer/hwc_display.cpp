@@ -1426,6 +1426,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
     DLOGE("mmap failed with err %d", errno);
     buffer_allocator_->FreeBuffer(&output_buffer_info_);
     output_buffer_info_ = {};
+    dump_frame_count_ = 0;
     return HWC2::Error::NoResources;
   }
 
@@ -1435,6 +1436,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
     munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size);
     buffer_allocator_->FreeBuffer(&output_buffer_info_);
     output_buffer_info_ = {};
+    dump_frame_count_ = 0;
     return err;
   }
   dump_output_to_file_ = dump_output_to_file;
@@ -1907,11 +1909,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     display_pause_pending_ = false;
   }
 
-  if (dump_frame_count_) {
-    dump_frame_count_--;
-    dump_frame_index_++;
-  }
-
   layer_stack_.flags.geometry_changed = false;
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
@@ -2114,7 +2111,8 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
       result = fwrite(base, buffer_info.alloc_buffer_info.size, 1, fp);
       fclose(fp);
     }
-
+    // Need to clear buffer after dumping of current frame to provide empty buffer for next frame.
+    memset(base, 0, buffer_info.alloc_buffer_info.size);
     DLOGI("Frame Dump of %s is %s", dump_file_name, result ? "Successful" : "Failed");
   }
 }
@@ -3546,29 +3544,59 @@ void HWCDisplay::HandleFrameDump() {
     // If CWB request status is not notified, then need to wait for the notification.
     if (cwb_resp.status == kCWBReleaseFenceNotChecked) {
       if (cwb_cv_.wait_until(
-              lock, std::chrono::system_clock::now() + std::chrono::milliseconds(cwb_wait_ms)) ==
+              lock, std::chrono::system_clock::now() + std::chrono::milliseconds(kCwbWaitMs)) ==
         std::cv_status::timeout) {
-        DLOGE("CWB wait timed out.");
-        cwb_resp.status = kCWBReleaseFenceWaitTimedOut;
+        DLOGW("CWB notification wait timed out, it would be handled in next cycle.");
+        // Return to handle the notification in next cycle, if release fence is not yet notified.
+        return;
       }
     }
     ret = cwb_resp.status;
+    cwb_capture_status_map_.erase(kCWBClientFrameDump);
   }
 
-  if (ret != kCWBReleaseFenceErrorNone) {
-    DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-  }
-
-  if (!ret) {
+  if (!ret || ret == kCWBReleaseFenceWaitTimedOut) {
+    // On fence wait timeout, we could dump the frame, because timeout means it waited for
+    // one second for signal, and which might got delayed due to some flushing and resource
+    // releasing operations during certain power glitch event. So, we can assume that buffer
+    // writing operation is over after timeout.
     DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence);
+    if (ret == kCWBReleaseFenceWaitTimedOut) {
+      DLOGW("CWB frame-%d dump may be empty due to fence timeout on any unexpected event!",
+            dump_frame_index_);
+    }
+  } else {
+    // CwbManager notifies -1 (unknown error) on power down or tear down, where -1 means, last
+    // request is not processed by CwbManager and tried to flush the CWB pending requests from
+    // CWB request queue.
+    DLOGW("Probably, power/tear down occured during the cwb request. So, dropped off frame-%d.",
+          dump_frame_index_);
   }
 
+  bool stop_frame_dump = false;
   if (0 == (dump_frame_count_ - 1)) {
+    stop_frame_dump = true;
+  } else {
+    const native_handle_t *hnd = static_cast<native_handle_t *>(output_buffer_info_.private_data);
+    HWC2::Error err = SetReadbackBuffer(hnd, nullptr, output_buffer_cwb_config_,
+                                        kCWBClientFrameDump);
+    if (err != HWC2::Error::None) {
+      stop_frame_dump = true;
+      DLOGE("Unexpectedly stopped dumping of remaining %d frames for frame indices %d onwards!",
+            dump_frame_count_, dump_frame_index_);
+    } else {
+      dump_frame_count_--;
+      dump_frame_index_++;
+    }
+  }
+
+  if (stop_frame_dump) {
     dump_output_to_file_ = false;
     // Unmap and Free buffer
     if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
       DLOGE("unmap failed with err %d", errno);
     }
+
     if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
       DLOGE("FreeBuffer failed");
     }
@@ -3576,15 +3604,8 @@ void HWCDisplay::HandleFrameDump() {
     output_buffer_info_ = {};
     output_buffer_base_ = nullptr;
     output_buffer_cwb_config_ = {};
-  } else {
-    const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
-    HWC2::Error err = SetReadbackBuffer(handle, nullptr, output_buffer_cwb_config_,
-                                        kCWBClientFrameDump);
-    if (err != HWC2::Error::None) {
-      munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size);
-      buffer_allocator_->FreeBuffer(&output_buffer_info_);
-      output_buffer_info_ = {};
-    }
+    dump_frame_count_ = 0;
+    dump_frame_index_ = 0;
   }
 }
 
