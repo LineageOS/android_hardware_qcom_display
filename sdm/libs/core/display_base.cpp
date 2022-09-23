@@ -3837,6 +3837,9 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
         return err;
       }
     }
+    if (state == kStateOff) {
+      *needs_refresh = false;
+    }
   }
   if (*needs_refresh) {
     validated_ = false;

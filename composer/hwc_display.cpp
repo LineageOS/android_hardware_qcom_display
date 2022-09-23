@@ -3128,6 +3128,10 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
     DLOGI("Resume display %d-%d",  sdm_id_, type_);
     display_paused_ = false;
+    if (*needs_refresh == false) {
+      secure_event_ = kSecureEventMax;
+      return kErrorNone;
+    }
   } else if (secure_event == kTUITransitionPrepare || secure_event == kTUITransitionStart) {
     if (*needs_refresh) {
       display_pause_pending_ = true;
