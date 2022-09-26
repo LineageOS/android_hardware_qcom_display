@@ -1967,6 +1967,9 @@ DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   sync_commit = true;
 #endif
 
+  // dpps commit feature ops doesn't use the obj id, set it as -1
+  drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, -1);
+
   int ret = NullCommit(sync_commit /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
