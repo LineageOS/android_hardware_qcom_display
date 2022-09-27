@@ -889,8 +889,24 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
 }
 
 DisplayError HWInfoDRM::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {
-  hw_disp_info->type = kBuiltIn;
-  hw_disp_info->is_connected = true;
+  HWDisplaysInfo hw_displays_info = {};
+
+  DisplayError error = GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    DLOGE("Failed to get connected display list. Error = %d", error);
+    return error;
+  }
+
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.is_primary) {
+      hw_disp_info->type = info.display_type;
+      hw_disp_info->is_connected = info.is_connected;
+      DLOGI("Primary display: %d-%d, connected: %s", info.display_id,
+            info.display_type, info.is_connected ? "true" : "false");
+      break;
+    }
+  }
 
   return kErrorNone;
 }
