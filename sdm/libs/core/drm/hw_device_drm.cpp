@@ -1566,7 +1566,7 @@ DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
   } else {
     err = AtomicCommit(hw_layers);
   }
-
+  secure_inactive_pending_commit_ = false;
   return err;
 }
 
@@ -2443,6 +2443,7 @@ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
   if (first_null_cycle_)
     first_null_cycle_ = false;
 
+  secure_inactive_pending_commit_ = false;
   return kErrorNone;
 }
 
