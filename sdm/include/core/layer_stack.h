@@ -402,6 +402,8 @@ struct LayerStackFlags {
       bool use_metadata_refresh_rate : 1;
 
       uint32_t iwe_present : 1;  //!< This flag shall be set to true to indicate stack has iwe layer
+
+      bool default_strategy: 1;  //!< This flag indicates the default strategy usage.
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.

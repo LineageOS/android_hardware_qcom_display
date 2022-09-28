@@ -101,13 +101,14 @@ DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_att
     error = strategy_intf_->Start(disp_layer_stack_, max_attempts, constraints);
     if (error == kErrorNone || error == kErrorNeedsValidate || error == kErrorNeedsLutRegen) {
       extn_start_success_ = true;
-      return error;
+    } else {
+      *max_attempts = 1;
+      error = kErrorNeedsValidate;
     }
   }
 
-  *max_attempts = 1;
-
-  return kErrorNeedsValidate;
+  disp_layer_stack_->stack->flags.default_strategy = !extn_start_success_;
+  return error;
 }
 
 DisplayError Strategy::Stop() {
