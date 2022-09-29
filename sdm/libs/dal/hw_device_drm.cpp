@@ -1410,13 +1410,14 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 #ifdef TRUSTED_VM
   if (first_cycle_) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::RESET_PANEL_FEATURES, 0 /* argument is not used */);
+    // On TUI start, need to clear the SSPP luts.
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_LUT, token_.crtc_id);
   }
 #endif
 
   if (reset_planes_luts_) {
-    // Used in 2 cases:
+    // Used in 1 cases:
     // 1. Since driver doesnt clear the SSPP luts during the adb shell stop/start, clear once
-    // 2. On TUI start also, need to clear the SSPP luts.
     drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_LUT, token_.crtc_id);
   }
 
