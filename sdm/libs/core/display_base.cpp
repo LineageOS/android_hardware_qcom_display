@@ -2948,9 +2948,14 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   }
   DLOGV_IF(kTagDisplay, "Max area layer at index : %d", max_area_layer_index);
 
+  uint32_t num_active_displays = comp_manager_->GetActiveDisplayCount();
+
   // TODO(user): Mark layer which needs downscaling on GPU fallback as priority layer and use MDP
   // for composition to avoid quality mismatch between GPU and MDP switch(idle timeout usecase).
-  if (max_layer_area >= fb_area) {
+  if ((max_layer_area > fb_area && (num_active_displays == 1)) || max_layer_area == fb_area) {
+    // Disable dynamic destination scalar when more than one display is active
+    // Dynamic destination scalar introduce the demand for scaling, and since built-in displays
+    // do not have dedicate VIG pipes, lead to composition strategies exhausted.
     Layer *layer = layers.at(max_area_layer_index);
     bool needs_rotation = (layer->transform.rotation == 90.0f);
 

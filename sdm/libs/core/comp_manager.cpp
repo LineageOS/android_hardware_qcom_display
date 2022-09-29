@@ -688,6 +688,10 @@ DisplayError CompManager::ControlDpps(bool enable) {
   return kErrorNone;
 }
 
+uint32_t CompManager::GetActiveDisplayCount() {
+  return powered_on_displays_.size();
+}
+
 bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
                                   const SyncPoints &sync_points) {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);

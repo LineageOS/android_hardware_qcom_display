@@ -162,6 +162,7 @@ class CompManager : public CwbCallback {
   virtual void TriggerRefresh(int32_t display_id);
   std::string Dump();
   uint32_t GetMixerCount();
+  uint32_t GetActiveDisplayCount();
 
  private:
   static const int kMaxThermalLevel = 3;
