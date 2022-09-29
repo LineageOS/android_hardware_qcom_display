@@ -578,6 +578,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool HasHDRSupport(HWCDisplay *hwc_display);
   void PostInit();
   int GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DispType *disp_type);
+  DisplayError WaitForPrimaryHotplug(HWDisplayInterfaceInfo *hw_disp_info);
+  void HandlePluggablePrimaryDisplay(HWDisplaysInfo *hw_displays_info);
 
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);
