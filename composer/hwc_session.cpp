@@ -1429,6 +1429,11 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
 }
 
 void HWCSession::GetVirtualDisplayList() {
+  if (null_display_mode_) {
+    DLOGI("In null display mode, skip handling of virtual displays list");
+    return;
+  }
+
   HWDisplaysInfo hw_displays_info = {};
   core_intf_->GetDisplaysStatus(&hw_displays_info);
 
