@@ -141,6 +141,7 @@ class ResourceInterface {
   virtual void HandleSkipValidate(Handle display_ctx) = 0;
   virtual std::string Dump() = 0;
   virtual uint32_t GetMixerCount() = 0;
+  virtual void HandleTUITransition(bool tui_active) = 0;
 };
 
 }  // namespace sdm
