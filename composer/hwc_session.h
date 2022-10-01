@@ -315,6 +315,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t SetDimmingMinBl(hwc2_display_t display, int32_t min_bl);
   int32_t GetClientTargetProperty(hwc2_display_t display,
                                   HwcClientTargetProperty *outClientTargetProperty);
+  int32_t SetDemuraState(hwc2_display_t display, int32_t state);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
@@ -433,7 +434,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     };
 
     struct DisplayCWBSession{
-      std::deque<QueueNode *> queue;
+      std::deque<std::shared_ptr<QueueNode>> queue;
       std::mutex lock;
       std::condition_variable cv;
       std::future<void> future;
@@ -442,7 +443,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
     static void AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t display_type);
     void ProcessCWBStatus(hwc2_display_t display_type);
-    void NotifyCWBStatus(int status, QueueNode *cwb_node);
+    void NotifyCWBStatus(int status, std::shared_ptr<QueueNode> cwb_node);
 
     std::map<hwc2_display_t, DisplayCWBSession> display_cwb_session_map_;
     HWCSession *hwc_session_ = nullptr;
@@ -634,6 +635,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t HandleTUITransition(int disp_id, int event);
   android::status_t GetDisplayPortId(uint32_t display, int *port_id);
   android::status_t UpdateTransferTime(const android::Parcel *input_parcel);
+  android::status_t RetrieveDemuraTnFiles(const android::Parcel *input_parcel);
 
   // Internal methods
   void HandleSecureSession();
@@ -660,6 +662,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int WaitForVmRelease(hwc2_display_t display, int timeout_ms);
   void GetVirtualDisplayList();
   HWC2::Error CheckWbAvailability();
+  bool IsHWDisplayConnected(hwc2_display_t client_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

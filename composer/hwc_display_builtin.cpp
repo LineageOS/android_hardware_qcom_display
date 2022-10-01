@@ -174,7 +174,7 @@ int HWCDisplayBuiltIn::Init() {
   }
 
   int vsyncs = 0;
-  HWCDebugHandler::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &vsyncs);
+  HWCDebugHandler::Get()->GetProperty(TRANSIENT_FPS_CYCLE_COUNT, &vsyncs);
   if (vsyncs > 0) {
     SetVsyncsApplyRateChange(UINT32(vsyncs));
   }
@@ -1564,6 +1564,32 @@ HWC2::Error HWCDisplayBuiltIn::SetDimmingMinBl(int min_bl) {
     DLOGE("Failed. min_bl = %d, error = %d", min_bl, error);
     return HWC2::Error::BadDisplay;
   }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::RetrieveDemuraTnFiles() {
+  DLOGV("Display ID: %" PRId64, id_);
+  DisplayError error = display_intf_->RetrieveDemuraTnFiles();
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. error = %d",error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetDemuraState(int state) {
+  DLOGV("Display ID: %" PRId64 " state: %d", id_, state);
+  DisplayError error = display_intf_->SetDemuraState(state);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed. state = %d, error = %d", state, error);
+    return HWC2::Error::BadDisplay;
+  }
+
+  callbacks_->Refresh(id_);
 
   return HWC2::Error::None;
 }

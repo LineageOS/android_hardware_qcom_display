@@ -896,7 +896,7 @@ bool DRMPlane::SetCscConfig(drmModeAtomicReq *req, DRMCscType csc_type) {
   return true;
 }
 
-bool DRMPlane::SetFp16CscConfig(drmModeAtomicReq *req, int csc_type) {
+bool DRMPlane::SetFp16CscConfig(drmModeAtomicReq *req, DRMFp16CscType csc_type) {
   if (csc_type > kFP16CscTypeMax) {
     return false;
   }
@@ -906,14 +906,30 @@ bool DRMPlane::SetFp16CscConfig(drmModeAtomicReq *req, int csc_type) {
   }
 
   if (csc_type == kFP16CscTypeMax) {
+// Since logic for setting FP16 properties is in SetupAtomic, adding optimization for setting and
+// resetting blob properties leads to AddProperty being called in Validate and ignored during
+// Commit call. This invalidates the current FP16 test cases, and to avoid this we need to add
+// SDM_VIRTUAL_DRIVER checks in both SetFp16CscConfig and SetFp16GcConfig
+#ifndef SDM_VIRTUAL_DRIVER
+    if (!fp16_csc_blob_id_) {
+      return true;
+    }
+#endif
+    UnsetFp16CscConfig();
     AddProperty(req, drm_plane_->plane_id, prop_id, 0, false /* cache */, tmp_prop_val_map_);
   } else {
-    uint32_t fp16_csc_blob_id = 0;
+#ifndef SDM_VIRTUAL_DRIVER
+    if (csc_type == fp16_csc_type_) {
+      return true;
+    }
+#endif
+    UnsetFp16CscConfig();
     drmModeCreatePropertyBlob(fd_, reinterpret_cast<void *>(&csc_fp16_convert[csc_type]),
-                              sizeof(drm_msm_fp16_csc), &fp16_csc_blob_id);
-    AddProperty(req, drm_plane_->plane_id, prop_id, fp16_csc_blob_id, false /* cache */,
+                              sizeof(drm_msm_fp16_csc), &fp16_csc_blob_id_);
+    AddProperty(req, drm_plane_->plane_id, prop_id, fp16_csc_blob_id_, false /* cache */,
                 tmp_prop_val_map_);
   }
+  fp16_csc_type_ = csc_type;
 
   return true;
 }
@@ -948,16 +964,44 @@ bool DRMPlane::SetFp16GcConfig(drmModeAtomicReq *req, drm_msm_fp16_gc *fp16_gc_c
 
 
   if (fp16_gc_config->mode == FP16_GC_MODE_INVALID) {
+#ifndef SDM_VIRTUAL_DRIVER
+    if (!fp16_gc_blob_id_) {
+      return true;
+    }
+#endif
+    UnsetFp16GcConfig();
     AddProperty(req, drm_plane_->plane_id, prop_id, 0, false /* cache */, tmp_prop_val_map_);
   } else {
-    uint32_t fp16_gc_blob_id = 0;
+#ifndef SDM_VIRTUAL_DRIVER
+    if (fp16_gc_config->mode == fp16_gc_config_.mode &&
+        fp16_gc_config->flags == fp16_gc_config_.flags) {
+      return true;
+    }
+#endif
+    UnsetFp16GcConfig();
     drmModeCreatePropertyBlob(fd_, reinterpret_cast<void *>(fp16_gc_config),
-                              sizeof(drm_msm_fp16_gc), &fp16_gc_blob_id);
-    AddProperty(req, drm_plane_->plane_id, prop_id, fp16_gc_blob_id, false /* cache */,
+                              sizeof(drm_msm_fp16_gc), &fp16_gc_blob_id_);
+    AddProperty(req, drm_plane_->plane_id, prop_id, fp16_gc_blob_id_, false /* cache */,
                 tmp_prop_val_map_);
   }
+  fp16_gc_config_.mode = fp16_gc_config->mode;
+  fp16_gc_config_.flags = fp16_gc_config->flags;
 
   return true;
+}
+
+void DRMPlane::UnsetFp16CscConfig() {
+  if (fp16_csc_blob_id_) {
+    drmModeDestroyPropertyBlob(fd_, fp16_csc_blob_id_);
+    fp16_csc_blob_id_ = 0;
+  }
+}
+
+void DRMPlane::UnsetFp16GcConfig() {
+  if (fp16_gc_blob_id_) {
+    drmModeDestroyPropertyBlob(fd_, fp16_gc_blob_id_);
+    fp16_gc_blob_id_ = 0;
+  }
 }
 
 bool DRMPlane::SetScalerConfig(drmModeAtomicReq *req, uint64_t handle) {
@@ -1268,7 +1312,7 @@ void DRMPlane::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
 
     case DRMOps::PLANE_SET_FP16_CSC_CONFIG: {
       uint32_t config = va_arg(args, uint32_t);
-      SetFp16CscConfig(req, config);
+      SetFp16CscConfig(req, (DRMFp16CscType)config);
     } break;
 
     case DRMOps::PLANE_SET_FP16_GC_CONFIG: {
@@ -1388,6 +1432,13 @@ void DRMPlane::Unset(bool is_commit, drmModeAtomicReq *req) {
     dgm_csc_in_use_ = !is_commit;
   }
   ResetColorLUTs(is_commit, req);
+
+  // Reset FP16 properties
+  PerformWrapper(DRMOps::PLANE_SET_FP16_CSC_CONFIG, req, kFP16CscTypeMax);
+  PerformWrapper(DRMOps::PLANE_SET_FP16_IGC_CONFIG, req, 0);
+  PerformWrapper(DRMOps::PLANE_SET_FP16_UNMULT_CONFIG, req, 0);
+  drm_msm_fp16_gc fp16_gc_config = {.flags = 0, .mode = FP16_GC_MODE_INVALID};
+  PerformWrapper(DRMOps::PLANE_SET_FP16_GC_CONFIG, req, &fp16_gc_config);
 
   tmp_prop_val_map_.clear();
   committed_prop_val_map_.clear();

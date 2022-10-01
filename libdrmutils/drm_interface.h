@@ -884,6 +884,7 @@ struct DRMConnectorInfo {
   uint32_t max_os_brightness;
   uint32_t max_panel_backlight;
   bool is_reserved;
+  std::string backlight_type;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>

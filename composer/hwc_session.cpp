@@ -1292,6 +1292,10 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
 
   auto mode = static_cast<HWC2::PowerMode>(int_mode);
 
+  if (mode == HWC2::PowerMode::On && !IsHWDisplayConnected(display)) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
   // When secure session going on primary, if power request comes on second built-in, cache it and
   // process once secure session ends.
   // Allow power off transition during secure session.
@@ -1399,6 +1403,10 @@ int32_t HWCSession::SetDimmingEnable(hwc2_display_t display, int32_t int_enabled
 
 int32_t HWCSession::SetDimmingMinBl(hwc2_display_t display, int32_t min_bl) {
   return CallDisplayFunction(display, &HWCDisplay::SetDimmingMinBl, min_bl);
+}
+
+int32_t HWCSession::SetDemuraState(hwc2_display_t display, int32_t state) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDemuraState, state);
 }
 
 int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support) {
@@ -2084,6 +2092,28 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = UpdateTransferTime(input_parcel);
     } break;
 
+    case qService::IQService::RETRIEVE_DEMURATN_FILES : {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      status = RetrieveDemuraTnFiles(input_parcel);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
+    case qService::IQService::SET_DEMURA_STATE: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int state = input_parcel->readInt32();
+      status = SetDemuraState(disp_id, state);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -2103,6 +2133,23 @@ android::status_t HWCSession::UpdateTransferTime(const android::Parcel *input_pa
   uint32_t transfer_time = UINT32(input_parcel->readInt32());
   return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayBuiltIn::UPDATE_TRANSFER_TIME,
                                                     transfer_time);
+}
+
+android::status_t HWCSession::RetrieveDemuraTnFiles(const android::Parcel *input_parcel) {
+  auto display_id = static_cast<int>(input_parcel->readInt32());
+
+  int disp_idx = GetDisplayIndex(display_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display_id);
+    return -EINVAL;
+  }
+
+  auto err = CallDisplayFunction(static_cast<hwc2_display_t>(disp_idx),
+                                 &HWCDisplay::RetrieveDemuraTnFiles);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  return 0;
 }
 
 android::status_t HWCSession::getComposerStatus() {
@@ -3060,7 +3107,10 @@ int HWCSession::HandleBuiltInDisplays() {
 
       DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id,
             UINT32(client_id));
+      // Free lock before the callback
+      primary_display_lock_.Unlock();
       callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+      primary_display_lock_.Lock();
       break;
     }
   }
@@ -3068,35 +3118,75 @@ int HWCSession::HandleBuiltInDisplays() {
   return status;
 }
 
-int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
-  SCOPE_LOCK(pluggable_handler_lock_);
-  if (null_display_mode_) {
-    DLOGW("Skipped pluggable display handling in null-display mode");
-    return 0;
-  }
-
-  hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-  std::bitset<kSecureMax> secure_sessions = 0;
-
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-    Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
-    hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
-  }
-
-  if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
-    // Defer hotplug handling.
-    DLOGI("Marking hotplug pending...");
-    pending_hotplug_event_ = kHotPlugEvent;
-    return -EAGAIN;
-  }
-
-  DLOGI("Handling hotplug...");
+bool HWCSession::IsHWDisplayConnected(hwc2_display_t client_id) {
   HWDisplaysInfo hw_displays_info = {};
+
   DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
   if (error != kErrorNone) {
     DLOGE("Failed to get connected display list. Error = %d", error);
-    return -EINVAL;
+    return false;
+  }
+
+  auto itr_map = std::find_if(map_info_pluggable_.begin(),
+                              map_info_pluggable_.end(),
+                              [&client_id](auto& i){return client_id == i.client_id;});
+
+  // return connected as true for all non pluggable displays
+  if (itr_map == map_info_pluggable_.end()) {
+    return true;
+  }
+
+  auto sdm_id = itr_map->sdm_id;
+
+  auto itr_hw = std::find_if(hw_displays_info.begin(), hw_displays_info.end(),
+                             [&sdm_id](auto& info){return sdm_id == info.second.display_id;});
+
+  if (itr_hw == hw_displays_info.end()) {
+    DLOGW("client id: %d, sdm_id: %d not found in hw map", client_id, sdm_id);
+    return false;
+  }
+
+  if (!itr_hw->second.is_connected) {
+    DLOGW("client_id: %d, sdm_id: %d, not connected", client_id, sdm_id);
+    return false;
+  }
+
+  DLOGI("client_id: %d, sdm_id: %d, is connected", client_id, sdm_id);
+  return true;
+}
+
+int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
+  HWDisplaysInfo hw_displays_info = {};
+  {
+    SCOPE_LOCK(pluggable_handler_lock_);
+    if (null_display_mode_) {
+      DLOGW("Skipped pluggable display handling in null-display mode");
+      return 0;
+    }
+
+    hwc2_display_t virtual_display_index =
+        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    std::bitset<kSecureMax> secure_sessions = 0;
+
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
+      Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
+      hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+    }
+
+    if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
+      // Defer hotplug handling.
+      DLOGI("Marking hotplug pending...");
+      pending_hotplug_event_ = kHotPlugEvent;
+      return -EAGAIN;
+    }
+
+    DLOGI("Handling hotplug...");
+    DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+    if (error != kErrorNone) {
+      DLOGE("Failed to get connected display list. Error = %d", error);
+      return -EINVAL;
+    }
   }
 
   int status = HandleDisconnectedDisplays(&hw_displays_info);
@@ -3144,10 +3234,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
     available_mixer_count = hwc_display_[active_builtin]->GetAvailableMixerCount();
   }
 
-  if (available_mixer_count < min_mixer_count) {
-    return -EAGAIN;
-  }
-
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;
 
@@ -3164,6 +3250,12 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
     if (display_used != map_info_pluggable_.end()) {
       // Display is already used in a slot.
       continue;
+    }
+
+    if (available_mixer_count < min_mixer_count) {
+      DLOGI("mixers not available: available: %d, min: %d",
+            available_mixer_count, min_mixer_count);
+      return -EAGAIN;
     }
 
     // Count active pluggable display slots and slots with no commits.
@@ -3644,13 +3736,17 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id,
     return;
   }
 
+  static constexpr uint32_t min_mixer_count = 2;
+  uint32_t available_mixer_count = 0;
   std :: bitset < kSecureMax > secure_sessions = 0;
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
     Locker::ScopeLock lock_d(locker_[active_builtin_disp_id]);
     hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+    available_mixer_count = hwc_display_[active_builtin_disp_id]->GetAvailableMixerCount();
   }
 
-  if (secure_sessions.any() || active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
+  if (secure_sessions.any() || active_builtin_disp_id >= HWCCallbacks::kNumDisplays ||
+      available_mixer_count < min_mixer_count) {
     return;
   }
 
@@ -4404,11 +4500,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     }
   }
   if (trigger_refresh) {
-    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
-    if (ret != 0) {
-      DLOGE("WaitForCommitDone failed with error %d", ret);
-      return -EINVAL;
-    }
+    callbacks_.Refresh(target_display);
   }
 
   if (pending_hotplug_event_ == kHotPlugEvent) {

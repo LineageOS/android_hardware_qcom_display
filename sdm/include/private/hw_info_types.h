@@ -688,6 +688,7 @@ struct HWAVRInfo {
 struct HWPipeCscInfo {
   HWWriteOperation op = kNoOp;
   HWCsc csc = {};
+  bool dgm_csc_config = false;
 };
 
 struct HWPipeTonemapLutInfo {

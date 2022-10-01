@@ -148,7 +148,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetAlternateDisplayConfig(bool set);
   virtual HWC2::Error SetDimmingEnable(int int_enabled);
   virtual HWC2::Error SetDimmingMinBl(int min_bl);
+  virtual HWC2::Error RetrieveDemuraTnFiles();
   virtual DisplayError UpdateTransferTime(uint32_t transfer_time);
+  virtual HWC2::Error SetDemuraState(int state);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

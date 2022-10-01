@@ -135,6 +135,7 @@ class ResourceInterface {
   virtual DisplayError SetMaxSDEClk(Handle display_ctx, uint32_t clk) = 0;
   virtual DisplayError ForceToneMapConfigure(Handle display_ctx,
                                              DispLayerStack *disp_layer_stack) = 0;
+  virtual bool ToneMapQueryRequested(Handle display_ctx) = 0;
   virtual DisplayError PreCommit(Handle display_ctx) = 0;
   virtual bool HandleCwbTeardown(Handle display_ctx) = 0;
   virtual void HandleSkipValidate(Handle display_ctx) = 0;

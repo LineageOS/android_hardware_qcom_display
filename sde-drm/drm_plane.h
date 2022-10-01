@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef __DRM_PLANE_H__
@@ -89,10 +93,12 @@ class DRMPlane {
   void ResetPlanesLUT(drmModeAtomicReq *req);
   void GetIndex(uint8_t *index) { *index = plane_type_info_.pipe_idx; }
   void GetRect(uint8_t *rect) { *rect = plane_type_info_.master_plane_id ? 1 : 0; }
-  bool SetFp16CscConfig(drmModeAtomicReq *req, int csc_type);
+  bool SetFp16CscConfig(drmModeAtomicReq *req, DRMFp16CscType csc_type);
   bool SetFp16IgcConfig(drmModeAtomicReq *req, uint32_t igc_en);
   bool SetFp16UnmultConfig(drmModeAtomicReq *req, uint32_t unmult_en);
   bool SetFp16GcConfig(drmModeAtomicReq *req, drm_msm_fp16_gc *fp16_gc_config);
+  void UnsetFp16CscConfig();
+  void UnsetFp16GcConfig();
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
@@ -124,6 +130,11 @@ class DRMPlane {
   DRMPlaneLutState dgm_1d_lut_gc_state_ = kInactive;
   DRMPlaneLutState vig_1d_lut_igc_state_ = kInactive;
   DRMPlaneLutState vig_3d_lut_gamut_state_ = kInactive;
+  // FP16 properties
+  uint32_t fp16_csc_blob_id_ = 0;
+  DRMFp16CscType fp16_csc_type_ = kFP16CscTypeMax;
+  uint32_t fp16_gc_blob_id_ = 0;
+  drm_msm_fp16_gc fp16_gc_config_ = {.flags = 0, .mode = FP16_GC_MODE_INVALID};
 };
 
 class DRMPlaneManager {
