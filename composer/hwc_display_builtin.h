@@ -225,6 +225,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   // Long term large composition hint
   int hwc_tid_ = 0;
   uint32_t num_basic_frames_ = 0;
+  uint32_t large_comp_hint_threshold_ = 0;
 };
 
 }  // namespace sdm

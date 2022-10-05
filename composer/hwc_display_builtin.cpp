@@ -206,6 +206,11 @@ int HWCDisplayBuiltIn::Init() {
   DebugHandler::Get()->GetProperty(ENABLE_ROUNDED_CORNER, &value);
   enable_round_corner_ = (value == 1);
 
+  value = 0;
+  if (DebugHandler::Get()->GetProperty(LARGE_COMP_HINT_THRESHOLD, &value) == kErrorNone) {
+    large_comp_hint_threshold_ = value;
+  }
+
   uint32_t config_index = 0;
   GetActiveDisplayConfig(&config_index);
   DisplayConfigVariableInfo attr = {};
@@ -1365,6 +1370,12 @@ bool HWCDisplayBuiltIn::NeedsLargeCompPerfHint() {
 
   if (active_refresh_rate_ < 120) {
     return false;
+  }
+
+  if (large_comp_hint_threshold_ > 0 && layer_set_.size() >= large_comp_hint_threshold_) {
+    DLOGV_IF(kTagResources, "Number of app layers %d meet requirement %d. Set perf hint for large "
+             "comp cycle", layer_set_.size(), large_comp_hint_threshold_);
+    return true;
   }
 
   // Send hints when the device is in multi-display or when a skip layer is present.
