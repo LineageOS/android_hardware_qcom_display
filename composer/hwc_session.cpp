@@ -1099,10 +1099,11 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
   }
 
   // On SF stop, disable the idle time.
-  if (!pointer && is_idle_time_up_ && hwc_display_[HWC_DISPLAY_PRIMARY]) { // De-registering…
+  if (!pointer && is_client_up_ && hwc_display_[HWC_DISPLAY_PRIMARY]) { // De-registering…
     DLOGI("disable idle time");
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
-    is_idle_time_up_ = false;
+    is_client_up_ = false;
+    hwc_display_[HWC_DISPLAY_PRIMARY]->MarkClientActive(false);
   }
 }
 
