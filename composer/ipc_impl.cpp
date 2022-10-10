@@ -120,6 +120,7 @@ int IPCImpl::Init() {
   } else {
     DLOGW("Unable to load = %s, error = %s", QRTR_CLIENT_LIB_NAME, qrtr_client_lib_.Error());
   }
+
   if (mem_buf_client_lib_.Open(MEMBUF_CLIENT_LIB_NAME)) {
     if (!mem_buf_client_lib_.Sym(CREATE_MEMBUF_INTERFACE_NAME,
                             reinterpret_cast<void **>(&GetMemBuf)) ||
@@ -131,30 +132,45 @@ int IPCImpl::Init() {
       DLOGE("Membuf Symbols not resolved");
       return -1;
     }
+
+    int err = GetMemBuf(&mem_buf_);
+    if (err != 0) {
+      DLOGE("GetMemBuf failed!! %d", err);
+      goto cleanup;
+    }
   } else {
     DLOGW("Unable to load = %s, error = %s", MEMBUF_CLIENT_LIB_NAME, mem_buf_client_lib_.Error());
-  }
-  int err = GetMemBuf(&mem_buf_);
-  if (err != 0) {
-    DLOGE("GetMemBuf failed!! %d", err);
-    goto cleanup;
   }
 
   init_done_ = true;
   return 0;
+
 cleanup:
-  return Deinit();
+  if (mem_buf_ && PutMembuf) {
+    PutMembuf();
+    mem_buf_ = nullptr;
+  }
+
+  if (qrtr_client_intf_ && destroy_qrtr_client_intf_) {
+    int err = destroy_qrtr_client_intf_(qrtr_client_intf_);
+    if (err != 0) {
+      return err;
+    }
+    qrtr_client_intf_ = nullptr;
+  }
+
+  return -1;
 }
 
 int IPCImpl::Deinit() {
   if (!init_done_)
     return 0;
 
-  if (mem_buf_) {
+  if (mem_buf_ && PutMembuf) {
     PutMembuf();
   }
 
-  if (destroy_qrtr_client_intf_) {
+  if (qrtr_client_intf_ && destroy_qrtr_client_intf_) {
     int err = destroy_qrtr_client_intf_(qrtr_client_intf_);
     if (err != 0) {
       return err;
