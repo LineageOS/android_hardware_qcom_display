@@ -77,6 +77,7 @@
 #include <condition_variable>  // NOLINT
 #include <string>
 #include <vector>
+#include <future>
 
 #include "hw_interface.h"
 #include "comp_manager.h"
@@ -455,9 +456,11 @@ class DisplayBase : public DisplayInterface {
   void UpdateFrameBuffer();
   void CleanupOnError();
   bool IsValidateNeeded();
+  void TrackInputFences();
   DisplayError InitBorderLayers();
   std::vector<LayerRect> GetBorderRects();
   void GenerateBorderLayers(const std::vector<LayerRect> &border_rects);
+  void WaitOnFences();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   unsigned int rc_cached_mixer_width_ = 0;
@@ -484,6 +487,10 @@ class DisplayBase : public DisplayInterface {
   bool windowed_display_ = false;
   LayerRect window_rect_ = {};
   bool enable_win_rect_mask_ = false;
+  std::future<void> fence_wait_future_;
+  bool track_input_fences_ = false;
+  std::vector<shared_ptr<Fence>> acquire_fences_;
+  std::mutex fence_track_mutex_;
 };
 
 }  // namespace sdm
