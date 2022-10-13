@@ -200,6 +200,10 @@ HWC2::Error HWCDisplayVirtualDPU::PreValidateDisplay(bool *exit_validate) {
     }
   }
 
+  if (force_gpu_comp_ && !layer_stack_.flags.secure_present) {
+    MarkLayersForClientComposition();
+  }
+
   *exit_validate = false;
 
   return HWC2::Error::None;
@@ -273,6 +277,12 @@ HWC2::Error HWCDisplayVirtualDPU::SetPanelLuminanceAttributes(float min_lum, flo
   if (err != kErrorNone) {
     return HWC2::Error::BadParameter;
   }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayVirtualDPU::SetColorTransform(const float *matrix,
+                                                    android_color_transform_t hint) {
+  force_gpu_comp_ = (hint != HAL_COLOR_TRANSFORM_IDENTITY) ? true : false;
   return HWC2::Error::None;
 }
 
