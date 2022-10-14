@@ -645,6 +645,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::condition_variable cwb_cv_;
   std::map<CWBClient, CWBCaptureResponse> cwb_capture_status_map_;
   static constexpr unsigned int kCwbWaitMs = 100;
+  bool validate_done_ = false;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
@@ -660,7 +661,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool game_supported_ = false;
   uint64_t elapse_timestamp_ = 0;
   bool draw_method_set_ = false;
-  bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
   bool is_client_up_ = false;
 };
