@@ -62,7 +62,6 @@ void Allocator::SetProperties(gralloc::GrallocProperties props) {
 
 int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   int ret;
-  int err = 0;
   bool is_secure = false;
   alloc_data->uncached = UseUncached(format, usage);
 
@@ -88,15 +87,16 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   } else {
     ALOGE("%s: Failed to allocate buffer - heap name: %s flags: 0x%x ret: %d", __FUNCTION__,
           alloc_data->heap_name.c_str(), alloc_data->flags, ret);
+    return ret;
   }
 
   if (!alloc_data->vm_names.empty()) {
-    err = alloc_intf->SecureMemPerms(alloc_data);
+    ret = alloc_intf->SecureMemPerms(alloc_data);
   }
 
-  if (err) {
+  if (ret) {
     ALOGE("%s: Failed to modify secure use permissions - heap name: %s flags: 0x%x, err: %d",
-          __FUNCTION__, alloc_data->heap_name.c_str(), alloc_data->flags, err);
+          __FUNCTION__, alloc_data->heap_name.c_str(), alloc_data->flags, ret);
   }
 
   return ret;
