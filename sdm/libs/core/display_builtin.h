@@ -182,6 +182,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) override;
   DisplayError PostHandleSecureEvent(SecureEvent secure_event) override;
   void InitCWBBuffer();
+  void DeinitCWBBuffer();
   void AppendCWBLayer(LayerStack *layer_stack);
   uint32_t GetUpdatingAppLayersCount(LayerStack *layer_stack);
   DisplayError ChangeFps();
@@ -307,6 +308,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   Layer cwb_layer_ = {};
   bool lower_fps_ = false;
   bool cwb_buffer_initialized_ = false;
+  BufferInfo output_buffer_info_ = {};
 };
 
 }  // namespace sdm

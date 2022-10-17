@@ -2948,9 +2948,14 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   }
   DLOGV_IF(kTagDisplay, "Max area layer at index : %d", max_area_layer_index);
 
+  uint32_t num_active_displays = comp_manager_->GetActiveDisplayCount();
+
   // TODO(user): Mark layer which needs downscaling on GPU fallback as priority layer and use MDP
   // for composition to avoid quality mismatch between GPU and MDP switch(idle timeout usecase).
-  if (max_layer_area >= fb_area) {
+  if ((max_layer_area > fb_area && (num_active_displays == 1)) || max_layer_area == fb_area) {
+    // Disable dynamic destination scalar when more than one display is active
+    // Dynamic destination scalar introduce the demand for scaling, and since built-in displays
+    // do not have dedicate VIG pipes, lead to composition strategies exhausted.
     Layer *layer = layers.at(max_area_layer_index);
     bool needs_rotation = (layer->transform.rotation == 90.0f);
 
@@ -4245,6 +4250,49 @@ void DisplayBase::Refresh() {
   event_handler_->Refresh();
 }
 
+DisplayError DisplayBase::ValidateCwbRoiWithOutputBuffer(const LayerBuffer &output_buffer,
+                                                         CwbConfig &cwb_config) {
+  if (cwb_config.pu_as_cwb_roi) {
+    uint32_t full_frame_width = cwb_config.cwb_full_rect.right - cwb_config.cwb_full_rect.left;
+    uint32_t full_frame_height = cwb_config.cwb_full_rect.bottom - cwb_config.cwb_full_rect.top;
+    if (full_frame_width > output_buffer.width || full_frame_height > output_buffer.height) {
+      // If output buffer is less than full frame when PU as CWB ROI is enabled, then it
+      // may possible in later validation for partial update that it may fallback to full frame
+      // ROI and then it will cause commit failure due to falling of PU ROI out of CWB ROI
+      // bounds. So, to avoid such case, just disable pu_as_cwb_roi to fallback to full
+      // frame update instead of partial update.
+      cwb_config.pu_as_cwb_roi = false;
+    }
+  }
+
+  if (!cwb_config.pu_as_cwb_roi && !IsValid(cwb_config.cwb_roi)) {
+    // Fall to full frame ROI for invalid CWB ROI, when pu_as_cwb_roi is disabled.
+    cwb_config.cwb_roi = cwb_config.cwb_full_rect;
+  }
+
+  // If CWB ROI doesn't fit into provided output buffer, then it limits the right and bottom
+  // bounds of CWB ROI as per provided output buffer to avoid commit failure due to insufficient
+  // buffer detection for CWB ROI.
+  int32_t roi_width = cwb_config.cwb_roi.right - cwb_config.cwb_roi.left;
+  int32_t roi_height = cwb_config.cwb_roi.bottom - cwb_config.cwb_roi.top;
+  if (roi_width > output_buffer.width || roi_height > output_buffer.height) {
+    DLOGW("Insufficient buffer(%dx%d) provided for cwb roi(%f, %f, %f, %f). "
+          "Thus, falling to buffer fit ROI.", output_buffer.width,
+          output_buffer.height, cwb_config.cwb_roi.left, cwb_config.cwb_roi.top,
+          cwb_config.cwb_roi.right, cwb_config.cwb_roi.bottom);
+
+    if (roi_width > output_buffer.width) {
+      cwb_config.cwb_roi.right = FLOAT(output_buffer.width) + cwb_config.cwb_roi.left;
+    }
+
+    if (roi_height > output_buffer.height) {
+      cwb_config.cwb_roi.bottom = FLOAT(output_buffer.height) + cwb_config.cwb_roi.top;
+    }
+  }
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::CaptureCwb(const LayerBuffer &output_buffer, const CwbConfig &config) {
   ClientLock lock(disp_mutex_);
 
@@ -4278,6 +4326,12 @@ DisplayError DisplayBase::CaptureCwb(const LayerBuffer &output_buffer, const Cwb
   error = ValidateCwbConfigInfo(&cwb_config, output_buffer.format);
   if (error != kErrorNone) {
     DLOGE("CWB_config validation failed.");
+    return error;
+  }
+
+  error = ValidateCwbRoiWithOutputBuffer(output_buffer, cwb_config);
+  if (error != kErrorNone) {
+    DLOGW("Buffer validation failed");
     return error;
   }
 

@@ -254,6 +254,8 @@ DisplayError DisplayBuiltIn::Deinit() {
         DLOGE("Unable to DeInit DemuraTn on Display %d", display_id_);
       }
     }
+
+    DeinitCWBBuffer();
   }
   return DisplayBase::Deinit();
 }
@@ -2703,38 +2705,37 @@ void DisplayBuiltIn::InitCWBBuffer() {
     return;
   }
 
-  if (disable_cwb_idle_fallback_) {
+  if (disable_cwb_idle_fallback_ || cwb_buffer_initialized_) {
     return;
   }
 
-  BufferInfo output_buffer_info;
   // Initialize CWB buffer with display resolution to get full size buffer
   // as mixer or fb can init with custom values based on property
-  output_buffer_info.buffer_config.width = display_attributes_.x_pixels;
-  output_buffer_info.buffer_config.height = display_attributes_.y_pixels;
+  output_buffer_info_.buffer_config.width = display_attributes_.x_pixels;
+  output_buffer_info_.buffer_config.height = display_attributes_.y_pixels;
 
-  output_buffer_info.buffer_config.format = kFormatRGBX8888Ubwc;
-  output_buffer_info.buffer_config.buffer_count = 1;
-  if (buffer_allocator_->AllocateBuffer(&output_buffer_info) != 0) {
+  output_buffer_info_.buffer_config.format = kFormatRGBX8888Ubwc;
+  output_buffer_info_.buffer_config.buffer_count = 1;
+  if (buffer_allocator_->AllocateBuffer(&output_buffer_info_) != 0) {
     DLOGE("Buffer allocation failed");
     return;
   }
 
   LayerBuffer buffer = {};
-  buffer.planes[0].fd = output_buffer_info.alloc_buffer_info.fd;
+  buffer.planes[0].fd = output_buffer_info_.alloc_buffer_info.fd;
   buffer.planes[0].offset = 0;
-  buffer.planes[0].stride = output_buffer_info.alloc_buffer_info.stride;
-  buffer.size = output_buffer_info.alloc_buffer_info.size;
-  buffer.handle_id = output_buffer_info.alloc_buffer_info.id;
-  buffer.width = output_buffer_info.alloc_buffer_info.aligned_width;
-  buffer.height = output_buffer_info.alloc_buffer_info.aligned_height;
-  buffer.format = output_buffer_info.alloc_buffer_info.format;
-  buffer.unaligned_width = output_buffer_info.buffer_config.width;
-  buffer.unaligned_height = output_buffer_info.buffer_config.height;
+  buffer.planes[0].stride = output_buffer_info_.alloc_buffer_info.stride;
+  buffer.size = output_buffer_info_.alloc_buffer_info.size;
+  buffer.handle_id = output_buffer_info_.alloc_buffer_info.id;
+  buffer.width = output_buffer_info_.alloc_buffer_info.aligned_width;
+  buffer.height = output_buffer_info_.alloc_buffer_info.aligned_height;
+  buffer.format = output_buffer_info_.alloc_buffer_info.format;
+  buffer.unaligned_width = output_buffer_info_.buffer_config.width;
+  buffer.unaligned_height = output_buffer_info_.buffer_config.height;
 
   cwb_layer_.composition = kCompositionCWBTarget;
   cwb_layer_.input_buffer = buffer;
-  cwb_layer_.input_buffer.buffer_id = reinterpret_cast<uint64_t>(output_buffer_info.private_data);
+  cwb_layer_.input_buffer.buffer_id = reinterpret_cast<uint64_t>(output_buffer_info_.private_data);
   cwb_layer_.src_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
                          FLOAT(cwb_layer_.input_buffer.unaligned_height)};
   cwb_layer_.dst_rect = {0, 0, FLOAT(cwb_layer_.input_buffer.unaligned_width),
@@ -2745,7 +2746,26 @@ void DisplayBuiltIn::InitCWBBuffer() {
   return;
 }
 
+void DisplayBuiltIn::DeinitCWBBuffer() {
+  if (!cwb_buffer_initialized_) {
+    return;
+  }
+
+  buffer_allocator_->FreeBuffer(&output_buffer_info_);
+  cwb_layer_ = {};
+  cwb_buffer_initialized_ = false;
+}
+
 void DisplayBuiltIn::AppendCWBLayer(LayerStack *layer_stack) {
+  if (cwb_buffer_initialized_ &&
+      (cwb_layer_.input_buffer.unaligned_width < display_attributes_.x_pixels ||
+      cwb_layer_.input_buffer.unaligned_height < display_attributes_.y_pixels)) {
+    DLOGI("Resetting CWB layer due to insufficient buffer size(%dx%d) compare to output(%dx%d).",
+          cwb_layer_.input_buffer.unaligned_width, cwb_layer_.input_buffer.unaligned_height,
+          display_attributes_.x_pixels, display_attributes_.y_pixels);
+    DeinitCWBBuffer();
+  }
+
   if (!cwb_buffer_initialized_) {
     // If CWB buffer is not initialized, then it must be initialized for video mode
     InitCWBBuffer();

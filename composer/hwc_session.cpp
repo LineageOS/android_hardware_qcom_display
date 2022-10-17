@@ -1291,6 +1291,8 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   }
 
   auto mode = static_cast<HWC2::PowerMode>(int_mode);
+  bool is_builtin = false;
+  bool is_power_off = false;
 
   if (mode == HWC2::PowerMode::On && !IsHWDisplayConnected(display)) {
     return HWC2_ERROR_BAD_DISPLAY;
@@ -1302,14 +1304,18 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   {
     SCOPE_LOCK(locker_[display]);
     if (hwc_display_[display]) {
-      bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
-      bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
-      if (secure_session_active_ && is_builtin && is_power_off) {
-        if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
-          DLOGI("Secure session in progress, defer power state change");
-          hwc_display_[display]->SetPendingPowerMode(mode);
-          return HWC2_ERROR_NONE;
-        }
+      is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+      is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
+    }
+  }
+
+  if (secure_session_active_ && is_builtin && is_power_off) {
+    if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+      DLOGI("Secure session in progress, defer power state change");
+      SCOPE_LOCK(locker_[display]);
+      if (hwc_display_[display]) {
+        hwc_display_[display]->SetPendingPowerMode(mode);
+        return HWC2_ERROR_NONE;
       }
     }
   }
@@ -1429,6 +1435,11 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
 }
 
 void HWCSession::GetVirtualDisplayList() {
+  if (null_display_mode_) {
+    DLOGI("In null display mode, skip handling of virtual displays list");
+    return;
+  }
+
   HWDisplaysInfo hw_displays_info = {};
   core_intf_->GetDisplaysStatus(&hw_displays_info);
 

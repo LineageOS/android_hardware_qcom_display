@@ -174,6 +174,8 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual DisplayError ValidateCwbRoiWithOutputBuffer(const LayerBuffer &output_buffer,
+                                                      CwbConfig &cwb_config);
   virtual DisplayError CaptureCwb(const LayerBuffer &output_buffer, const CwbConfig &config);
   virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event) {
     return kErrorNotSupported;

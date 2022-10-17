@@ -688,6 +688,10 @@ DisplayError CompManager::ControlDpps(bool enable) {
   return kErrorNone;
 }
 
+uint32_t CompManager::GetActiveDisplayCount() {
+  return powered_on_displays_.size();
+}
+
 bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
                                   const SyncPoints &sync_points) {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
@@ -772,9 +776,13 @@ void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event
     resource_intf_->Perform(ResourceInterface::kCmdDisableRotatorOneFrame,
                             display_comp_ctx->display_resource_ctx);
   }
+  if (secure_event == kTUITransitionStart) {
+    resource_intf_->HandleTUITransition(true);
+  }
   if (secure_event == kTUITransitionEnd) {
     resource_intf_->Perform(ResourceInterface::kCmdResetLUT,
                             display_comp_ctx->display_resource_ctx);
+    resource_intf_->HandleTUITransition(false);
     safe_mode_ = false;
   }
   safe_mode_ = (secure_event == kTUITransitionStart) ? true : safe_mode_;
