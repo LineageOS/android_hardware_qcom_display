@@ -1,0 +1,5 @@
+cc_library_headers {
+    name: "libvmmem_headers",
+    vendor: true,
+    export_include_dirs: ["."],
+}
