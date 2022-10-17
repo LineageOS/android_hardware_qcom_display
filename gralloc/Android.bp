@@ -49,7 +49,6 @@ cc_library_shared {
         "qti_kernel_headers",
         "qti_display_kernel_headers",
         "device_kernel_headers",
-        "libvmmem_headers",
     ],
     include_dirs: [
         "system/memory/libion/include",
