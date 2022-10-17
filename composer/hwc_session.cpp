@@ -367,10 +367,10 @@ void HWCSession::InitSupportedDisplaySlots() {
   }
 
   HWDisplayInterfaceInfo hw_disp_info = {};
-  error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  error = WaitForPrimaryHotplug(&hw_disp_info);
   if (error != kErrorNone) {
     CoreInterface::DestroyCore();
-    DLOGE("Primary display type not recognized. Error = %d", error);
+    DLOGE("Primary display is not plugged. Error = %d", error);
     return;
   }
 
@@ -2989,6 +2989,8 @@ int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
     return -EINVAL;
   }
 
+  HandlePluggablePrimaryDisplay(&hw_displays_info);
+
   int status = HandleDisconnectedDisplays(&hw_displays_info);
   if (status) {
     DLOGE("All displays could not be disconnected.");
@@ -4479,6 +4481,43 @@ void HWCSession::NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t c
     attributes.panelType = DisplayPortType::DEFAULT;
     attributes.isYuv = var_info.is_yuv;
     NotifyResolutionChange(display, attributes);
+  }
+}
+
+DisplayError HWCSession::WaitForPrimaryHotplug(HWDisplayInterfaceInfo *hw_disp_info) {
+  int wait_for_hotplug = 0;  // Default value when property is not present.
+  HWCDebugHandler::Get()->GetProperty(WAIT_FOR_PRIMARY_DISPLAY, &wait_for_hotplug);
+  DLOGI("wait_for_primary_display :%d", wait_for_hotplug);
+
+  const uint32_t kMaxAttempts = wait_for_hotplug ? 60 : 1;
+  uint32_t attempts;
+  for (attempts = 0; attempts < kMaxAttempts; attempts++) {
+    DisplayError error = core_intf_->GetFirstDisplayInterfaceType(hw_disp_info);
+    if (error != kErrorNone) {
+      return error;
+    }
+    if (hw_disp_info->is_connected) {
+      DLOGI("Primary display of type-%d is connected after %u %s",
+            hw_disp_info->type, (attempts + 1), attempts ? "attempts" : "attempt");
+      break;
+    }
+    usleep(1000000);    // sleep for 1 second
+  }
+
+  if (attempts == kMaxAttempts) {
+    LOG_ALWAYS_FATAL("Primary display of type-%d is not yet connected after %u %s",
+                     hw_disp_info->type, kMaxAttempts, kMaxAttempts == 1 ? "attempt" : "attempts");
+  }
+
+  return kErrorNone;
+}
+
+void HWCSession::HandlePluggablePrimaryDisplay(HWDisplaysInfo *hw_displays_info) {
+  for (auto &iter : *hw_displays_info) {
+    auto &info = iter.second;
+    if (info.is_primary && (info.display_type == kPluggable) && !info.is_connected) {
+      LOG_ALWAYS_FATAL("Primary pluggable display is disconnected");
+    }
   }
 }
 }  // namespace sdm

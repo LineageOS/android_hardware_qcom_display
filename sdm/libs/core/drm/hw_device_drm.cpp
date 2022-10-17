@@ -631,6 +631,19 @@ void HWDeviceDRM::GetCWBCapabilities() {
   }
 }
 
+void HWDeviceDRM::OverrideConnectorInfo() {
+  // Overriding panel orientation
+  int value = 0;
+  if ((Debug::GetProperty(ENABLE_PANEL_INVERSE_MOUNT, &value) == kErrorNone) &&
+      connector_info_.is_primary) {
+    if (value == 1) {
+      connector_info_.panel_orientation = DRMRotation::ROT_180;
+      DLOGI("Panel_Orientation:%d -- %d-%d",
+      connector_info_.panel_orientation, display_id_, disp_type_);
+    }
+  }
+}
+
 DisplayError HWDeviceDRM::GetDisplayId(int32_t *display_id) {
   *display_id = display_id_;
   return kErrorNone;
@@ -877,6 +890,8 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.primaries.blue[0] = connector_info_.panel_hdr_prop.display_primaries[6];
   hw_panel_info_.primaries.blue[1] = connector_info_.panel_hdr_prop.display_primaries[7];
   hw_panel_info_.dyn_bitclk_support = connector_info_.dyn_bitclk_support;
+
+  OverrideConnectorInfo();
 
   // no supprt for 90 rotation only flips or 180 supported
   hw_panel_info_.panel_orientation.rotation = 0;
