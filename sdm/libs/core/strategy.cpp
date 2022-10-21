@@ -20,6 +20,10 @@
 * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <utils/constants.h>
@@ -55,7 +59,8 @@ DisplayError Strategy::Init() {
   if (extension_intf_) {
     error = extension_intf_->CreateStrategyExtn(display_id_, display_type_, buffer_allocator_,
                                                 hw_resource_info_, hw_panel_info_,
-                                                mixer_attributes_, fb_config_, &strategy_intf_);
+                                                mixer_attributes_, display_attributes_, fb_config_,
+                                                &strategy_intf_);
     if (error != kErrorNone) {
       DLOGE("Failed to create strategy for display %d-%d", display_id_, display_type_);
       return error;
@@ -219,8 +224,8 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
                                        mixer_attributes, display_attributes, fb_config,
                                        &partial_update_intf_);
 
-  error = strategy_intf_->Reconfigure(hw_panel_info, hw_resource_info_, mixer_attributes,
-                                      fb_config);
+  error = strategy_intf_->Reconfigure(hw_panel_info, hw_resource_info_, display_attributes,
+                                      mixer_attributes, fb_config);
   if (error != kErrorNone) {
     return error;
   }
