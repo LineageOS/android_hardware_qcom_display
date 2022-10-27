@@ -168,6 +168,7 @@ static void PopulateVMRequestStates(drmModePropertyRes *prop) {
 #define __CLASS__ "DRMCrtcManager"
 
 void DRMCrtcManager::Init(drmModeRes *resource) {
+  lock_guard<mutex> lock(lock_);
   for (int i = 0; i < resource->count_crtcs; i++) {
     unique_ptr<DRMCrtc> crtc(new DRMCrtc(fd_, i));
     drmModeCrtc *libdrm_crtc = drmModeGetCrtc(fd_, resource->crtcs[i]);
@@ -181,10 +182,12 @@ void DRMCrtcManager::Init(drmModeRes *resource) {
 }
 
 void DRMCrtcManager::DumpByID(uint32_t id) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(id)->Dump();
 }
 
 void DRMCrtcManager::DumpAll() {
+  lock_guard<mutex> lock(lock_);
   for (auto &crtc : crtc_pool_) {
     crtc.second->Dump();
   }
@@ -210,6 +213,7 @@ void DRMCrtcManager::Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req
 }
 
 void DRMCrtcManager::SetScalerLUT(const DRMScalerLUTInfo &lut_info) {
+  lock_guard<mutex> lock(lock_);
   // qseed3lite lut is hardcoded in HW. No need to program from sw.
   DRMCrtcInfo info;
   crtc_pool_.begin()->second->GetInfo(&info);
@@ -232,6 +236,7 @@ void DRMCrtcManager::SetScalerLUT(const DRMScalerLUTInfo &lut_info) {
 }
 
 void DRMCrtcManager::UnsetScalerLUT() {
+  lock_guard<mutex> lock(lock_);
   if (dir_lut_blob_id_) {
     drmModeDestroyPropertyBlob(fd_, dir_lut_blob_id_);
     dir_lut_blob_id_ = 0;
@@ -247,6 +252,7 @@ void DRMCrtcManager::UnsetScalerLUT() {
 }
 
 int DRMCrtcManager::GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info) {
+  lock_guard<mutex> lock(lock_);
   if (crtc_id == 0) {
     crtc_pool_.begin()->second->GetInfo(info);
   } else {
@@ -263,6 +269,7 @@ int DRMCrtcManager::GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info) {
 }
 
 void DRMCrtcManager::GetPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info) {
+  lock_guard<mutex> lock(lock_);
   auto it = crtc_pool_.find(crtc_id);
   if (it == crtc_pool_.end()) {
     DRM_LOGE("Invalid crtc id %d", crtc_id);
@@ -274,6 +281,7 @@ void DRMCrtcManager::GetPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info) {
 
 int DRMCrtcManager::Reserve(const std::set<uint32_t> &possible_crtc_indices,
                              DRMDisplayToken *token) {
+  lock_guard<mutex> lock(lock_);
   for (auto &item : crtc_pool_) {
     if (item.second->GetStatus() == DRMStatus::FREE) {
       if (possible_crtc_indices.find(item.second->GetIndex()) != possible_crtc_indices.end()) {
