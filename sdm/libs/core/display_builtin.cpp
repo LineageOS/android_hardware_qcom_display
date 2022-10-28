@@ -254,6 +254,7 @@ DisplayError DisplayBuiltIn::Deinit() {
         DLOGE("Unable to DeInit DemuraTn on Display %d", display_id_);
       }
     }
+    demura_dynamic_enabled_ = true;
 
     DeinitCWBBuffer();
   }
@@ -959,7 +960,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   }
 
   // Must go in NullCommit
-  if (demura_intended_ &&
+  if (demura_intended_ && demura_dynamic_enabled_ &&
       comp_manager_->GetDemuraStatusForDisplay(display_id_) && (state == kStateOff)) {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
     SetDemuraIntfStatus(false);
@@ -987,7 +988,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   }
 
   // Must only happen after NullCommit and get applied in next frame
-  if (demura_intended_ &&
+  if (demura_intended_ && demura_dynamic_enabled_ &&
       !comp_manager_->GetDemuraStatusForDisplay(display_id_) && (state == kStateOn)) {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
     SetDemuraIntfStatus(true);
@@ -2953,6 +2954,7 @@ DisplayError DisplayBuiltIn::SetDemuraState(int state) {
       return kErrorUndefined;
     }
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
+    demura_dynamic_enabled_ = true;
   } else if (!state && comp_manager_->GetDemuraStatusForDisplay(display_id_)) {
     ret = SetDemuraIntfStatus(false);
     if (ret) {
@@ -2960,6 +2962,7 @@ DisplayError DisplayBuiltIn::SetDemuraState(int state) {
       return kErrorUndefined;
     }
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
+    demura_dynamic_enabled_ = false;
   }
 
   // Disable Partial Update for one frame.
