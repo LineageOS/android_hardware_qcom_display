@@ -2020,12 +2020,15 @@ void HWCDisplay::DumpInputBuffers() {
         reinterpret_cast<const native_handle_t *>(layer->input_buffer.buffer_id);
     Fence::Wait(layer->input_buffer.acquire_fence);
 
-    DLOGI("Dump layer[%d] of %lu handle %p", i, layer_stack_.layers.size(), handle);
 
     if (!handle) {
-      DLOGE("Buffer handle is null");
+      DLOGW("Buffer handle is detected as null for layer: %s(%d) out of %lu layers with layer "
+            "flag value: %u", layer->layer_name.c_str(), layer->layer_id,
+            layer_stack_.layers.size(), layer->flags);
       continue;
     }
+
+    DLOGI("Dump layer[%d] of %lu handle %p", i, layer_stack_.layers.size(), handle);
 
     void *base_ptr = NULL;
     int error = buffer_allocator_->MapBuffer(handle, nullptr, &base_ptr);
