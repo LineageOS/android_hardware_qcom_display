@@ -27,6 +27,42 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <drm_master.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -184,10 +220,7 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         vm_release_event_index_ = i;
       } break;
-      case HWEvent::CEC_READ_MESSAGE:
-      case HWEvent::SHOW_BLANK_EVENT:
-      case HWEvent::THERMAL_LEVEL:
-      case HWEvent::PINGPONG_TIMEOUT:
+      default:
         break;
     }
   }
@@ -326,21 +359,30 @@ DisplayError HWEventsDRM::Deinit() {
 }
 
 DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
+  if (event != HWEvent::VSYNC) {
+    if (enable == registered_hw_events_.test(event)) {
+      DLOGW("%s of %sregistered hw event %d occurred!!",
+            enable ? "Registration" : "Deregistration",
+            enable ? "already " : "un-", event);
+      return kErrorNone;
+    }
+  }
   DisplayError error = kErrorNone;
   switch (event) {
     case HWEvent::VSYNC: {
       std::lock_guard<std::mutex> lock(vsync_mutex_);
       vsync_enabled_ = enable;
-      if (vsync_enabled_ && !vsync_registered_) {
+      if (vsync_enabled_ && !registered_hw_events_.test(HWEvent::VSYNC)) {
         error = RegisterVSync();
         if (error != kErrorNone) {
           return error;
         }
-        vsync_registered_ = true;
+        registered_hw_events_.set(event);
       } else if (!vsync_enabled_) {
-        vsync_registered_ = false;
+        registered_hw_events_.reset(event);
       }
-    } break;
+      return kErrorNone;
+    }
     case HWEvent::BACKLIGHT_EVENT: {
       std::lock_guard<std::mutex> lock(backlight_mutex_);
       if (backlight_event_index_ == UINT32_MAX) {
@@ -391,6 +433,7 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
       DLOGE("Event not supported");
       return kErrorNotSupported;
   }
+  registered_hw_events_.set(event, enable);
 
   return kErrorNone;
 }
@@ -528,6 +571,8 @@ void *HWEventsDRM::DisplayEventHandler() {
               (Sys::pread_(poll_fd.fd, data, kMaxStringLength, 0) > 0)) {
             (this->*(event_data_list_[i]).event_parser)(data);
           }
+          break;
+        default:
           break;
       }
     }
@@ -749,10 +794,11 @@ void HWEventsDRM::HandleVSync(char *data) {
   vsync_handler_count_ = 0;  //  reset vsync handler count. lock not needed
   {
     std::lock_guard<std::mutex> lock(vsync_mutex_);
-    vsync_registered_ = false;
+    registered_hw_events_.reset(HWEvent::VSYNC);
     if (vsync_enabled_) {
       ret = RegisterVSync();
-      vsync_registered_ = (ret == kErrorNone);
+      if (ret == kErrorNone)
+        registered_hw_events_.set(HWEvent::VSYNC);
     }
   }
 
@@ -767,10 +813,11 @@ void HWEventsDRM::HandleVSync(char *data) {
   if (vsync_handler_count_ > 1) {
     //  probable thread preemption caused > 1 vsync handling. Re-enable vsync before polling
     std::lock_guard<std::mutex> lock(vsync_mutex_);
-    vsync_registered_ = false;
+    registered_hw_events_.reset(HWEvent::VSYNC);
     if (vsync_enabled_) {
       ret = RegisterVSync();
-      vsync_registered_ = (ret == kErrorNone);
+      if (ret == kErrorNone)
+        registered_hw_events_.set(HWEvent::VSYNC);
     }
   }
 }

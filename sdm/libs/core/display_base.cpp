@@ -1796,6 +1796,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (state == state_) {
     if (pending_power_state_ != kPowerStateNone) {
       hw_intf_->CancelDeferredPowerMode();
+      pending_power_state_ = kPowerStateNone;
     }
     DLOGI("Same state transition is requested.");
     return kErrorNone;
@@ -1835,6 +1836,8 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
       hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
     }
 
+    cached_qos_data_.clock_hz =
+      std::max(cached_qos_data_.clock_hz, disp_layer_stack_.info.qos_data.clock_hz);
     error = hw_intf_->PowerOn(cached_qos_data_, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
