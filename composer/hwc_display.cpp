@@ -3148,7 +3148,11 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
 }
 
 DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
-  return display_intf_->PostHandleSecureEvent(secure_event);
+  DisplayError err = display_intf_->PostHandleSecureEvent(secure_event);
+  if (err == kErrorNone) {
+    secure_event_ = secure_event;
+  }
+  return err;
 }
 
 int HWCDisplay::GetCwbBufferResolution(CwbConfig *cwb_config, uint32_t *x_pixels,
@@ -3170,37 +3174,36 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     return kErrorParameters;
   }
 
-  if (!display_intf_->HandleCwbTeardown()) {
-    bool pending_cwb_request = false;
-    {
-      std::unique_lock<std::mutex> lock(cwb_mutex_);
-      pending_cwb_request = !!cwb_buffer_map_.size();
-    }
-
-    if (!pending_cwb_request) {
-      dump_frame_count_ = 0;
-      dump_frame_index_ = 0;
-      dump_output_to_file_ = false;
-      if (output_buffer_base_ != nullptr) {
-        if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
-          DLOGW("unmap failed with err %d", errno);
-        }
-      }
-
-      if (buffer_allocator_ && buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
-        DLOGW("FreeBuffer failed");
-      }
-      output_buffer_info_ = {};
-      output_buffer_base_ = nullptr;
-      frame_capture_buffer_queued_ = false;
-      frame_capture_status_ = 0;
-      *needs_refresh = false;
-      return kErrorNone;
-    }
+  bool pending_cwb_request = false;
+  {
+  std::unique_lock<std::mutex> lock(cwb_mutex_);
+  pending_cwb_request = !!cwb_buffer_map_.size();
   }
 
-  *needs_refresh = true;
-  return kErrorNone;
+  if (!pending_cwb_request) {
+    dump_frame_count_ = 0;
+    dump_frame_index_ = 0;
+    dump_output_to_file_ = false;
+    if (output_buffer_base_ != nullptr) {
+      if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+        DLOGW("unmap failed with err %d", errno);
+      }
+    }
+
+    if (buffer_allocator_ && buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+      DLOGW("FreeBuffer failed");
+    }
+    output_buffer_info_ = {};
+    output_buffer_base_ = nullptr;
+    frame_capture_buffer_queued_ = false;
+    frame_capture_status_ = 0;
+    *needs_refresh = false;
+    return kErrorNone;
+  } else {
+    *needs_refresh = true;
+    display_intf_->HandleCwbTeardown();
+    return kErrorNone;
+  }
 }
 
 void HWCDisplay::MMRMEvent(bool restricted) {
