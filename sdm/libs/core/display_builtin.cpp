@@ -169,18 +169,19 @@ DisplayError DisplayBuiltIn::Init() {
       return error;
     }
 
-    if ((error = SetupDemura()) != kErrorNone) {
+    DisplayError tmp = kErrorNone;
+    if ((tmp = SetupDemura()) != kErrorNone) {
       // Non-fatal but not expected, log error
       DLOGE("Demura failed to initialize on display %d-%d, Error = %d", display_id_,
-            display_type_, error);
+            display_type_, tmp);
       comp_manager_->FreeDemuraFetchResources(display_id_);
       comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
       if (demura_) {
         SetDemuraIntfStatus(false);
       }
     } else if (demuratn_factory_) {
-      if ((error = SetupDemuraTn()) != kErrorNone) {
-        DLOGW("Failed to setup DemuraTn, Error = %d", error);
+      if ((tmp = SetupDemuraTn()) != kErrorNone) {
+        DLOGW("Failed to setup DemuraTn, Error = %d", tmp);
       }
     }
   } else {
