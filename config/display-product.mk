@@ -74,6 +74,15 @@ ifeq ($(TARGET_BOARD_PLATFORM),parrot)
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_vtdr6130_amoled_qsync_video_mode_dsi_visionox_panel_with_DSC_parrot.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_vtdr6130_amoled_qsync_video_mode_dsi_visionox_panel_with_DSC.json
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),neo)
+    #QDCM calibration JSON file for sy103 amoled video mode single dsi without DSC panel.
+    #TBD: derived from qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.json
+    PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sy103_amoled_video_mode_panel_without_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_sy103_amoled_video_mode_panel_without_DSC.json
+
+    #Multi-stc libraries config xml file
+    PRODUCT_COPY_FILES += hardware/qcom/display/config/snapdragon_color_libs_config.xml:$(TARGET_COPY_OUT_VENDOR)/etc/snapdragon_color_libs_config.xml
+endif
+
 #Smomo config xml file
 PRODUCT_COPY_FILES += hardware/qcom/display/config/smomo_setting.xml:$(TARGET_COPY_OUT_VENDOR)/etc/smomo_setting.xml
 
