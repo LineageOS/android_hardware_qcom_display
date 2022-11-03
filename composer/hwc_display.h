@@ -683,6 +683,7 @@ class HWCDisplay : public DisplayEventHandler {
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void WaitOnPreviousFence();
+  void DumpStacktrace();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;

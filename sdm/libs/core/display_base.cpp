@@ -248,6 +248,11 @@ DisplayError DisplayBase::Init() {
   // Assume unified draw is supported.
   unified_draw_supported_ = true;
 
+  prop = 0;
+  Debug::GetProperty(TRACK_INPUT_FENCES, &prop);
+  track_input_fences_ = (prop == 1);
+  DLOGI("track_input_fences_:%d %d-%d", track_input_fences_, display_id_, display_type_);
+
   return kErrorNone;
 
 CleanupOnError:
@@ -1471,6 +1476,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::PerformCommit(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
+  TrackInputFences();
   DisplayError error = hw_intf_->Commit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("COMMIT failed: %d ", error);
@@ -4195,6 +4201,44 @@ DisplayError DisplayBase::ConfigureCwbForIdleFallback(LayerStack *layer_stack) {
   }
 
   return error;
+}
+
+void DisplayBase::TrackInputFences() {
+  if (!track_input_fences_) {
+    return;
+  }
+  // Check if async task is in progress.
+  // Wait until it finishes.
+  if (fence_wait_future_.valid()) {
+    fence_wait_future_.get();
+  }
+
+  lock_guard<mutex> scope_lock(fence_track_mutex_);
+  // Copy & Wait on all fences.
+  acquire_fences_ = {};
+  for (auto &hw_layer : disp_layer_stack_.info.hw_layers) {
+    acquire_fences_.push_back(hw_layer.input_buffer.acquire_fence);
+  }
+  // Start async task to wait on fences.
+  fence_wait_future_ = std::async(std::launch::async, [&](){
+                                  WaitOnFences();
+                                  });
+}
+
+void DisplayBase::WaitOnFences() {
+  lock_guard<mutex> scope_lock(fence_track_mutex_);
+  const int kFenceWaitTimeoutMs = 500;
+  for (auto &acquire_fence : acquire_fences_) {
+    if (Fence::Wait(acquire_fence, kFenceWaitTimeoutMs) == kErrorNone) {
+      continue;
+    }
+    // Fence did not signal in 500 ms.
+    DLOGI("Dumping stack trace for %d-%d", display_id_, display_type_);
+    event_handler_->HandleEvent(kDumpStacktrace);
+    usleep(kFenceWaitTimeoutMs * 1000);
+    DLOGI("Dumping stack trace after 500 ms sleep %d-%d", display_id_, display_type_);
+    event_handler_->HandleEvent(kDumpStacktrace);
+  }
 }
 
 }  // namespace sdm
