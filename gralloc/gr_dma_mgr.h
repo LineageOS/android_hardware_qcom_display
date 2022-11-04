@@ -59,13 +59,16 @@ class DmaManager : public AllocInterface {
   static DmaManager *GetInstance();
 
  private:
-  DmaManager() {}
+  DmaManager();
   int UnmapBuffer(void *base, unsigned int size, unsigned int offset);
   void Deinit();
 
   int dma_dev_fd_ = FD_INIT;
   BufferAllocator buffer_allocator_;
   static DmaManager *dma_manager_;
+
+  void* libvmmemPointer;
+  std::unique_ptr<VmMem> (*createVmMem)();
 };
 
 }  // namespace gralloc
