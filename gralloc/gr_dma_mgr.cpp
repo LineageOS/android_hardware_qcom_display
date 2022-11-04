@@ -46,6 +46,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <dlfcn.h>
 
 #include "gr_utils.h"
 #include "gralloc_priv.h"
@@ -56,6 +57,21 @@
 namespace gralloc {
 
 DmaManager *DmaManager::dma_manager_ = NULL;
+
+DmaManager::DmaManager() {
+    libvmmemPointer = dlopen("libvmmem.so", RTLD_LAZY);
+
+    if(!libvmmemPointer) {
+        ALOGE("Could not load libvmmem: %s", dlerror());
+    }
+
+    createVmMem = reinterpret_cast<std::unique_ptr<VmMem> (*)()>(dlsym(libvmmemPointer, "CreateVmMem"));
+    const char* dlsym_error = dlerror();
+    if (dlsym_error) {
+         ALOGE("Cannot load symbol CreateVmMem: %s", dlsym_error);
+    }
+
+}
 
 DmaManager *DmaManager::GetInstance() {
   if (!dma_manager_) {
@@ -179,7 +195,7 @@ int DmaManager::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset
 
 int DmaManager::SecureMemPerms(AllocData *data) {
   int ret = 0;
-  std::unique_ptr<VmMem> vmmem = VmMem::CreateVmMem();
+  std::unique_ptr<VmMem> vmmem = createVmMem();
   if (!vmmem) {
     return -ENOMEM;
   }
