@@ -63,7 +63,6 @@ cc_library_shared {
         "libhidlbase",
         "libion",
         "libdmabufheap",
-        "libvmmem",
         "android.hardware.graphics.mapper@2.1",
         "android.hardware.graphics.mapper@3.0",
         "android.hardware.graphics.mapper@4.0",
