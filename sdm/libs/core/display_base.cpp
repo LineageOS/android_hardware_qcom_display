@@ -1336,6 +1336,13 @@ DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
     } else {
       DLOGE("Prepare failed: %d", error);
     }
+    // Clear fences
+    DLOGI("Clearing fences on input layers on display %d-%d", display_id_, display_type_);
+    for (auto &layer : layer_stack->layers) {
+      layer->input_buffer.release_fence = nullptr;
+    }
+    layer_stack->retire_fence = nullptr;
+
     return error;
   }
 
