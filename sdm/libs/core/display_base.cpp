@@ -217,6 +217,10 @@ DisplayError DisplayBase::Init() {
   if (Debug::Get()->GetProperty(DISABLE_LLCC_DURING_AOD, &prop) == kErrorNone) {
     disable_llcc_during_aod_ = (prop == 1);
   }
+  prop = 0;
+  if (Debug::Get()->GetProperty(ALLOW_TONEMAP_NATIVE, &prop) == kErrorNone) {
+    allow_tonemap_native_ = (prop == 1);
+  }
 
   SetupPanelFeatureFactory();
 
@@ -3576,7 +3580,8 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_sRGB;
-  } else if (color_gamut == kNative) {
+  } else if (color_gamut == kNative && !allow_tonemap_native_) {
+    // if allow_tonemap_native_ is set, blend space is defaulted to BT709 + sRGB
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_Max;
   }

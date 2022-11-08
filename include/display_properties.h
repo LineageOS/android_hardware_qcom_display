@@ -133,6 +133,8 @@
 // Disable SDR dimming support
 #define DISABLE_SDR_DIMMING                  DISPLAY_PROP("disable_sdr_dimming")
 #define FORCE_TONEMAPPING                    DISPLAY_PROP("force_tonemapping")
+// Allows color management(tonemapping) in native mode (native mode is considered BT709+sRGB)
+#define ALLOW_TONEMAP_NATIVE                 DISPLAY_PROP("allow_tonemap_native")
 
 // RC
 #define ENABLE_ROUNDED_CORNER                DISPLAY_PROP("enable_rounded_corner")
