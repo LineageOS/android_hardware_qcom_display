@@ -711,7 +711,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool disable_non_wfd_vds_ = false;
   bool debug_enable_hwc_vds_ = false;
   bool tui_start_success_ = false;
-  std::future<int> commit_done_future_;
+  std::map <hwc2_display_t, std::future<int>> commit_done_future_;
 };
 }  // namespace sdm
 

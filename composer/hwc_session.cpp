@@ -4022,22 +4022,23 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
 int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
   std::chrono::milliseconds span(5000);
-  if (commit_done_future_.valid()) {
-    std::future_status status = commit_done_future_.wait_for(std::chrono::milliseconds(0));
+  if (commit_done_future_[display].valid()) {
+    std::future_status status = commit_done_future_[display].wait_for(std::chrono::milliseconds(0));
     if (status != std::future_status::ready) {
       // Previous task is stuck. Bail out early.
       return -ETIMEDOUT;
     }
   }
 
-  commit_done_future_ = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
-                                      return session->WaitForCommitDone(display, client_id);
-                                     }, this, display, client_id);
-  if (commit_done_future_.wait_for(span) == std::future_status::timeout) {
+  commit_done_future_[display] =
+      std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
+                      return session->WaitForCommitDone(display, client_id);
+                    }, this, display, client_id);
+  if (commit_done_future_[display].wait_for(span) == std::future_status::timeout) {
     DLOGW("WaitForCommitDoneAsync timed out");
     return -ETIMEDOUT;
   }
-  return commit_done_future_.get();
+  return commit_done_future_[display].get();
 }
 
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
@@ -4266,6 +4267,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       if (ret != -ETIMEDOUT) {
         DLOGE("Device unassign failed with error %d", ret);
       }
+      TUITransitionUnPrepare(disp_id);
       tui_start_success_ = false;
       return -EINVAL;
     }
@@ -4329,6 +4331,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
         if (ret != -ETIMEDOUT) {
           DLOGE("WaitForCommitDone failed with error %d", ret);
         }
+        tui_start_success_ = false;
         return -EINVAL;
       }
     }
