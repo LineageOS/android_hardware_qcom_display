@@ -120,6 +120,9 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
     return error;
   }
 
+  uint32_t active_index = 0;
+  hw_intf_->GetActiveConfig(&active_index);
+  hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
   hw_intf_->GetHWPanelInfo(&hw_panel_info);
 
   if (set_max_lum_ != -1.0 || set_min_lum_ != -1.0) {
