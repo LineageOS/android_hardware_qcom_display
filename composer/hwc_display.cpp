@@ -914,7 +914,8 @@ void HWCDisplay::BuildSolidFillStack() {
 HWC2::Error HWCDisplay::SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] SetLayerType failed to find layer", id_);
+    DLOGW("display [%" PRIu64"]-[%" PRIu64 "] SetLayerType (%" PRIu64 ") failed to find layer",
+        id_, type_, layer_id);
     return HWC2::Error::BadLayer;
   }
 
