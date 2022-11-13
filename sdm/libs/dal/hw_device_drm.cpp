@@ -2040,6 +2040,10 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
       *type = ((input_buffer.color_metadata.range == Range_Full) ?
                 DRMCscType::kCscYuv2Rgb2020FR : DRMCscType::kCscYuv2Rgb2020L);
       break;
+    case ColorPrimaries_DCIP3:
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+                DRMCscType::kCscYuv2RgbDCIP3FR : DRMCscType::kCscTypeMax);
+      break;
     default:
       break;
   }
