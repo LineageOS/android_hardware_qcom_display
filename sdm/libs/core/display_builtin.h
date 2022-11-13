@@ -180,6 +180,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
   DisplayError PrePrepare(LayerStack *layer_stack) override;
   DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) override;
+  DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) override;
   DisplayError PostHandleSecureEvent(SecureEvent secure_event) override;
   void InitCWBBuffer();
   void DeinitCWBBuffer();

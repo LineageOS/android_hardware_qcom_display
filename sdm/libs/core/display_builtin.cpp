@@ -2556,6 +2556,25 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 
 
 // LCOV_EXCL_START
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  DisplayError error = kErrorNone;
+
+  error = DisplayBase::HandleSecureEvent(secure_event, needs_refresh);
+  if (error) {
+    DLOGE("Failed to handle secure event %d", secure_event);
+    return error;
+  }
+
+  if (secure_event == kTUITransitionEnd) {
+    // enable demura after TUI transition end
+    if (demura_) {
+      SetDemuraIntfStatus(true);
+    }
+  }
+
+  return error;
+}
+
 DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
   ClientLock lock(disp_mutex_);
   if (secure_event == kTUITransitionStart) {
@@ -2571,6 +2590,13 @@ DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
     if (secure_event == kTUITransitionStart) {
       // Send display config information to secondary VM on TUI session start
       SendDisplayConfigs();
+    }
+
+    if (secure_event == kTUITransitionStart) {
+      //  disable demura before TUI transition start
+      if (demura_) {
+        SetDemuraIntfStatus(false);
+      }
     }
   }
   if (secure_event == kTUITransitionEnd) {
