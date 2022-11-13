@@ -4226,6 +4226,7 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   int timeout_ms = -1;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    DLOGI("Acquired lock for client %d display %" PRIu64, client_id, display);
     callbacks_.Refresh(display);
     clients_waiting_for_commit_[display].set(client_id);
     locker_[display].Wait();
@@ -4365,11 +4366,6 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     hwc_display_[target_display]->SetQSyncMode(kQSyncModeNone);
   }
 
-  int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
-  if (ret != 0) {
-    DLOGE("WaitForCommitDone failed with error = %d", ret);
-    return -EINVAL;
-  }
 
   int timeout_ms = -1;
   {
@@ -4415,16 +4411,11 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     tui_state_transition_[disp_id] = true;
   }
 
-  tui_start_success_ = true;
   return 0;
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   // Hold this lock so that any deferred hotplug events will not be handled during the commit
   // and will be handled at the end of TUITransitionPrepare.
-  if (!tui_start_success_) {
-    DLOGI("Bailing out TUI end");
-    return -EINVAL;
-  }
   SCOPE_LOCK(pluggable_handler_lock_);
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   bool needs_refresh = false;
@@ -4459,10 +4450,9 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
 
   if (needs_refresh) {
     DLOGI("Waiting for device unassign");
-    int ret = WaitForCommitDoneAsync(target_display, kClientTrustedUI);
+    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
     if (ret != 0) {
       DLOGE("Device unassign failed with error %d", ret);
-      tui_start_success_ = false;
       return -EINVAL;
     }
   }
@@ -4528,7 +4518,6 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();
   }
   // Reset tui session state variable.
-  tui_start_success_ = false;
   DLOGI("End of TUI session on display %d", disp_id);
   return 0;
 }

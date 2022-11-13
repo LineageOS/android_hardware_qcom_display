@@ -1166,8 +1166,9 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
 DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_points) {
   SetQOSData(qos_data);
 
-  if (tui_state_ != kTUIStateNone) {
-    DLOGI("Request deferred TUI state %d", tui_state_);
+  if (tui_state_ != kTUIStateNone || pending_cwb_teardown_) {
+    DLOGI("Request deferred TUI state %d pending cwb teardown %d", tui_state_,
+          pending_cwb_teardown_);
     pending_power_state_ = kPowerStateOn;
     return kErrorDeferred;
   }
@@ -1207,8 +1208,9 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     return kErrorNone;
   }
 
-  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
-    DLOGI("Request deferred TUI state %d", tui_state_);
+  if ((tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) || pending_cwb_teardown_) {
+    DLOGI("Request deferred TUI state %d pending cwb teardown %d", tui_state_,
+          pending_cwb_teardown_);
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;
   }
@@ -1941,6 +1943,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   update_mode_ = false;
   hw_layers_info->updates_mask = 0;
   pending_power_state_ = kPowerStateNone;
+  pending_cwb_teardown_ = false;
   // Inherently a real commit ensures null commit properties have happened, so update the member
   first_null_cycle_ = false;
   seamless_mode_switch_ = false;
@@ -3222,6 +3225,11 @@ DisplayError HWDeviceDRM::CancelDeferredPowerMode() {
   pending_power_state_ = kPowerStateNone;
 
   return kErrorNone;
+}
+
+void HWDeviceDRM::HandleCwbTeardown() {
+  DLOGI("Pending CWB teardown on CRTC: %u", token_.crtc_id);
+  pending_cwb_teardown_ = true;
 }
 
 }  // namespace sdm

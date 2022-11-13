@@ -4348,6 +4348,8 @@ bool DisplayBase::HandleCwbTeardown() {
     return false;
   }
 
+  hw_intf_->HandleCwbTeardown();
+
   return comp_manager_->HandleCwbTeardown(display_comp_ctx_);
 }
 

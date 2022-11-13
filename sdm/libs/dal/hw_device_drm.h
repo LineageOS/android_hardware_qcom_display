@@ -208,6 +208,7 @@ class HWDeviceDRM : public HWInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError CancelDeferredPowerMode();
+  virtual void HandleCwbTeardown();
 
   enum {
     kHWEventVSync,
@@ -349,6 +350,7 @@ class HWDeviceDRM : public HWInterface {
   bool doze_poms_switch_done_ = false;
   bool pending_poms_switch_ = false;
   bool active_ = false;
+  bool pending_cwb_teardown_ = false;
   PrimariesTransfer blend_space_ = {};
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
   uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.
