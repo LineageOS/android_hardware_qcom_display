@@ -1150,7 +1150,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buff
 }
 
 int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
-  if (display >= HWCCallbacks::kNumDisplays || !hwc_display_[display]) {
+  if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -1164,13 +1164,20 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // When secure session going on primary, if power request comes on second built-in, cache it and
   // process once secure session ends.
   // Allow power off transition during secure session.
-  bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
-  bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
-  if (secure_session_active_ && is_builtin && is_power_off) {
-    if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
-      DLOGI("Secure session in progress, defer power state change");
-      hwc_display_[display]->SetPendingPowerMode(mode);
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    if (!hwc_display_[display]) {
       return HWC2_ERROR_NONE;
+    }
+
+    bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+    bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
+    if (secure_session_active_ && is_builtin && is_power_off) {
+      if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+        DLOGI("Secure session in progress, defer power state change");
+        hwc_display_[display]->SetPendingPowerMode(mode);
+        return HWC2_ERROR_NONE;
+      }
     }
   }
 
@@ -1194,21 +1201,27 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // async_powermode supported for power on and off
   bool override_mode = async_powermode_ && display_ready_.test(UINT32(display)) &&
                        async_power_mode_triggered_;
-  HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
 
-  if (last_power_mode == mode) {
-    return HWC2_ERROR_NONE;
-  }
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    if (!hwc_display_[display]) {
+      return HWC2_ERROR_NONE;
+    }
+    HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
+    if (last_power_mode == mode) {
+      return HWC2_ERROR_NONE;
+    }
 
-  // 1. For power transition cases other than Off->On or On->Off, async power mode
-  // will not be used. Hence, set override_mode to false for them.
-  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
-  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
-  // in main thread path.
-  if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
-     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
-     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
-    override_mode = false;
+    // 1. For power transition cases other than Off->On or On->Off, async power mode
+    // will not be used. Hence, set override_mode to false for them.
+    // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+    // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+    // in main thread path.
+    if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
+       (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+       (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
+      override_mode = false;
+    }
   }
 
   if (!override_mode) {
@@ -1216,6 +1229,12 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     bool needs_validation = false;
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+      // There is possibiliity that pluggable display is already destroyed in other
+      // thread handling hotplug. So when it comes out of this sequence wait lock
+      // hwc_display can be null.
+      if (!hwc_display_[display]) {
+        return HWC2_ERROR_NONE;
+      }
       needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
                           mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
                           active_builtin_disp_id < HWCCallbacks::kNumDisplays);
@@ -1234,6 +1253,9 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
+    if (!hwc_display_[display]) {
+       return HWC2_ERROR_NONE;
+    }
     // Update hwc state for now. Actual poweron will handled through DisplayConfig.
     hwc_display_[display]->UpdatePowerMode(mode);
   }
