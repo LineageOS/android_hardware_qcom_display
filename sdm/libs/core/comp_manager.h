@@ -82,6 +82,7 @@ class CompManager {
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
                     BufferAllocator *buffer_allocator, SocketHandler *socket_handler);
   DisplayError Deinit();
+  DisplayError ReserveDisplay(DisplayType type);
   DisplayError RegisterDisplay(int32_t display_id, DisplayType type,
                                const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,

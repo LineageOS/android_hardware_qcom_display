@@ -124,6 +124,7 @@ class CoreImpl : public CoreInterface {
   virtual DisplayError Deinit();
 
   // Methods from core interface
+  virtual DisplayError ReserveDisplay(DisplayType type);
   virtual DisplayError CreateDisplay(DisplayType type, DisplayEventHandler *event_handler,
                                      DisplayInterface **intf);
   virtual DisplayError CreateDisplay(int32_t display_id, DisplayEventHandler *event_handler,

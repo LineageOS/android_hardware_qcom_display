@@ -169,6 +169,13 @@ class CoreInterface {
   */
   static DisplayError DestroyCore();
 
+  /*! @brief Method to reserve a display device for a given type.
+    @return \link DisplayError \endlink
+
+    @sa ReserveDisplay
+  */
+  virtual DisplayError ReserveDisplay(DisplayType type) = 0;
+
   /*! @brief Method to create a display device for a given type.
 
     @details Client shall use this method to create each of the connected display type. A handle to
