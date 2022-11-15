@@ -179,9 +179,9 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
 
   ClientContext *intf_ = nullptr;
   std::map<uint64_t, std::shared_ptr<DeviceClientContext>> display_config_map_;
+  std::vector<uint64_t> pending_display_config_;
   uint64_t client_id_ = 0;
   std::recursive_mutex death_service_mutex_;
-  std::shared_mutex shared_mutex_;
   static DeviceImpl *device_obj_;
   static std::mutex device_lock_;
 };
