@@ -2024,7 +2024,8 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
   // for other metadata types we will run into issues.
   bool extended_md_present = input_buffer.extended_content_metadata != nullptr &&
                               input_buffer.extended_content_metadata->size;
-  if (extended_md_present && input_buffer.color_metadata.transfer == Transfer_SMPTE_170M) {
+  if (extended_md_present && (input_buffer.color_metadata.transfer == Transfer_SMPTE_170M
+                          || input_buffer.color_metadata.transfer == Transfer_sRGB)) {
       *type = DRMCscType::kCscYuv2RgbDolbyVisionP5;
       return;
   }
