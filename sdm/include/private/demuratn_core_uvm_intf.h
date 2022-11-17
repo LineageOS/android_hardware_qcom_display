@@ -11,8 +11,15 @@
 
 namespace sdm {
 
+enum DemuraTnCoreState {
+  kDemuraTnCoreNotReady,
+  kDemuraTnCoreReady,
+  kDemuraTnCoreError,
+  kDemuraTnCoreStateMax,
+};
+
 enum DemuraTnCoreUvmParams {
-  /* Getter: bool */
+  /* Getter: DemuraTnCoreState */
   kDemuraTnCoreUvmParamInitReady,
   /* Getter/Setter: bool */
   kDemuraTnCoreUvmParamEnable,
