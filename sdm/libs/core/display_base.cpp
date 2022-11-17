@@ -1422,15 +1422,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
-  if (first_cycle_ && display_type_ != kVirtual) {
+  if (first_cycle_ && display_type_ == kBuiltIn) {
     // Register for panel dead since notification is sent at any time
     hw_events_intf_->SetEventState(HWEvent::PANEL_DEAD, true);
-
-    if (draw_method_ != kDrawDefault && !hw_panel_info_.is_primary_panel &&
-        display_type_ != kHDMI) {
-      DLOGI("Registering for power events");
-      hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
-    }
   }
 
   // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
@@ -1860,10 +1854,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateOn:
-    if (display_type_ == kHDMI && first_cycle_) {
-      hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
-    }
-
     cached_qos_data_.clock_hz =
       std::max(cached_qos_data_.clock_hz, disp_layer_stack_.info.qos_data.clock_hz);
     error = hw_intf_->PowerOn(cached_qos_data_, &sync_points);
@@ -1931,7 +1921,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
-  if ((pending_power_state_ == kPowerStateNone) && (!first_cycle_ || display_type_ == kHDMI)) {
+  if ((pending_power_state_ == kPowerStateNone) && !first_cycle_) {
     CacheRetireFence();
     SyncPoints sync = {};
     sync.retire_fence = retire_fence_;
@@ -3970,32 +3960,6 @@ void DisplayBase::MMRMEvent(uint32_t clk) {
 
 void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
   DTRACE_SCOPED();
-  // Wait on current retire fence.
-  if (draw_method_ == kDrawDefault || display_type_ == kVirtual) {
-    DLOGI("Wait for current retire fence");
-    Fence::Wait(sync_points->retire_fence);
-    DLOGI("Received retire fence");
-    return;
-  }
-
-  // Wait for CRTC power event on first cycle.
-  if (first_cycle_) {
-    if (hw_panel_info_.is_primary_panel) {
-      DLOGI("Sync commit on primary");
-      return;
-    }
-    DLOGI("Wait for CRTC power event on first cycle");
-    std::unique_lock<std::mutex> lck(power_mutex_);
-    while (!transition_done_) {
-      cv_.wait(lck);
-    }
-
-    DLOGI("Received CRTC power event on first cycle");
-    // Unregister power events.
-    hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, false);
-    return;
-  }
-
   // For displays in unified draw, wait on cached retire fence in steady state.
   shared_ptr<Fence> retire_fence = sync_points->retire_fence;
   DLOGI("Wait for cached retire fence to be in steady state");

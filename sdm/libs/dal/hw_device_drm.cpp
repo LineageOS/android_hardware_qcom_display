@@ -1157,7 +1157,10 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_po
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
-  int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
+  // On the first boot up of the display, make the power call synchronous. This is only applicable
+  // to pluggable displays. Check HWPeripheralDRM::PowerOn. For builtin first power call defered
+  // and handled in commit(synchronous for first cycle).
+  int ret = NullCommit(first_cycle_ /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
