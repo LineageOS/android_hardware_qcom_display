@@ -297,6 +297,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::shared_ptr<DemuraTnCoreUvmIntf> demuratn_ = nullptr;
   Layer demura_layer_ = {};
   bool demura_intended_ = false;
+  bool demura_dynamic_enabled_ = true;
   bool enable_dpps_dyn_fps_ = false;
   HWDisplayMode last_panel_mode_ = kModeDefault;
   bool hdr_present_ = false;
