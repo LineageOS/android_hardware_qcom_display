@@ -3720,23 +3720,69 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
 
   Fence::Wait(retire_fence);
 
+  SCOPE_LOCK(pluggable_handler_lock_);
+  HWDisplaysInfo hw_displays_info = {};
+  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    DLOGE("Failed to get connected display list. Error = %d", error);
+    return;
+  }
+
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY + 1;
     display < HWCCallbacks::kNumDisplays; display++) {
-    if (display != active_builtin_disp_id) {
-      Locker::ScopeLock lock_d(locker_[display]);
-      if (pending_power_mode_[display] && hwc_display_[display]) {
-        HWC2::Error error =
-          hwc_display_[display]->SetPowerMode(hwc_display_[display]->GetPendingPowerMode(), false);
-        if (HWC2::Error::None == error) {
-          pending_power_mode_[display] = false;
-          hwc_display_[display]->ClearPendingPowerMode();
-          pending_refresh_.set(UINT32(HWC_DISPLAY_PRIMARY));
-        } else {
-          DLOGE("SetDisplayStatus error = %d (%s)", error, to_string(error).c_str());
+    if (display == active_builtin_disp_id) {
+      continue;
+    }
+
+    Locker::ScopeLock lock_d(locker_[display]);
+    if (!pending_power_mode_[display] || !hwc_display_[display]) {
+      continue;
+    }
+
+    // check if a pluggable display which is in pending power state is already disconnected.
+    // In such cases, avoid powering up the display. It will be disconnected as part of
+    // HandlePendingHotplug.
+    bool disconnected = false;
+    hwc2_display_t client_id;
+    sdm::DisplayType disp_type;
+    for (auto &map_info : map_info_pluggable_) {
+      if (display != map_info.client_id) {
+        continue;
+      }
+
+      for (auto &iter : hw_displays_info) {
+        auto &info = iter.second;
+        if (info.display_id == map_info.sdm_id && !info.is_connected) {
+          disconnected = true;
+          break;
         }
       }
+      client_id = map_info.client_id;
+      disp_type = map_info.disp_type;
+      break;
+    }
+
+    if (disconnected) {
+      continue;
+    }
+
+    HWC2::PowerMode pending_mode = hwc_display_[display]->GetPendingPowerMode();
+
+    if (pending_mode == HWC2::PowerMode::Off || pending_mode == HWC2::PowerMode::DozeSuspend) {
+      map_active_displays_.erase(display);
+    } else {
+      map_active_displays_.insert(std::make_pair(client_id, disp_type));
+    }
+    HWC2::Error error = hwc_display_[display]->SetPowerMode(pending_mode, false);
+    if (HWC2::Error::None == error) {
+      pending_power_mode_[display] = false;
+      hwc_display_[display]->ClearPendingPowerMode();
+      pending_refresh_.set(UINT32(HWC_DISPLAY_PRIMARY));
+    } else {
+      DLOGE("SetDisplayStatus error = %d (%s)", error, to_string(error).c_str());
     }
   }
+
   secure_session_active_ = false;
 }
 
