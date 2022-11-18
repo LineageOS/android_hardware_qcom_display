@@ -224,6 +224,7 @@
 #define TRANSIENT_FPS_CYCLE_COUNT            DISPLAY_PROP("transient_fps_cycle_count")
 #define ENABLE_PANEL_INVERSE_MOUNT           DISPLAY_PROP("enable_panel_inverse_mount")
 #define WAIT_FOR_PRIMARY_DISPLAY             DISPLAY_PROP("wait_for_primary_display")
+#define TRACK_INPUT_FENCES                   DISPLAY_PROP("track_input_fences")
 
 // Add all other.properties above
 // End of property

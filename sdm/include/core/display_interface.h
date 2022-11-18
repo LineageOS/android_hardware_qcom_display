@@ -200,6 +200,7 @@ enum DisplayEvent {
   kSyncInvalidateDisplay,   // Event triggered by Non-DrawCycle threads to Invalidate display.
   kPostIdleTimeout,         // Event triggered after entering idle.
   kVmReleaseDone,           // Event triggered after releasing the mdp hw to secondary vm.
+  kDumpStacktrace,          // Event triggered by commit thread to dump stack trace.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
