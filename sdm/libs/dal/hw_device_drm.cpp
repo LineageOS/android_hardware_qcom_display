@@ -585,6 +585,14 @@ DisplayError HWDeviceDRM::Init() {
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
+  LayerRect window_rect = {};
+  windowed_display_ = Debug::GetWindowRect(hw_panel_info_.is_primary_panel, &window_rect.left,
+                                           &window_rect.top, &window_rect.right,
+                                           &window_rect.bottom) == 0;
+  if (windowed_display_) {
+    window_rect_ = window_rect;
+  }
+
   // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
   if (hw_resource_.has_qseed3) {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
@@ -3057,6 +3065,13 @@ void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info
 
   sde_drm::DRMRect cwb_dst = full_frame;
   LayerRect cwb_roi = cwb_config->cwb_roi;
+
+  if (windowed_display_) {
+    cwb_roi.left += window_rect_.left;
+    cwb_roi.right += window_rect_.left;
+    cwb_roi.top += window_rect_.top;
+    cwb_roi.bottom += window_rect_.top;
+  }
 
   if (has_cwb_crop_) {  // If CWB ROI feature is supported, then set WB connector's roi_v1 property
     // to PU ROI and DST_* properties to CWB ROI. Else, set DST_* properties to full frame ROI.

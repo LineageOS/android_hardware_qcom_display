@@ -3357,6 +3357,24 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   LayerRect &full_rect = config.cwb_full_rect;
   CwbTapPoint &tap_point = config.tap_point;
 
+  LayerRect full_rect_with_window_rect = full_rect;
+  LayerRect cwb_roi_with_window_rect = roi;
+
+  full_rect_with_window_rect.left += window_rect_.left;
+  full_rect_with_window_rect.top += window_rect_.top;
+  full_rect_with_window_rect.right -= window_rect_.right;
+  full_rect_with_window_rect.bottom -= window_rect_.bottom;
+
+  cwb_roi_with_window_rect.left += window_rect_.left;
+  cwb_roi_with_window_rect.top += window_rect_.top;
+  cwb_roi_with_window_rect.right += window_rect_.left;
+  cwb_roi_with_window_rect.bottom += window_rect_.top;
+
+  if (windowed_display_ && (!(Contains(full_rect_with_window_rect, cwb_roi_with_window_rect)))) {
+    DLOGW("Requested CWB ROI is out of bounds");
+    return HWC2::Error::Unsupported;
+  }
+
   DisplayError error = kErrorNone;
   error = display_intf_->CaptureCwb(output_buffer, config);
   if (error) {
