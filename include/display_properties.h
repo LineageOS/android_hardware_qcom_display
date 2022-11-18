@@ -154,6 +154,7 @@
 #define DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH    DISPLAY_PROP("demura_secondary_panel_override_high")
 // Panel Feature DemuraTn Properties
 #define ENABLE_ANTI_AGING                    DISPLAY_PROP("enable_antiaging")
+#define ENABLE_ACCELERATED_AGING             DISPLAY_PROP("enable_accelerated_aging")
 #define ANTI_AGING_SHORT_TIMER               DISPLAY_PROP("demura_short_timer")
 #define ANTI_AGING_LONG_TIMER                DISPLAY_PROP("demura_long_timer")
 #define ANTI_AGING_RECALIB_TIMER             DISPLAY_PROP("demura_recalib_timer")
