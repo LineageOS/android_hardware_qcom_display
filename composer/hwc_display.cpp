@@ -3151,6 +3151,9 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
 DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
   DisplayError err = display_intf_->PostHandleSecureEvent(secure_event);
   if (err == kErrorNone) {
+    if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
+      return kErrorNone;
+    }
     secure_event_ = secure_event;
   }
   return err;
