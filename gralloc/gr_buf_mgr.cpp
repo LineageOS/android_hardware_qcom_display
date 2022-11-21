@@ -859,11 +859,9 @@ Error BufferManager::GetMetadataValue(private_handle_t *handle, int64_t metadata
     return Error::BAD_BUFFER;
   }
 
-  auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
   if (metadatatype_value == QTI_CUSTOM_CONTENT_METADATA) {
     Error error = Error::NONE;
     void *custom_content_md_region = buf->custom_content_md_region_ptr;
-    uint64_t custom_content_md_region_size = buf->custom_content_md_size;
 
       if (buf->custom_content_md_region_ptr == nullptr ||
           buf->custom_content_md_size != sizeof(CustomContentMetadata)) {
@@ -913,7 +911,6 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
   auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
 
   void *metadata_ptr = nullptr;
-  auto result = GetMetaDataByReference(handle, metadatatype_value, &metadata_ptr);
   Error error = Error::NONE;
   switch (metadatatype_value) {
     case (int64_t)StandardMetadataType::BUFFER_ID:
