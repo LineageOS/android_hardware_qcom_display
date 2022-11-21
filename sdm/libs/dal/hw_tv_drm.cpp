@@ -257,6 +257,12 @@ DisplayError HWTVDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     // LP connecter prop N/A for External
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   }
+
+  if (cwb_config_.cwb_disp_id == display_id_ && cwb_config_.enabled) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    DLOGI("Teardown CWB on %d-%d", display_id_, disp_type_);
+  }
+
   ClearSolidfillStages();
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/);
   if (ret) {
