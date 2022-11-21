@@ -62,7 +62,6 @@ void Allocator::SetProperties(gralloc::GrallocProperties props) {
 
 int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   int ret;
-  bool is_secure = false;
   alloc_data->uncached = UseUncached(format, usage);
 
   AllocInterface *alloc_intf = AllocInterface::GetInstance();
@@ -161,7 +160,6 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   bool cur_uncached = false, prev_uncached = false;
   unsigned int alignedw, alignedh;
   unsigned int max_size = 0;
-  bool is_secure = false;
   unsigned int cur_size = 0, prev_size = 0;
 
   *max_index = -1;
