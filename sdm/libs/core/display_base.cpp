@@ -3807,12 +3807,12 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     SetPendingPowerState(state);
   }
 
+  comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   err = hw_intf_->HandleSecureEvent(secure_event, cached_qos_data_);
   if (err != kErrorNone) {
     return err;
   }
 
-  comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
     DisplayState pending_state;
