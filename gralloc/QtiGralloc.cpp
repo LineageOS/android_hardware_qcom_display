@@ -185,7 +185,6 @@ Error decodeYUVPlaneInfoMetadata(hidl_vec<uint8_t> &in, qti_ycbcr *out) {
   if (!in.size() || !out) {
     return Error::BAD_VALUE;
   }
-  qti_ycbcr *p = reinterpret_cast<qti_ycbcr *>(in.data());
   memcpy(out, in.data(), (YCBCR_LAYOUT_ARRAY_SIZE * sizeof(qti_ycbcr)));
   return Error::NONE;
 }
