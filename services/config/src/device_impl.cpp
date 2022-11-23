@@ -146,17 +146,9 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
 
 void DeviceImpl::serviceDied(uint64_t client_handle,
                              const android::wp<::android::hidl::base::V1_0::IBase>& callback) {
-  std::lock_guard<std::shared_mutex> exclusive_lock(shared_mutex_);
   std::lock_guard<std::recursive_mutex> lock(death_service_mutex_);
-  auto itr = display_config_map_.find(client_handle);
-  std::shared_ptr<DeviceClientContext> client = itr->second;
-  if (client != NULL) {
-    ConfigInterface *intf = client->GetDeviceConfigIntf();
-    intf_->UnRegisterClientContext(intf);
-    client.reset();
+  pending_display_config_.push_back(client_handle);
     ALOGW("Client id:%lu service died", client_handle);
-    display_config_map_.erase(itr);
-  }
 }
 
 DeviceImpl::DeviceClientContext::DeviceClientContext(
@@ -899,12 +891,24 @@ void DeviceImpl::DeviceClientContext::ParseAllowIdleFallback(perform_cb _hidl_cb
 Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
                                  const ByteStream &input_params, const HandleStream &input_handles,
                                  perform_cb _hidl_cb) {
-  std::shared_lock<std::shared_mutex> shared_lock(shared_mutex_);
   int32_t error = 0;
   std::shared_ptr<DeviceClientContext> client = nullptr;
 
   {
     std::lock_guard<std::recursive_mutex> lock(death_service_mutex_);
+    for (auto& pending_client_handle : pending_display_config_) {
+      auto itr = display_config_map_.find(pending_client_handle);
+      std::shared_ptr<DeviceClientContext> pending_client = itr->second;
+      if (pending_client != NULL) {
+        ConfigInterface *pending_intf = pending_client->GetDeviceConfigIntf();
+        intf_->UnRegisterClientContext(pending_intf);
+        pending_client.reset();
+        ALOGI("clear old client id:%lu ", pending_client_handle);
+      }
+      display_config_map_.erase(itr);
+    }
+    pending_display_config_.clear();
+
     auto itr = display_config_map_.find(client_handle);
     if (itr == display_config_map_.end()) {
       error = -EINVAL;
