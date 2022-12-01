@@ -142,8 +142,10 @@ case "$target" in
         setprop vendor.gralloc.secure_preview_buffer_format 420_sp
         setprop vendor.display.disable_non_wfd_vds 1
         ;;
-        568)
+        568|602)
         # Set property for Ravelin
+        # SOC ID for Ravelin is 568
+        # SOC ID for Ravelin APQ is 602
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_allow_idle_fallback 1
