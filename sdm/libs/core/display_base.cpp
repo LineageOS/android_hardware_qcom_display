@@ -1833,7 +1833,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
   case kStateOn:
     if (display_type_ == kHDMI && first_cycle_) {
-      hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
+      error = hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
+      if (error != kErrorNone) {
+        Abort();
+        return error;
+      }
     }
 
     cached_qos_data_.clock_hz =
