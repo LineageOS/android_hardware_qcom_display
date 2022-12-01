@@ -81,6 +81,17 @@ struct BufferConfig {
   bool trusted_ui = false;                    //!< Specifies buffer to be allocated from non-secure
                                               //!< contiguous memory.
   BufferAccessControlMap access_control;      //!< Specifies the access permission for this buffer
+
+  bool operator!=(const BufferConfig& config) const {
+    return width != config.width   ||
+           height != config.height ||
+           format != config.format ||
+           secure != config.secure ||
+           cache != config.cache   ||
+           secure_camera != config.secure_camera ||
+           gfx_client != config.gfx_client ||
+           trusted_ui != config.trusted_ui;
+  }
 };
 
 /*! @brief Holds the information about the allocated buffer.

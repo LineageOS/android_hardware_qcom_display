@@ -523,6 +523,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
                              int active_config_index, uint32_t num_configs) {};
   virtual void Abort();
+  virtual void MarkClientActive(bool is_client_up);
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -703,6 +704,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool draw_method_set_ = false;
   bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
+  bool is_client_up_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

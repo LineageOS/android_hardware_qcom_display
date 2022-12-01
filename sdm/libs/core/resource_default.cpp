@@ -392,7 +392,7 @@ uint32_t ResourceDefault::GetMixerCount() {
   return 0;
 }
 
-void ResourceDefault::HandleTUITransition(bool tui_active) {
+void ResourceDefault::HandleTUITransition(Handle display_ctx, bool tui_active) {
 }
 
 DisplayError ResourceDefault::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {

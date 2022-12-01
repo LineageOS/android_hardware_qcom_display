@@ -1970,6 +1970,9 @@ DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   sync_commit = true;
 #endif
 
+  // dpps commit feature ops doesn't use the obj id, set it as -1
+  drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, -1);
+
   int ret = NullCommit(sync_commit /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
@@ -2039,6 +2042,10 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
     case ColorPrimaries_BT2020:
       *type = ((input_buffer.color_metadata.range == Range_Full) ?
                 DRMCscType::kCscYuv2Rgb2020FR : DRMCscType::kCscYuv2Rgb2020L);
+      break;
+    case ColorPrimaries_DCIP3:
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+                DRMCscType::kCscYuv2RgbDCIP3FR : DRMCscType::kCscTypeMax);
       break;
     default:
       break;
