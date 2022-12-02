@@ -481,6 +481,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   bool windowed_display_ = false;
   LayerRect window_rect_ = {};
   bool enable_win_rect_mask_ = false;
+  HWDisplayMode default_panel_mode_ = kModeDefault;
 };
 
 }  // namespace sdm

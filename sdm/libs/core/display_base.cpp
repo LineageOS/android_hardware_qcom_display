@@ -125,6 +125,7 @@ DisplayError DisplayBase::Init() {
   DisplayError error = kErrorNone;
   hw_panel_info_ = HWPanelInfo();
   hw_intf_->GetHWPanelInfo(&hw_panel_info_);
+  default_panel_mode_ = hw_panel_info_.mode;
   if (hw_info_intf_) {
     hw_info_intf_->GetHWResourceInfo(&hw_resource_info_);
   }
@@ -3768,9 +3769,11 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   DLOGI("Secure event %d for display %d-%d", secure_event, display_id_, display_type_);
 
   if (secure_event == kTUITransitionStart &&
-      (state_ != kStateOn || (pending_power_state_ != kPowerStateNone))) {
-    DLOGW("Cannot start TUI session when display state is %d or pending_power_state %d",
-          state_, pending_power_state_);
+      (state_ != kStateOn || (pending_power_state_ != kPowerStateNone) ||
+       (hw_panel_info_.mode != default_panel_mode_))) {
+    DLOGW("Cannot start TUI session when display state is %d or pending_power_state %d "
+          "or panel mode is changed; current panel mode = %d, panel mode during bootup = %d",
+           state_, pending_power_state_, hw_panel_info_.mode, default_panel_mode_);
     return kErrorPermission;
   }
   shared_ptr<Fence> release_fence = nullptr;
