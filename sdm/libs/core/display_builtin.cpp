@@ -778,9 +778,9 @@ DisplayError DisplayBuiltIn::EnableDemuraTn(bool enable) {
   *en = enable;
 
   if (enable) {  // make sure init is ready before enabling
-    bool *init_ready = nullptr;
+    DemuraTnCoreState *init_ready = nullptr;
     GenericPayload ready_pl;
-    ret = ready_pl.CreatePayload<bool>(init_ready);
+    ret = ready_pl.CreatePayload<DemuraTnCoreState>(init_ready);
     if (ret) {
       DLOGE("failed to create the payload. Error:%d", ret);
       return kErrorUndefined;
@@ -791,16 +791,25 @@ DisplayError DisplayBuiltIn::EnableDemuraTn(bool enable) {
       DLOGE("GetParameter for InitReady failed ret %d", ret);
       return kErrorUndefined;
     }
-    if (!(*init_ready)) {
+    if (*init_ready == kDemuraTnCoreNotReady) {
       return kErrorNone;
-    }
-
-    ret = demuratn_->SetParameter(kDemuraTnCoreUvmParamEnable, payload);
-    if (ret) {
-      DLOGE("SetParameter for enable failed ret %d", ret);
+    } else if (*init_ready == kDemuraTnCoreError) {
+      DLOGE("DemuraTn init ready state returns error");
+      int rc = demuratn_->Deinit();
+      if (rc)
+        DLOGE("Failed to deinit DemuraTn ret %d", rc);
+      demuratn_factory_ = nullptr;
+      demuratn_.reset();
+      demuratn_ = nullptr;
       return kErrorUndefined;
+    } else if (*init_ready == kDemuraTnCoreReady) {
+      ret = demuratn_->SetParameter(kDemuraTnCoreUvmParamEnable, payload);
+      if (ret) {
+        DLOGE("SetParameter for enable failed ret %d", ret);
+        return kErrorUndefined;
+      }
+      demuratn_enabled_ = true;
     }
-    demuratn_enabled_ = true;
   } else {
     ret = demuratn_->SetParameter(kDemuraTnCoreUvmParamEnable, payload);
     if (ret) {
