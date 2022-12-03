@@ -162,6 +162,7 @@
 #define ANTI_AGING_RECALIB_TIMER             DISPLAY_PROP("demura_recalib_timer")
 #define ANTI_AGING_RECORD_TIMER              DISPLAY_PROP("demura_record_timer")
 #define ANTI_AGING_IDLE_TIMER                DISPLAY_PROP("demura_idle_timer")
+#define ANTI_AGING_MEMORY_SIZE               DISPLAY_PROP("demura_memory_size")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
