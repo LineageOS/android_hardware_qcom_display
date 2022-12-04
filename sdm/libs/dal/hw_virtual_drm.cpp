@@ -70,6 +70,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utils/utils.h>
 #include <algorithm>
 #include <vector>
+#include <cmath>
 #include "hw_device_drm.h"
 #include "hw_virtual_drm.h"
 #include "hw_info_drm.h"
@@ -139,7 +140,8 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
   mode.vdisplay = mode.vsync_start = mode.vsync_end = mode.vtotal =
                                        UINT16(display_attributes.y_pixels);
   mode.vrefresh = UINT32(display_attributes.fps);
-  mode.clock = (mode.htotal * mode.vtotal * mode.vrefresh) / 1000;
+
+  mode.clock = std::round(FLOAT(mode.htotal * mode.vtotal * mode.vrefresh) / 1000.00f);
   snprintf(mode.name, DRM_DISPLAY_MODE_LEN, "%dx%d", mode.hdisplay, mode.vdisplay);
   modes.push_back(mode);
   for (auto &item : connector_info_.modes) {

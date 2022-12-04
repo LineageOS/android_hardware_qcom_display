@@ -169,18 +169,19 @@ DisplayError DisplayBuiltIn::Init() {
       return error;
     }
 
-    if ((error = SetupDemura()) != kErrorNone) {
+    DisplayError tmp = kErrorNone;
+    if ((tmp = SetupDemura()) != kErrorNone) {
       // Non-fatal but not expected, log error
       DLOGE("Demura failed to initialize on display %d-%d, Error = %d", display_id_,
-            display_type_, error);
+            display_type_, tmp);
       comp_manager_->FreeDemuraFetchResources(display_id_);
       comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
       if (demura_) {
         SetDemuraIntfStatus(false);
       }
     } else if (demuratn_factory_) {
-      if ((error = SetupDemuraTn()) != kErrorNone) {
-        DLOGW("Failed to setup DemuraTn, Error = %d", error);
+      if ((tmp = SetupDemuraTn()) != kErrorNone) {
+        DLOGW("Failed to setup DemuraTn, Error = %d", tmp);
       }
     }
   } else {
@@ -254,6 +255,7 @@ DisplayError DisplayBuiltIn::Deinit() {
         DLOGE("Unable to DeInit DemuraTn on Display %d", display_id_);
       }
     }
+    demura_dynamic_enabled_ = true;
 
     DeinitCWBBuffer();
   }
@@ -959,7 +961,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   }
 
   // Must go in NullCommit
-  if (demura_intended_ &&
+  if (demura_intended_ && demura_dynamic_enabled_ &&
       comp_manager_->GetDemuraStatusForDisplay(display_id_) && (state == kStateOff)) {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
     SetDemuraIntfStatus(false);
@@ -987,7 +989,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   }
 
   // Must only happen after NullCommit and get applied in next frame
-  if (demura_intended_ &&
+  if (demura_intended_ && demura_dynamic_enabled_ &&
       !comp_manager_->GetDemuraStatusForDisplay(display_id_) && (state == kStateOn)) {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
     SetDemuraIntfStatus(true);
@@ -1902,7 +1904,7 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   }
 
   // force clear qsync mode if set by idle timeout.
-  if (qsync_mode_ !=  kQSyncModeNone && qsync_mode_ == qsync_mode) {
+  if (qsync_mode_ ==  active_qsync_mode_ && qsync_mode_ == qsync_mode) {
     DLOGW("Qsync mode already set as requested mode: qsync_mode_=%d", qsync_mode_);
     return kErrorNone;
   }
@@ -2555,6 +2557,25 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 
 
 // LCOV_EXCL_START
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  DisplayError error = kErrorNone;
+
+  error = DisplayBase::HandleSecureEvent(secure_event, needs_refresh);
+  if (error) {
+    DLOGE("Failed to handle secure event %d", secure_event);
+    return error;
+  }
+
+  if (secure_event == kTUITransitionEnd) {
+    // enable demura after TUI transition end
+    if (demura_) {
+      SetDemuraIntfStatus(true);
+    }
+  }
+
+  return error;
+}
+
 DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
   ClientLock lock(disp_mutex_);
   if (secure_event == kTUITransitionStart) {
@@ -2570,6 +2591,13 @@ DisplayError DisplayBuiltIn::PostHandleSecureEvent(SecureEvent secure_event) {
     if (secure_event == kTUITransitionStart) {
       // Send display config information to secondary VM on TUI session start
       SendDisplayConfigs();
+    }
+
+    if (secure_event == kTUITransitionStart) {
+      //  disable demura before TUI transition start
+      if (demura_) {
+        SetDemuraIntfStatus(false);
+      }
     }
   }
   if (secure_event == kTUITransitionEnd) {
@@ -2953,6 +2981,7 @@ DisplayError DisplayBuiltIn::SetDemuraState(int state) {
       return kErrorUndefined;
     }
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
+    demura_dynamic_enabled_ = true;
   } else if (!state && comp_manager_->GetDemuraStatusForDisplay(display_id_)) {
     ret = SetDemuraIntfStatus(false);
     if (ret) {
@@ -2960,6 +2989,7 @@ DisplayError DisplayBuiltIn::SetDemuraState(int state) {
       return kErrorUndefined;
     }
     comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
+    demura_dynamic_enabled_ = false;
   }
 
   // Disable Partial Update for one frame.

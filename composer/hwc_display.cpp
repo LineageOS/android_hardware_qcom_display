@@ -914,7 +914,8 @@ void HWCDisplay::BuildSolidFillStack() {
 HWC2::Error HWCDisplay::SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] SetLayerType failed to find layer", id_);
+    DLOGW("display [%" PRIu64"]-[%" PRIu64 "] SetLayerType (%" PRIu64 ") failed to find layer",
+        id_, type_, layer_id);
     return HWC2::Error::BadLayer;
   }
 
@@ -2020,12 +2021,15 @@ void HWCDisplay::DumpInputBuffers() {
         reinterpret_cast<const native_handle_t *>(layer->input_buffer.buffer_id);
     Fence::Wait(layer->input_buffer.acquire_fence);
 
-    DLOGI("Dump layer[%d] of %lu handle %p", i, layer_stack_.layers.size(), handle);
 
     if (!handle) {
-      DLOGE("Buffer handle is null");
+      DLOGW("Buffer handle is detected as null for layer: %s(%d) out of %lu layers with layer "
+            "flag value: %u", layer->layer_name.c_str(), layer->layer_id,
+            layer_stack_.layers.size(), layer->flags);
       continue;
     }
+
+    DLOGI("Dump layer[%d] of %lu handle %p", i, layer_stack_.layers.size(), handle);
 
     void *base_ptr = NULL;
     int error = buffer_allocator_->MapBuffer(handle, nullptr, &base_ptr);
@@ -2866,7 +2870,7 @@ HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
                                 vsync_period_change_constraints->desiredTimeNanos);
 
   out_timeline->refreshRequired = true;
-  if (info.x_pixels != fb_width_ || info.y_pixels != fb_height_) {
+  if (is_client_up_ && (info.x_pixels != fb_width_ || info.y_pixels != fb_height_)) {
     out_timeline->refreshRequired = false;
     fb_width_ = info.x_pixels;
     fb_height_ = info.y_pixels;
@@ -3701,4 +3705,7 @@ void HWCDisplay::Abort() {
   display_intf_->Abort();
 }
 
-} //namespace sdm
+void HWCDisplay::MarkClientActive(bool is_client_up) {
+  is_client_up_ = is_client_up ;
+}
+}  // namespace sdm

@@ -1376,7 +1376,7 @@ bool QtiComposerClient::CommandReader::parseSetColorTransform(uint16_t length) {
 
 bool QtiComposerClient::CommandReader::parseSetClientTarget(uint16_t length) {
   // 4 parameters followed by N rectangles
-  if ((length - 4) % 4 != 0) {
+  if (length < 4 || ((length - 4) % 4 != 0)) {
     return false;
   }
 
@@ -1957,7 +1957,7 @@ bool QtiComposerClient::CommandReader::parseSetLayerColorTransform(uint16_t leng
 bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadataBlobs(uint16_t length) {
   // must have at least one metadata blob
   // of at least size 1 in queue (i.e {/*numBlobs=*/1, key, size, blob})
-  if (length < 4) {
+  if (length <= 4) {
     return false;
   }
 
@@ -1971,7 +1971,7 @@ bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadataBlobs(uint16
     uint32_t blobSize = read();
     length -= 2;
 
-    if (length * sizeof(uint32_t) < blobSize) {
+    if (length * sizeof(uint32_t) < blobSize && (length % 2 != 0)) {
       return false;
     }
 
