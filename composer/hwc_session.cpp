@@ -4270,10 +4270,10 @@ int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   shared_ptr<Fence> retire_fence = nullptr;
   int timeout_ms = -1;
+  callbacks_.Refresh(display);
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
     DLOGI("Acquired lock for client %d display %" PRIu64, client_id, display);
-    callbacks_.Refresh(display);
     clients_waiting_for_commit_[display].set(client_id);
     locker_[display].Wait();
     if (commit_error_[display] != 0) {
@@ -4454,7 +4454,6 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
-    tui_state_transition_[disp_id] = true;
   }
 
   return 0;
@@ -4472,11 +4471,6 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   if (target_display != qdutils::DISPLAY_PRIMARY && target_display != qdutils::DISPLAY_BUILTIN_2) {
     DLOGE("Display %" PRIu64 " not supported", target_display);
     return -ENOTSUP;
-  }
-
-  if (!tui_state_transition_[disp_id]) {
-    DLOGE("Display %d tui transition state is not valid.", disp_id);
-    return -EINVAL;
   }
 
   {
@@ -4513,7 +4507,6 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
-    tui_state_transition_[disp_id] = false;
   }
 
   return TUITransitionUnPrepare(disp_id);
