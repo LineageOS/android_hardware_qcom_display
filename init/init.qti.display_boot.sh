@@ -57,8 +57,10 @@ case "$target" in
     ;;
     "kalama")
     #SOC ID for Kalama is 519
+    #SOC ID for Kalama SG36 is 600
+    #SOC ID for Kalama SG p is 601
     case "$soc_hwid" in
-      519)
+        519|600|601)
         setprop vendor.display.enable_fb_scaling 0
         setprop vendor.display.target.version 4
         setprop vendor.gralloc.use_dma_buf_heaps 1
