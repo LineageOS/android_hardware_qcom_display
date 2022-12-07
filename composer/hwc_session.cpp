@@ -2798,10 +2798,13 @@ android::status_t HWCSession::SetJitterConfig(const android::Parcel *input_parce
 }
 
 android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
-  int disp_id = input_parcel->readInt32();
+  uint32_t disp_id = UINT32(input_parcel->readInt32());
   uint64_t clk = UINT64(input_parcel->readInt64());
   if (disp_id != HWC_DISPLAY_PRIMARY) {
-    return -EINVAL;
+    if (!std::any_of(map_info_builtin_.begin(), map_info_builtin_.end(),
+                    [&disp_id](auto &i) {return disp_id == i.client_id;})) {
+                      return -EINVAL;
+                   }
   }
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
