@@ -68,7 +68,7 @@
 #define OVERFLOW(x, y) (((y) != 0) && ((x) > (UINT_MAX / (y))))
 
 #define ROUND_UP_PAGESIZE(x) roundUpToPageSize(x)
-inline int roundUpToPageSize(int x) {
+inline size_t roundUpToPageSize(size_t x) {
   return (x + (getpagesize() - 1)) & ~(getpagesize() - 1);
 }
 
