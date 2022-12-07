@@ -25,7 +25,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -169,21 +169,7 @@ DisplayError DisplayBuiltIn::Init() {
       return error;
     }
 
-    DisplayError tmp = kErrorNone;
-    if ((tmp = SetupDemura()) != kErrorNone) {
-      // Non-fatal but not expected, log error
-      DLOGE("Demura failed to initialize on display %d-%d, Error = %d", display_id_,
-            display_type_, tmp);
-      comp_manager_->FreeDemuraFetchResources(display_id_);
-      comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
-      if (demura_) {
-        SetDemuraIntfStatus(false);
-      }
-    } else if (demuratn_factory_) {
-      if ((tmp = SetupDemuraTn()) != kErrorNone) {
-        DLOGW("Failed to setup DemuraTn, Error = %d", tmp);
-      }
-    }
+    SetupDemuraT0AndTn();
   } else {
     DLOGW("Skipping Panel Feature Setups!");
   }
@@ -509,128 +495,96 @@ DisplayError DisplayBuiltIn::SetupSPR() {
 }
 
 DisplayError DisplayBuiltIn::SetupDemura() {
-  if (!comp_manager_->GetDemuraStatus()) {
-    comp_manager_->FreeDemuraFetchResources(display_id_);
-    comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
-    return kErrorNone;
+  DemuraInputConfig input_cfg;
+  input_cfg.secure_session = false;  // TODO(user): Integrate with secure solution
+  std::string brightness_base;
+  hw_intf_->GetPanelBrightnessBasePath(&brightness_base);
+  input_cfg.brightness_path = brightness_base+"brightness";
+
+  FetchResourceList frl;
+  comp_manager_->GetDemuraFetchResources(display_comp_ctx_, &frl);
+  for (auto &fr : frl) {
+    int i = std::get<1>(fr);  // fetch resource index
+    input_cfg.resources.set(i);
   }
-
-  int value = 0;
-  uint64_t panel_id = 0;
-  int panel_id_w = 0;
-  if (IsPrimaryDisplay()) {
-    Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_LOW, &panel_id_w);
-    panel_id = static_cast<uint32_t>(panel_id_w);
-    Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
-    panel_id |=  ((static_cast<uint64_t>(panel_id_w)) << 32);
-    DLOGI("panel overide total value %lx\n", panel_id);
-    Debug::Get()->GetProperty(DISABLE_DEMURA_PRIMARY, &value);
-  } else {
-    Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_LOW, &panel_id_w);
-    panel_id = static_cast<uint32_t>(panel_id_w);
-    Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
-    panel_id |=  ((static_cast<uint64_t>(panel_id_w)) << 32);
-    DLOGI("panel overide total value %lx\n", panel_id);
-    Debug::Get()->GetProperty(DISABLE_DEMURA_SECONDARY, &value);
-  }
-
-  if (value > 0) {
-    comp_manager_->FreeDemuraFetchResources(display_id_);
-    comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
-    return kErrorNone;
-  } else if (value == 0) {
-    DemuraInputConfig input_cfg;
-    input_cfg.secure_session = false;  // TODO(user): Integrate with secure solution
-    std::string brightness_base;
-    hw_intf_->GetPanelBrightnessBasePath(&brightness_base);
-    input_cfg.brightness_path = brightness_base+"brightness";
-
-    FetchResourceList frl;
-    comp_manager_->GetDemuraFetchResources(display_comp_ctx_, &frl);
-    for (auto &fr : frl) {
-      int i = std::get<1>(fr);  // fetch resource index
-      input_cfg.resources.set(i);
-    }
 
 #ifdef TRUSTED_VM
-    int ret = 0;
-    GenericPayload out;
-    IPCImportBufOutParams *buf_out_params = nullptr;
-    if ((ret = out.CreatePayload<IPCImportBufOutParams>(buf_out_params))) {
-      DLOGE("Failed to create output payload error = %d", ret);
-      return kErrorUndefined;
-    }
+  int ret = 0;
+  GenericPayload out;
+  IPCImportBufOutParams *buf_out_params = nullptr;
+  if ((ret = out.CreatePayload<IPCImportBufOutParams>(buf_out_params))) {
+    DLOGE("Failed to create output payload error = %d", ret);
+    return kErrorUndefined;
+  }
 
-    GenericPayload in;
-    IPCImportBufInParams *buf_in_params = nullptr;
-    if ((ret = in.CreatePayload<IPCImportBufInParams>(buf_in_params))) {
-      DLOGE("Failed to create input payload error = %d", ret);
-      return kErrorUndefined;
-    }
-    buf_in_params->req_buf_type = kIpcBufferTypeDemuraHFC;
+  GenericPayload in;
+  IPCImportBufInParams *buf_in_params = nullptr;
+  if ((ret = in.CreatePayload<IPCImportBufInParams>(buf_in_params))) {
+    DLOGE("Failed to create input payload error = %d", ret);
+    return kErrorUndefined;
+  }
+  buf_in_params->req_buf_type = kIpcBufferTypeDemuraHFC;
 
-    if ((ret = ipc_intf_->ProcessOps(kIpcOpsImportBuffers, in, &out))) {
-      DLOGE("Failed to kIpcOpsImportBuffers payload error = %d", ret);
-      return kErrorUndefined;
-    }
-    DLOGI("DemuraHFC buffer fd %d size %d", buf_out_params->buffers[0].fd,
-      buf_out_params->buffers[0].size);
+  if ((ret = ipc_intf_->ProcessOps(kIpcOpsImportBuffers, in, &out))) {
+    DLOGE("Failed to kIpcOpsImportBuffers payload error = %d", ret);
+    return kErrorUndefined;
+  }
+  DLOGI("DemuraHFC buffer fd %d size %d", buf_out_params->buffers[0].fd,
+    buf_out_params->buffers[0].size);
 
-    if (buf_out_params->buffers[0].fd < 0) {
-      DLOGE("HFC buffer import error fd :%d ", buf_out_params->buffers[0].fd);
-      return kErrorUndefined;
-    }
+  if (buf_out_params->buffers[0].fd < 0) {
+    DLOGE("HFC buffer import error fd :%d ", buf_out_params->buffers[0].fd);
+    return kErrorUndefined;
+  }
 
-    input_cfg.secure_hfc_fd = buf_out_params->buffers[0].fd;
-    input_cfg.secure_hfc_size = buf_out_params->buffers[0].size;
-    input_cfg.panel_id = buf_out_params->buffers[0].panel_id;
-    input_cfg.secure_session = true;
-    hfc_buffer_fd_ = buf_out_params->buffers[0].fd;
-    hfc_buffer_size_ = buf_out_params->buffers[0].size;
+  input_cfg.secure_hfc_fd = buf_out_params->buffers[0].fd;
+  input_cfg.secure_hfc_size = buf_out_params->buffers[0].size;
+  input_cfg.panel_id = buf_out_params->buffers[0].panel_id;
+  input_cfg.secure_session = true;
+  hfc_buffer_fd_ = buf_out_params->buffers[0].fd;
+  hfc_buffer_size_ = buf_out_params->buffers[0].size;
 #endif
-    DLOGI("panel id %lx\n", input_cfg.panel_id);
-    input_cfg.panel_id = panel_id;
-    std::unique_ptr<DemuraIntf> demura =
-        pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
-    if (!demura) {
-      DLOGE("Unable to create Demura on Display %d-%d", display_id_, display_type_);
-      return kErrorMemory;
-    }
+  input_cfg.panel_id = panel_id_;
+  DLOGI("panel id %lx\n", input_cfg.panel_id);
+  std::unique_ptr<DemuraIntf> demura =
+      pf_factory_->CreateDemuraIntf(input_cfg, prop_intf_, buffer_allocator_, spr_);
+  if (!demura) {
+    DLOGE("Unable to create Demura on Display %d-%d", display_id_, display_type_);
+    return kErrorMemory;
+  }
 
-    demura_ = std::move(demura);
-    if (demura_->Init() != 0) {
-      DLOGE("Unable to initialize Demura on Display %d-%d", display_id_, display_type_);
-      return kErrorUndefined;
-    }
+  demura_ = std::move(demura);
+  if (demura_->Init() != 0) {
+    DLOGE("Unable to initialize Demura on Display %d-%d", display_id_, display_type_);
+    return kErrorUndefined;
+  }
 
-    if (SetupDemuraLayer() != kErrorNone) {
-      DLOGE("Unable to setup Demura layer on Display %d-%d", display_id_, display_type_);
-      return kErrorUndefined;
-    }
+  if (SetupDemuraLayer() != kErrorNone) {
+    DLOGE("Unable to setup Demura layer on Display %d-%d", display_id_, display_type_);
+    return kErrorUndefined;
+  }
 
-    if (SetDemuraIntfStatus(true)) {
-      return kErrorUndefined;
-    }
+  if (SetDemuraIntfStatus(true)) {
+    return kErrorUndefined;
+  }
 
-    comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
-    demura_intended_ = true;
-    DLOGI("Enabled Demura Core!");
+  comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
+  demura_intended_ = true;
+  DLOGI("Enabled Demura Core!");
 
 #ifndef TRUSTED_VM
-    GenericPayload pl;
-    uint64_t *panel_id_ptr = nullptr;
-    int rc = 0;
-    if ((rc = pl.CreatePayload<uint64_t>(panel_id_ptr))) {
-      DLOGE("Failed to create payload for Paneld, error = %d", rc);
-    }
-    demura_->GetParameter(kDemuraFeatureParamPanelId, &pl);
-    vm_cb_intf_ = new DisplayIPCVmCallbackImpl(buffer_allocator_, ipc_intf_,
-        *panel_id_ptr, hfc_buffer_width_, hfc_buffer_height_);
-    vm_cb_intf_->Init();
-#endif
-    return kErrorNone;
+  GenericPayload pl;
+  uint64_t *panel_id_ptr = nullptr;
+  int rc = 0;
+  if ((rc = pl.CreatePayload<uint64_t>(panel_id_ptr))) {
+    DLOGE("Failed to create payload for Paneld, error = %d", rc);
   }
-  return kErrorUndefined;
+  demura_->GetParameter(kDemuraFeatureParamPanelId, &pl);
+  vm_cb_intf_ = new DisplayIPCVmCallbackImpl(buffer_allocator_, ipc_intf_,
+      *panel_id_ptr, hfc_buffer_width_, hfc_buffer_height_);
+  vm_cb_intf_->Init();
+#endif
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetupDemuraLayer() {
@@ -728,6 +682,139 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
   if (histogramSetup) {
     SetDppsFeatureLocked(&histogramIRQ, sizeof(histogramIRQ));
   }
+}
+
+DisplayError DisplayBuiltIn::SetupDemuraT0AndTn() {
+  DisplayError error = kErrorNone;
+  int ret = 0, value = 0, panel_id_w = 0;
+  uint64_t panel_id = 0;
+  bool demura_allowed = false, demuratn_allowed = false;
+
+  if (!comp_manager_->GetDemuraStatus()) {
+    comp_manager_->FreeDemuraFetchResources(display_id_);
+    comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
+    return kErrorNone;
+  }
+
+  if (IsPrimaryDisplay()) {
+    Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_LOW, &panel_id_w);
+    panel_id = static_cast<uint32_t>(panel_id_w);
+    Debug::Get()->GetProperty(DEMURA_PRIMARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
+    panel_id |= ((static_cast<uint64_t>(panel_id_w)) << 32);
+    Debug::Get()->GetProperty(DISABLE_DEMURA_PRIMARY, &value);
+    DLOGI("panel overide total value %lx\n", panel_id);
+  } else {
+    Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_LOW, &panel_id_w);
+    panel_id = static_cast<uint32_t>(panel_id_w);
+    Debug::Get()->GetProperty(DEMURA_SECONDARY_PANEL_OVERRIDE_HIGH, &panel_id_w);
+    panel_id |= ((static_cast<uint64_t>(panel_id_w)) << 32);
+    Debug::Get()->GetProperty(DISABLE_DEMURA_SECONDARY, &value);
+    DLOGI("panel overide total value %lx\n", panel_id);
+  }
+
+  if (value > 0) {
+    comp_manager_->FreeDemuraFetchResources(display_id_);
+    comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
+    return kErrorNone;
+  } else if (value < 0) {
+    return kErrorUndefined;
+  }
+
+  PanelFeaturePropertyInfo info;
+  if (!panel_id) {
+    info.prop_ptr = reinterpret_cast<uint64_t>(&panel_id);
+    info.prop_id = kPanelFeatureDemuraPanelId;
+    ret = prop_intf_->GetPanelFeature(&info);
+    if (ret) {
+      DLOGE("Failed to get panel id, error = %d", ret);
+      return kErrorUndefined;
+    }
+  }
+  panel_id_ = panel_id;
+  DLOGI("panel_id 0x%lx", panel_id_);
+
+#ifndef SDM_UNIT_TESTING
+  if (!feature_license_factory_) {
+    DLOGI("Feature license factory is not available");
+    return kErrorNone;
+  }
+
+  std::shared_ptr<FeatureLicenseIntf> feat_license_intf =
+      feature_license_factory_->CreateFeatureLicenseIntf();
+  if (!feat_license_intf) {
+    feature_license_factory_ = nullptr;
+    DLOGE("Failed to create FeatureLicenseIntf");
+    return kErrorUndefined;
+  }
+  ret = feat_license_intf->Init();
+  if (ret) {
+    DLOGE("Failed to init FeatureLicenseIntf");
+    return kErrorUndefined;
+  }
+
+  GenericPayload demura_pl, aa_pl, out_pl;
+  DemuraValidatePermissionInput *demura_input = nullptr;
+  ret = demura_pl.CreatePayload<DemuraValidatePermissionInput>(demura_input);
+  if (ret) {
+    DLOGE("Failed to create the payload. Error:%d", ret);
+    return kErrorUndefined;
+  }
+
+  bool *allowed = nullptr;
+  ret = out_pl.CreatePayload<bool>(allowed);
+  if (ret) {
+    DLOGE("Failed to create the payload. Error:%d", ret);
+    return kErrorUndefined;
+  }
+
+  demura_input->id = kDemura;
+  demura_input->panel_id = panel_id_;
+  ret = feat_license_intf->ProcessOps(kValidatePermission, demura_pl, &out_pl);
+  if (ret) {
+    DLOGE("Failed to get the license permission for Demura. Error:%d", ret);
+    return kErrorUndefined;
+  }
+  demura_allowed = *allowed;
+
+  AntiAgingValidatePermissionInput *aa_input = nullptr;
+  ret = aa_pl.CreatePayload<AntiAgingValidatePermissionInput>(aa_input);
+  if (ret) {
+    DLOGE("Failed to create the payload. Error:%d", ret);
+    return kErrorUndefined;
+  }
+
+  aa_input->id = kAntiAging;
+  ret = feat_license_intf->ProcessOps(kValidatePermission, aa_pl, &out_pl);
+  if (ret) {
+    DLOGE("Failed to get the license permission for Anti-aging. Error:%d", ret);
+    return kErrorUndefined;
+  }
+  demuratn_allowed = *allowed;
+#else
+  demura_allowed = true;
+  demuratn_allowed = true;
+#endif
+
+  DLOGI("Demura enable allowed %d, Anti-aging enable allowed %d", demura_allowed, demuratn_allowed);
+  if (demura_allowed) {
+    error = SetupDemura();
+    if (error != kErrorNone) {
+      // Non-fatal but not expected, log error
+      DLOGE("Demura failed to initialize on display %d-%d, Error = %d", display_id_, display_type_,
+            error);
+      comp_manager_->FreeDemuraFetchResources(display_id_);
+      comp_manager_->SetDemuraStatusForDisplay(display_id_, false);
+      if (demura_) {
+        SetDemuraIntfStatus(false);
+      }
+    } else if (demuratn_allowed && demuratn_factory_) {
+      error = SetupDemuraTn();
+      if (error != kErrorNone) {
+        DLOGW("Failed to setup DemuraTn, Error = %d", error);
+      }
+    }
+  }
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetupDemuraTn() {
