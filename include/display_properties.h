@@ -200,6 +200,8 @@
 #define ENABLE_VERBOSE_LOG                   DISPLAY_PROP("enable_verbose_log")
 // HDR10 GPU Target
 #define ENABLE_HDR10_GPU_TARGET              DISPLAY_PROP("enable_hdr10_gpu_target")
+// Restrict max powered on displays
+#define RESTRICT_MAX_POWERON_DISPLAYS        DISPLAY_PROP("restrict_max_poweron_displays")
 
 // Add all vendor.display properties above
 
