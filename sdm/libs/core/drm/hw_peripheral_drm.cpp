@@ -538,6 +538,7 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, SyncPoints *syn
     pending_power_state_ = kPowerStateOn;
     return kErrorDeferred;
   }
+  SetVMReqState();
 
   if (switch_mode_valid_ && doze_poms_switch_done_ && (current_mode_index_ == cmd_mode_index_)) {
     HWDeviceDRM::SetDisplayMode(kModeVideo);
@@ -564,6 +565,7 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, SyncPoints *syn
   idle_pc_enabled_ = true;
   pending_poms_switch_ = false;
   active_ = true;
+  SetTUIState();
 
   CacheDestScalarData();
 
