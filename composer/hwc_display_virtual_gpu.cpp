@@ -176,6 +176,16 @@ HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf,
     if (!buffer_allocator_->GetBufferGeometry(hnd, slice_width, slice_height)) {
       output_buffer_.unaligned_width = slice_width;
       output_buffer_.unaligned_height = slice_height;
+      // Update buffer width and height.
+      int new_aligned_w = 0;
+      int new_aligned_h = 0;
+      int output_handle_format = 0;;
+      buffer_allocator_->GetFormat(hnd, output_handle_format);
+      buffer_allocator_->GetAlignedWidthAndHeight(INT(slice_width), INT(slice_height),
+                                                  output_handle_format, 0, &new_aligned_w,
+                                                  &new_aligned_h);
+      output_buffer_.width = UINT32(new_aligned_w);
+      output_buffer_.height = UINT32(new_aligned_h);
       color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeReset, nullptr);
     }
   }
