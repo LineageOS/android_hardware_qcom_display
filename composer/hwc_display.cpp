@@ -3090,7 +3090,7 @@ DisplayError HWCDisplay::ValidateTUITransition (SecureEvent secure_event) {
       }
       break;
     case kTUITransitionStart:
-      if (secure_event_ != kSecureEventMax) {
+      if (secure_event_ != kTUITransitionPrepare) {
         DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
         return kErrorParameters;
       }
@@ -3108,8 +3108,14 @@ DisplayError HWCDisplay::ValidateTUITransition (SecureEvent secure_event) {
   return kErrorNone;
 }
 
-DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh,
+                                           bool update_event_only) {
   if (secure_event == secure_event_) {
+    return kErrorNone;
+  }
+
+  if (update_event_only) {
+    secure_event_ = secure_event;
     return kErrorNone;
   }
 
@@ -3184,6 +3190,9 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
   pending_cwb_request = !!cwb_buffer_map_.size();
   }
 
+  *needs_refresh = true;
+  display_intf_->HandleCwbTeardown();
+
   if (!pending_cwb_request) {
     dump_frame_count_ = 0;
     dump_frame_index_ = 0;
@@ -3201,13 +3210,8 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     output_buffer_base_ = nullptr;
     frame_capture_buffer_queued_ = false;
     frame_capture_status_ = 0;
-    *needs_refresh = false;
-    return kErrorNone;
-  } else {
-    *needs_refresh = true;
-    display_intf_->HandleCwbTeardown();
-    return kErrorNone;
   }
+  return kErrorNone;
 }
 
 void HWCDisplay::MMRMEvent(bool restricted) {
@@ -3279,7 +3283,7 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   }
 
   if (secure_event_ != kSecureEventMax) {
-    DLOGE("CWB is not supported as TUI transition is in progress");
+    DLOGW("CWB is not supported as TUI transition is in progress");
     return HWC2::Error::Unsupported;
   }
 
