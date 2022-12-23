@@ -1,4 +1,10 @@
-#Common headers
+./msm8226/common.mk
+./msm8998/common.mk
+./msm8909w_3100/common.mk
+./msm8909/common.mk
+./msm8960/common.mk
+./msm8994/common.mk
+./msm8996/common.mk#Common headers
 common_includes := $(LOCAL_PATH)/../libgralloc
 common_includes += $(LOCAL_PATH)/../liboverlay
 common_includes += $(LOCAL_PATH)/../libcopybit
@@ -21,7 +27,7 @@ common_libs := liblog libutils libcutils libhardware
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 #TODO: Add -Werror back once all the current warnings are fixed
-common_flags += -Wconversion -Wall
+common_flags += -Wconversion -Wall -Wno-sign-conversion
 
 ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON

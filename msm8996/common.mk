@@ -18,7 +18,7 @@ common_libs := liblog libutils libcutils libhardware
 
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
-common_flags += -Wconversion -Wall -Werror
+common_flags += -Wconversion -Wall -Werror -Wno-sign-conversion
 ifeq ($(TARGET_IS_HEADLESS), true)
     LOCAL_CLANG := false
 else

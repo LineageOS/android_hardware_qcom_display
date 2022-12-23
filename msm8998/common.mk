@@ -3,7 +3,7 @@ display_top := $(call my-dir)
 
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
-common_flags += -Wconversion -Wall -Werror
+common_flags += -Wconversion -Wall -Werror -Wno-sign-conversion
 common_flags += -DUSE_GRALLOC1
 ifneq ($(TARGET_IS_HEADLESS), true)
     common_flags += -DCOMPILE_DRM
