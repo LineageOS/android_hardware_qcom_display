@@ -1681,8 +1681,9 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   const bool display_unchanged = (display_attributes == display_attributes_);
   const bool mixer_unchanged = (mixer_attributes == mixer_attributes_);
   const bool panel_unchanged = (hw_panel_info == hw_panel_info_);
-  if (!dirty && display_unchanged && mixer_unchanged && panel_unchanged) {
-    return kErrorNone;
+  const bool fps_switch = display_unchanged && (display_attributes.fps != current_refresh_rate_);
+  if (!dirty && display_unchanged && mixer_unchanged && panel_unchanged && !fps_switch) {
+     return kErrorNone;
   }
 
   if (CanDeferFpsConfig(display_attributes.fps)) {
@@ -1691,6 +1692,16 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
 
     // Apply current config until new Fps is deferred.
     GetFpsConfig(&display_attributes, &hw_panel_info);
+  }
+
+  if (fps_switch) {
+    uint32_t config;
+    error = hw_intf_->GetConfigIndexForFps(current_refresh_rate_, &config);
+    if (error == kErrorNone) {
+      hw_intf_->GetDisplayAttributes(config, &display_attributes);
+    }
+  } else {
+    current_refresh_rate_ = display_attributes.fps;
   }
 
   fb_config_.fps = display_attributes.fps;
