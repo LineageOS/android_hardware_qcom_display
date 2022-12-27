@@ -1904,12 +1904,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   flush_ = false;
   skip_commit_ = false;
 
-  if (display_pause_pending_) {
-    DLOGI("Pause display %d-%d", sdm_id_, type_);
-    display_paused_ = true;
-    display_pause_pending_ = false;
-  }
-
   layer_stack_.flags.geometry_changed = false;
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
@@ -2269,6 +2263,10 @@ void HWCDisplay::GetRealPanelResolution(uint32_t *x_pixels, uint32_t *y_pixels) 
 int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
   int status = 0;
 
+  if (secure_event_ != kSecureEventMax) {
+    DLOGW("SetDisplayStatus is not supported when TUI transition in progress");
+    return -ENOTSUP;
+  }
   switch (display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
@@ -2373,6 +2371,10 @@ void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
 }
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
+  if (secure_event_ != kSecureEventMax) {
+    DLOGW("Toggle screen updates is not supported when TUI transition in progress");
+    return -ENOTSUP;
+  }
   display_paused_ = enable ? false : true;
   callbacks_->Refresh(id_);
   return 0;
