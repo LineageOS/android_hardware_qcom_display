@@ -1969,6 +1969,7 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
     return error;
   }
 
+  avoid_qsync_mode_change_ = true;
   active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
