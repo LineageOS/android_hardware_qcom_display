@@ -26,6 +26,13 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <android-base/logging.h>
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
@@ -33,6 +40,7 @@
 
 #include "DisplayConfigAIDL.h"
 #include "QtiComposer.h"
+#include "hwc_debugger.h"
 
 using aidl::vendor::qti::hardware::display::config::DisplayConfigAIDL;
 using android::ProcessState;
@@ -46,11 +54,20 @@ using vendor::qti::hardware::display::composer::V3_1::implementation::QtiCompose
 int main(int, char **) {
   ALOGI("Creating Display HW Composer HAL");
 
+  int composer_thread_count = 8;
+  sdm::HWCDebugHandler::Get()->GetProperty(COMPOSER_THREAD_COUNT, &composer_thread_count);
+  if (composer_thread_count < 4) {
+    composer_thread_count = 4;
+  } else if (composer_thread_count > 15) {
+    composer_thread_count = 15;
+  }
+  ALOGI("composer_thread_count: %d", composer_thread_count);
+
   // TODO(user): double-check for SCHED_FIFO logic
   // the conventional HAL might start binder services
   ProcessState::initWithDriver("/dev/vndbinder");
   sp<ProcessState> ps(ProcessState::self());
-  ps->setThreadPoolMaxThreadCount(4);
+  ps->setThreadPoolMaxThreadCount(composer_thread_count);
   ps->startThreadPool();
   ALOGI("ProcessState initialization completed");
 
@@ -73,7 +90,7 @@ int main(int, char **) {
   }
 
   ALOGI("Configuring RPC threadpool");
-  configureRpcThreadpool(4, true /*callerWillJoin*/);
+  configureRpcThreadpool(composer_thread_count, true /*callerWillJoin*/);
   ALOGI("Configuring RPC threadpool...done!");
 
   ALOGI("Registering Display HW Composer HAL as a service");
