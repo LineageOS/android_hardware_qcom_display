@@ -125,6 +125,7 @@ DisplayError DisplayBase::Init() {
   DisplayError error = kErrorNone;
   hw_panel_info_ = HWPanelInfo();
   hw_intf_->GetHWPanelInfo(&hw_panel_info_);
+  default_panel_mode_ = hw_panel_info_.mode;
   if (hw_info_intf_) {
     hw_info_intf_->GetHWResourceInfo(&hw_resource_info_);
   }
@@ -216,6 +217,10 @@ DisplayError DisplayBase::Init() {
   prop = 0;
   if (Debug::Get()->GetProperty(DISABLE_LLCC_DURING_AOD, &prop) == kErrorNone) {
     disable_llcc_during_aod_ = (prop == 1);
+  }
+  prop = 0;
+  if (Debug::Get()->GetProperty(ALLOW_TONEMAP_NATIVE, &prop) == kErrorNone) {
+    allow_tonemap_native_ = (prop == 1);
   }
 
   SetupPanelFeatureFactory();
@@ -2540,6 +2545,9 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
   }
 
   LayerRect &roi = cwb_config->cwb_roi;
+  // Set cwb full rect as per window rect.
+  cwb_config->cwb_full_rect.right -= (window_rect_.left + window_rect_.right);
+  cwb_config->cwb_full_rect.bottom -= (window_rect_.top + window_rect_.bottom);
   LayerRect &full_frame = cwb_config->cwb_full_rect;
   uint32_t cwb_roi_supported = 0;  // Check whether CWB ROI is supported.
   IsSupportedOnDisplay(kCwbCrop, &cwb_roi_supported);
@@ -2581,7 +2589,8 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
     DLOGI_IF(kTagDisplay, "Client provided invalid ROI. Going for Full frame CWB.");
     roi = full_frame;
   }
-
+  // Reposition CWB ROI as per window rect.
+  roi = Reposition(roi, window_rect_.left, window_rect_.top);
   DLOGI_IF(kTagDisplay, "Cwb_config: tap_point %d, CWB ROI Rect(%f %f %f %f), PU_as_CWB_ROI %d",
            tap_point, roi.left, roi.top, roi.right, roi.bottom, pu_as_cwb_roi);
 
@@ -3580,7 +3589,8 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_sRGB;
-  } else if (color_gamut == kNative) {
+  } else if (color_gamut == kNative && !allow_tonemap_native_) {
+    // if allow_tonemap_native_ is set, blend space is defaulted to BT709 + sRGB
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_Max;
   }
@@ -3763,9 +3773,11 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   DLOGI("Secure event %d for display %d-%d", secure_event, display_id_, display_type_);
 
   if (secure_event == kTUITransitionStart &&
-      (state_ != kStateOn || (pending_power_state_ != kPowerStateNone))) {
-    DLOGW("Cannot start TUI session when display state is %d or pending_power_state %d",
-          state_, pending_power_state_);
+      (state_ != kStateOn || (pending_power_state_ != kPowerStateNone) ||
+       (hw_panel_info_.mode != default_panel_mode_))) {
+    DLOGW("Cannot start TUI session when display state is %d or pending_power_state %d "
+          "or panel mode is changed; current panel mode = %d, panel mode during bootup = %d",
+           state_, pending_power_state_, hw_panel_info_.mode, default_panel_mode_);
     return kErrorPermission;
   }
   shared_ptr<Fence> release_fence = nullptr;

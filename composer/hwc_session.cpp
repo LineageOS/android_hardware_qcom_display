@@ -2798,10 +2798,13 @@ android::status_t HWCSession::SetJitterConfig(const android::Parcel *input_parce
 }
 
 android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
-  int disp_id = input_parcel->readInt32();
+  uint32_t disp_id = UINT32(input_parcel->readInt32());
   uint64_t clk = UINT64(input_parcel->readInt64());
   if (disp_id != HWC_DISPLAY_PRIMARY) {
-    return -EINVAL;
+    if (!std::any_of(map_info_builtin_.begin(), map_info_builtin_.end(),
+                    [&disp_id](auto &i) {return disp_id == i.client_id;})) {
+                      return -EINVAL;
+                   }
   }
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
@@ -4274,7 +4277,6 @@ int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
     DLOGI("Acquired lock for client %d display %" PRIu64, client_id, display);
-    callbacks_.Refresh(display);
     clients_waiting_for_commit_[display].set(client_id);
     locker_[display].Wait();
     if (commit_error_[display] != 0) {
@@ -4370,11 +4372,9 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
   for (auto &info : map_info) {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
     if (hwc_display_[info.client_id]) {
-      if (info.client_id == target_display) {
-        continue;
-      }
-      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionPrepare,
-                                                          &needs_refresh) != kErrorNone) {
+      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionPrepare, &needs_refresh,
+                                                          info.client_id == target_display) !=
+                                                          kErrorNone) {
         return -EINVAL;
       }
     }
@@ -4418,8 +4418,8 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
-      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart,
-                                                          &needs_refresh) != kErrorNone) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart, &needs_refresh,
+                                                          false) != kErrorNone) {
         return -EINVAL;
       }
       uint32_t config = 0;
@@ -4479,8 +4479,8 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
     hwc_display_[target_display]->SetIdleTimeoutMs(idle_time_active_ms_, idle_time_inactive_ms_);
     hwc_display_[target_display]->SetQSyncMode(hwc_display_qsync_[target_display]);
     if (hwc_display_[target_display]) {
-      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd,
-                                                          &needs_refresh) != kErrorNone) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd, &needs_refresh,
+                                                          false) != kErrorNone) {
         return -EINVAL;
       }
     } else {
@@ -4535,14 +4535,12 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
       if (hwc_display_[info.client_id]) {
-        if (info.client_id == target_display) {
-          continue;
-        }
         if (info.disp_type == kPluggable && pending_hotplug_event_ == kHotPlugEvent) {
           continue;
         }
-        if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare,
-                                                            &needs_refresh) != kErrorNone) {
+        if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare, &needs_refresh,
+                                                            info.client_id == target_display) !=
+                                                            kErrorNone) {
           return -EINVAL;
         }
       }

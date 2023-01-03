@@ -134,6 +134,8 @@
 // Disable SDR dimming support
 #define DISABLE_SDR_DIMMING                  DISPLAY_PROP("disable_sdr_dimming")
 #define FORCE_TONEMAPPING                    DISPLAY_PROP("force_tonemapping")
+// Allows color management(tonemapping) in native mode (native mode is considered BT709+sRGB)
+#define ALLOW_TONEMAP_NATIVE                 DISPLAY_PROP("allow_tonemap_native")
 
 // RC
 #define ENABLE_ROUNDED_CORNER                DISPLAY_PROP("enable_rounded_corner")
@@ -161,6 +163,8 @@
 #define ANTI_AGING_RECALIB_TIMER             DISPLAY_PROP("demura_recalib_timer")
 #define ANTI_AGING_RECORD_TIMER              DISPLAY_PROP("demura_record_timer")
 #define ANTI_AGING_IDLE_TIMER                DISPLAY_PROP("demura_idle_timer")
+#define ANTI_AGING_MEMORY_SIZE               DISPLAY_PROP("demura_memory_size")
+#define ANTI_AGING_RECALIB_TIMER_DIVIDER     DISPLAY_PROP("demura_recalib_timer_divider")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")

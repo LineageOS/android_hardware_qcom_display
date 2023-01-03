@@ -1610,8 +1610,8 @@ HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t 
   layer_stack_.client_incompatible = false;
 
   validate_done_ = true;
-
-  return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
+  return (((*out_num_types > 0) || (has_client_composition_ && *out_num_requests > 0))
+          ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
 HWC2::Error HWCDisplay::AcceptDisplayChanges() {
@@ -3090,7 +3090,7 @@ DisplayError HWCDisplay::ValidateTUITransition (SecureEvent secure_event) {
       }
       break;
     case kTUITransitionStart:
-      if (secure_event_ != kSecureEventMax) {
+      if (secure_event_ != kTUITransitionPrepare) {
         DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
         return kErrorParameters;
       }
@@ -3108,8 +3108,14 @@ DisplayError HWCDisplay::ValidateTUITransition (SecureEvent secure_event) {
   return kErrorNone;
 }
 
-DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh,
+                                           bool update_event_only) {
   if (secure_event == secure_event_) {
+    return kErrorNone;
+  }
+
+  if (update_event_only) {
+    secure_event_ = secure_event;
     return kErrorNone;
   }
 
@@ -3151,6 +3157,9 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
 DisplayError HWCDisplay::PostHandleSecureEvent(SecureEvent secure_event) {
   DisplayError err = display_intf_->PostHandleSecureEvent(secure_event);
   if (err == kErrorNone) {
+    if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
+      return kErrorNone;
+    }
     secure_event_ = secure_event;
   }
   return err;
@@ -3181,6 +3190,9 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
   pending_cwb_request = !!cwb_buffer_map_.size();
   }
 
+  *needs_refresh = true;
+  display_intf_->HandleCwbTeardown();
+
   if (!pending_cwb_request) {
     dump_frame_count_ = 0;
     dump_frame_index_ = 0;
@@ -3198,13 +3210,8 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
     output_buffer_base_ = nullptr;
     frame_capture_buffer_queued_ = false;
     frame_capture_status_ = 0;
-    *needs_refresh = false;
-    return kErrorNone;
-  } else {
-    *needs_refresh = true;
-    display_intf_->HandleCwbTeardown();
-    return kErrorNone;
   }
+  return kErrorNone;
 }
 
 void HWCDisplay::MMRMEvent(bool restricted) {
@@ -3276,7 +3283,7 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   }
 
   if (secure_event_ != kSecureEventMax) {
-    DLOGE("CWB is not supported as TUI transition is in progress");
+    DLOGW("CWB is not supported as TUI transition is in progress");
     return HWC2::Error::Unsupported;
   }
 
@@ -3356,6 +3363,24 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   LayerRect &roi = config.cwb_roi;
   LayerRect &full_rect = config.cwb_full_rect;
   CwbTapPoint &tap_point = config.tap_point;
+
+  LayerRect full_rect_with_window_rect = full_rect;
+  LayerRect cwb_roi_with_window_rect = roi;
+
+  full_rect_with_window_rect.left += window_rect_.left;
+  full_rect_with_window_rect.top += window_rect_.top;
+  full_rect_with_window_rect.right -= window_rect_.right;
+  full_rect_with_window_rect.bottom -= window_rect_.bottom;
+
+  cwb_roi_with_window_rect.left += window_rect_.left;
+  cwb_roi_with_window_rect.top += window_rect_.top;
+  cwb_roi_with_window_rect.right += window_rect_.left;
+  cwb_roi_with_window_rect.bottom += window_rect_.top;
+
+  if (windowed_display_ && (!(Contains(full_rect_with_window_rect, cwb_roi_with_window_rect)))) {
+    DLOGW("Requested CWB ROI is out of bounds");
+    return HWC2::Error::Unsupported;
+  }
 
   DisplayError error = kErrorNone;
   error = display_intf_->CaptureCwb(output_buffer, config);
