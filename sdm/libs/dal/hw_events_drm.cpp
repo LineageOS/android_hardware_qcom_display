@@ -403,7 +403,9 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
       }
     } break;
     case HWEvent::POWER_EVENT: {
-      RegisterPowerEvents(enable);
+      if (RegisterPowerEvents(enable) != kErrorNone) {
+        return kErrorResources;
+      }
     } break;
     case HWEvent::PANEL_DEAD: {
       RegisterPanelDead(enable);
@@ -655,8 +657,8 @@ DisplayError HWEventsDRM::RegisterPowerEvents(bool enable) {
     } else {
       DLOGE("Failed to %s event. Event_thread_name : %s, Ret=%d", (enable) ? "Register" :
             "DeRegister", event_thread_name_.c_str(), ret);
-      return kErrorResources;
     }
+    return kErrorResources;
   }
   return kErrorNone;
 }
