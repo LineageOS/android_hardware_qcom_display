@@ -29,7 +29,7 @@
 
 /* Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -108,6 +108,9 @@ bool IsYuvFormat(int format) {
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
       return true;
     default:
       return false;
@@ -205,6 +208,9 @@ bool IsCameraCustomFormat(int format, uint64_t usage) {
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW12:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
       if (usage & GRALLOC_USAGE_HW_COMPOSER) {
         ALOGW("%s: HW_Composer flag is set for camera custom format: 0x%x, Usage: 0x%" PRIx64,
               __FUNCTION__, format, usage);

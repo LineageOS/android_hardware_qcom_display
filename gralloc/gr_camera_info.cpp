@@ -27,6 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <dlfcn.h>
 #include <log/log.h>
 #include <mutex>
@@ -117,6 +123,15 @@ CamxPixelFormat CameraInfo::GetCameraPixelFormat(int hal_format) {
       break;
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
       format = CAMERA_PIXEL_FORMAT_UBWC_FLEX_8_BATCH;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+      format = CAMERA_PIXEL_FORMAT_YUV_FLEX_2_BATCH;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+      format = CAMERA_PIXEL_FORMAT_YUV_FLEX_4_BATCH;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
+      format = CAMERA_PIXEL_FORMAT_YUV_FLEX_8_BATCH;
       break;
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
       format = CAMERA_PIXEL_FORMAT_MULTIPLANAR_FLEX;
