@@ -199,6 +199,12 @@ DisplayError CoreImpl::Deinit() {
   return kErrorNone;
 }
 
+DisplayError CoreImpl::ReserveDisplay(DisplayType type) {
+  SCOPE_LOCK(locker_);
+
+  return comp_mgr_.ReserveDisplay(type);
+}
+
 DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *event_handler,
                                      DisplayInterface **intf) {
   SCOPE_LOCK(locker_);

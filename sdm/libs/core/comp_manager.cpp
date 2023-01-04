@@ -119,6 +119,12 @@ DisplayError CompManager::Deinit() {
   return kErrorNone;
 }
 
+DisplayError CompManager::ReserveDisplay(DisplayType type) {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+
+  return resource_intf_->ReserveDisplay(type);
+}
+
 DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
                                           const HWDisplayAttributes &display_attributes,
                                           const HWPanelInfo &hw_panel_info,
