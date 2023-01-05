@@ -63,6 +63,12 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <core/buffer_allocator.h>
 #include <utils/debug.h>
 #include <utils/constants.h>
@@ -1123,7 +1129,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
   {
     SCOPE_LOCK(hwc_session_->locker_[disp_type]);
     if (!hwc_session_->hwc_display_[dpy_index]) {
-      DLOGE("Display is not created yet with display index = %d and display id = %d!",
+      DLOGW("Display is not created yet with display index = %d and display id = %d!",
             dpy_index, disp_id);
       return -1;
     }
