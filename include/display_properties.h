@@ -200,6 +200,8 @@
 #define ENABLE_VERBOSE_LOG                   DISPLAY_PROP("enable_verbose_log")
 // HDR10 GPU Target
 #define ENABLE_HDR10_GPU_TARGET              DISPLAY_PROP("enable_hdr10_gpu_target")
+// Restrict max powered on displays
+#define RESTRICT_MAX_POWERON_DISPLAYS        DISPLAY_PROP("restrict_max_poweron_displays")
 
 // Add all vendor.display properties above
 
@@ -225,6 +227,7 @@
 #define ENABLE_PANEL_INVERSE_MOUNT           DISPLAY_PROP("enable_panel_inverse_mount")
 #define WAIT_FOR_PRIMARY_DISPLAY             DISPLAY_PROP("wait_for_primary_display")
 #define TRACK_INPUT_FENCES                   DISPLAY_PROP("track_input_fences")
+#define ENABLE_ROTATOR_CONCURRENCY           DISPLAY_PROP("enable_rotator_concurrency")
 
 // Add all other.properties above
 // End of property

@@ -66,6 +66,8 @@ ifeq ($(TARGET_BOARD_PLATFORM),parrot)
     #QDCM calibration JSON file for ft8726 panel.
     #Derived from: qdcm_calib_data_nt36672e_lcd_video_mode_dsi_novatek_panel_with_DSC_parrot.json
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_ft8726_fhd_plus_120Hz_Video_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_ft8726_fhd_plus_120Hz_Video_panel.json
+    #Derived from: qdcm_calib_data_nt36672e_lcd_video_mode_dsi_novatek_panel_with_DSC_parrot.json
+    PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_ft8726_lcd_video_mode_dsi_focaltech_panel_with_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_ft8726_lcd_video_mode_dsi_focaltech_panel_with_DSC.json
 else
     #QDCM calibration JSON file for nt36672e LCD video mode single dsi with DSC panel.
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt36672e_lcd_video_mode_dsi_novatek_panel_with_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_nt36672e_lcd_video_mode_dsi_novatek_panel_with_DSC.json
