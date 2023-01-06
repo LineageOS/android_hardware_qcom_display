@@ -154,4 +154,14 @@ DisplayError DisplayNull::GetDisplayIdentificationData(uint8_t *out_port, uint32
   return kErrorNone;
 }
 
+DisplayError DisplayNull::GetDisplayId(int32_t *display_id) {
+  *display_id = 1;
+  return kErrorNone;
+}
+
+DisplayError DisplayNull::GetDisplayType(DisplayType *display_type) {
+  *display_type = kBuiltIn;
+  return kErrorNone;
+}
+
 }  // namespace sdm

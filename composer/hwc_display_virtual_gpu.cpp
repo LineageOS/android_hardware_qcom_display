@@ -27,6 +27,13 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include "hwc_display_virtual_gpu.h"
 #include "hwc_session.h"
 #include "QtiGralloc.h"
@@ -39,8 +46,13 @@ int HWCDisplayVirtualGPU::Init() {
   // Create client target.
   client_target_ = new HWCLayer(id_, buffer_allocator_);
 
-  // Calls into SDM need to be dropped. Create Null Display interface.
-  display_intf_ = new DisplayNull();
+  // Create Null Display interface.
+  DisplayError error = core_intf_->CreateNullDisplay(&display_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Null Display create failed. Error = %d display_id = %d disp_intf = %p",
+          error, sdm_id_, display_intf_);
+    return -EINVAL;
+  }
 
   disable_animation_ = Debug::IsExtAnimDisabled();
 
@@ -53,7 +65,12 @@ int HWCDisplayVirtualGPU::Deinit() {
     color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeDestroyInstance, nullptr);
   }
 
-  delete static_cast<DisplayNull *>(display_intf_);
+  DisplayError error = core_intf_->DestroyNullDisplay(display_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Null Display destroy failed. Error = %d", error);
+    return -EINVAL;
+  }
+
   delete client_target_;
 
   for (auto hwc_layer : layer_set_) {

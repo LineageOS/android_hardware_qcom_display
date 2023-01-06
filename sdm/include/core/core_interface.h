@@ -1,6 +1,5 @@
 /*
 * Copyright (c) 2014 - 2016, 2018 - 2021 The Linux Foundation. All rights reserved.
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -26,6 +25,13 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 /*! @file core_interface.h
@@ -207,6 +213,20 @@ class CoreInterface {
   virtual DisplayError CreateDisplay(int32_t display_id, DisplayEventHandler *event_handler,
                                      DisplayInterface **interface) = 0;
 
+  /*! @brief Method to create a null display.
+
+    @details Client shall use this method to create a DisplayInterface to DisplayNull. A handle
+    to the DisplayInterface is returned via the 'interface' output parameter which can be used to
+    interact further with the display device.
+
+    @param[out] interface \link DisplayInterface \endlink
+
+    @return \link DisplayError \endlink
+
+    @sa DestroyNullDisplay
+  */
+  virtual DisplayError CreateNullDisplay(DisplayInterface **interface) = 0;
+
   /*! @brief Method to destroy a display device.
 
     @details Client shall use this method to destroy each of the created display device objects.
@@ -218,6 +238,18 @@ class CoreInterface {
     @sa CreateDisplay
   */
   virtual DisplayError DestroyDisplay(DisplayInterface *interface) = 0;
+
+  /*! @brief Method to destroy a null display device.
+
+    @details Client shall use this method to destroy null display device objects.
+
+    @param[in] interface \link DisplayInterface \endlink
+
+    @return \link DisplayError \endlink
+
+    @sa CreateNullDisplay
+  */
+  virtual DisplayError DestroyNullDisplay(DisplayInterface *interface) = 0;
 
 #ifdef PROFILE_COVERAGE_DATA
   /*! @brief Method to destroy a display device.
