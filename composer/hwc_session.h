@@ -4,8 +4,6 @@
  *
  * Copyright 2015 The Android Open Source Project
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,42 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/*
-* Changes from Qualcomm Innovation Center are provided under the following license:
-*
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
 
 /*
  * Changes from Qualcomm Innovation Center are provided under the following license:
@@ -92,7 +54,6 @@
 #include "hwc_display.h"
 #include "hwc_display_builtin.h"
 #include "hwc_display_pluggable.h"
-#include "hwc_display_dummy.h"
 #include "hwc_display_virtual.h"
 #include "hwc_display_pluggable_test.h"
 #include "hwc_color_manager.h"
@@ -201,14 +162,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
-    {
-      // Power state transition start.
-      SCOPE_LOCK(power_state_[display]);
-      if (power_state_transition_[display]) {
-        display = map_hwc_display_.find(display)->second;
-      }
-    }
-
     SCOPE_LOCK(locker_[display]);
     auto status = HWC2::Error::BadDisplay;
     if (hwc_display_[display]) {
@@ -223,14 +176,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                             HWC2::Error (HWCLayer::*member)(Args...), Args... args) {
     if (display >= HWCCallbacks::kNumDisplays) {
       return HWC2_ERROR_BAD_DISPLAY;
-    }
-
-    {
-      // Power state transition start.
-      SCOPE_LOCK(power_state_[display]);
-      if (power_state_transition_[display]) {
-        display = map_hwc_display_.find(display)->second;
-      }
     }
 
     SCOPE_LOCK(locker_[display]);
@@ -397,7 +342,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
 
   static Locker locker_[HWCCallbacks::kNumDisplays];
-  static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static std::mutex command_seq_mutex_;
@@ -488,8 +432,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                     uint32_t factor_out);
     virtual int UpdateVSyncSourceOnPowerModeOff();
     virtual int UpdateVSyncSourceOnPowerModeDoze();
-    virtual int SetPowerMode(uint32_t disp_id, DisplayConfig::PowerMode power_mode);
-    virtual int IsPowerModeOverrideSupported(uint32_t disp_id, bool *supported);
     virtual int IsHDRSupported(uint32_t disp_id, bool *supported);
     virtual int IsWCGSupported(uint32_t disp_id, bool *supported);
     virtual int SetLayerAsMask(uint32_t disp_id, uint64_t layer_id);
@@ -559,7 +501,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void InitSupportedNullDisplaySlots();
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
-  void CreateDummyDisplay(hwc2_display_t client_id);
   int HandleBuiltInDisplays();
   int HandlePluggableDisplays(bool delay_hotplug);
   int HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug);
@@ -723,10 +664,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::mutex callbacks_lock_;
   std::unordered_map<int64_t, std::shared_ptr<IDisplayConfigCallback>> callback_clients_;
   uint64_t callback_client_id_ = 0;
-  bool async_powermode_ = false;
-  bool async_power_mode_triggered_ = false;
   bool async_vds_creation_ = false;
-  bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
   bool secure_session_active_ = false;
   bool is_client_up_ = false;
