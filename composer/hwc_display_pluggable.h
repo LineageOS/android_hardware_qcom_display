@@ -38,7 +38,6 @@
 #define __HWC_DISPLAY_PLUGGABLE_H__
 
 #include "hwc_display.h"
-#include "display_null.h"
 #include "hwc_display_event_handler.h"
 
 namespace sdm {
@@ -54,7 +53,6 @@ class HWCDisplayPluggable : public HWCDisplay {
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
-  virtual int SetState(bool connected);
   virtual DisplayError Flush();
   virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
   virtual HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
@@ -74,7 +72,6 @@ class HWCDisplayPluggable : public HWCDisplay {
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
                                      uint32_t *virtual_width, uint32_t *virtual_height);
 
-  DisplayNullExternal display_null_;
   int underscan_width_ = 0;
   int underscan_height_ = 0;
   bool has_color_tranform_ = false;
