@@ -265,68 +265,6 @@ void HWCDisplayPluggable::GetDownscaleResolution(uint32_t primary_width, uint32_
   }
 }
 
-int HWCDisplayPluggable::SetState(bool connected) {
-  DisplayError error = kErrorNone;
-  DisplayState state = kStateOff;
-  DisplayConfigVariableInfo fb_config = {};
-
-  if (connected) {
-    if (display_null_.IsActive()) {
-      error = core_intf_->CreateDisplay(type_, this, &display_intf_);
-      if (error != kErrorNone) {
-        DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
-              error, type_, this, &display_intf_);
-        return -EINVAL;
-      }
-
-      // Restore HDMI attributes when display is reconnected.
-      // This is to ensure that surfaceflinger & sdm are in sync.
-      display_null_.GetFrameBufferConfig(&fb_config);
-      int status = SetFrameBufferResolution(fb_config.x_pixels, fb_config.y_pixels);
-      if (status) {
-        DLOGW("Set frame buffer config failed. Error = %d", error);
-        return -1;
-      }
-      shared_ptr<Fence> release_fence = nullptr;
-      display_null_.GetDisplayState(&state);
-      display_intf_->SetDisplayState(state, false /* teardown */, &release_fence);
-
-      SetVsyncEnabled(HWC2::Vsync::Enable);
-
-      display_null_.SetActive(false);
-      DLOGI("Display is connected successfully.");
-    } else {
-      DLOGI("Display is already connected.");
-    }
-  } else {
-    if (!display_null_.IsActive()) {
-      shared_ptr<Fence> release_fence = nullptr;
-      // Preserve required attributes of HDMI display that surfaceflinger sees.
-      // Restore HDMI attributes when display is reconnected.
-      display_intf_->GetDisplayState(&state);
-      display_null_.SetDisplayState(state, false /* teardown */, &release_fence);
-
-      error = display_intf_->GetFrameBufferConfig(&fb_config);
-      if (error != kErrorNone) {
-        DLOGW("Get frame buffer config failed. Error = %d", error);
-        return -1;
-      }
-      display_null_.SetFrameBufferConfig(fb_config);
-
-      SetVsyncEnabled(HWC2::Vsync::Disable);
-      core_intf_->DestroyDisplay(display_intf_);
-      display_intf_ = &display_null_;
-
-      display_null_.SetActive(true);
-      DLOGI("Display is disconnected successfully.");
-    } else {
-      DLOGI("Display is already disconnected.");
-    }
-  }
-
-  return 0;
-}
-
 void HWCDisplayPluggable::GetUnderScanConfig() {
   if (!display_intf_->IsUnderscanSupported()) {
     // Read user defined underscan width and height
