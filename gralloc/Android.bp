@@ -208,6 +208,8 @@ cc_binary {
         "qti_kernel_headers",
     ],
     shared_libs: [
+        "libbinder",
+        "libbinder_ndk",
         "libhidlbase",
         "libqdMetaData",
         "libgrallocutils",
@@ -224,6 +226,10 @@ cc_binary {
         "android.hardware.graphics.allocator@3.0",
         "vendor.qti.hardware.display.mapperextensions@1.0",
         "vendor.qti.hardware.display.mapperextensions@1.1",
+        "android.hardware.graphics.allocator-V1-ndk",
+    ],
+    static_libs: [
+        "libaidlcommonsupport",
     ],
     cflags: [
         "-DLOG_TAG=\"qdgralloc\"",
@@ -233,6 +239,7 @@ cc_binary {
     }),
     srcs: [
         "QtiAllocator.cpp",
+        "QtiAllocatorAIDL.cpp",
         "service.cpp",
     ],
     init_rc: ["vendor.qti.hardware.display.allocator-service.rc"],

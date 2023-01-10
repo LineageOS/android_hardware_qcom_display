@@ -25,15 +25,26 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include <hidl/LegacySupport.h>
+#include <android/binder_manager.h>
+#include <android/binder_process.h>
+#include <aidlcommonsupport/NativeHandle.h>
+
+#include <string>
 
 #include "QtiAllocator.h"
+#include "QtiAllocatorAIDL.h"
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
 using IQtiAllocator3 = vendor::qti::hardware::display::allocator::V3_0::IQtiAllocator;
 using IQtiAllocator4 = vendor::qti::hardware::display::allocator::V4_0::IQtiAllocator;
+using aidl::android::hardware::graphics::allocator::impl::QtiAllocatorAIDL;
 
 int main(int, char **) {
   android::sp<IQtiAllocator3> service3 =
@@ -55,6 +66,25 @@ int main(int, char **) {
   }
   ALOGI("Initialized qti-allocator 4");
 #endif
+
+  ALOGI("Registering QTI Allocator AIDL as a service");
+  auto allocator = ndk::SharedRefBase::make<QtiAllocatorAIDL>();
+  const std::string instance = std::string() + QtiAllocatorAIDL::descriptor + "/default";
+  if (!allocator->asBinder().get()) {
+    ALOGW("QTI Allocator AIDL's binder is null");
+    return EXIT_FAILURE;
+  }
+
+  binder_status_t status =
+      AServiceManager_addService(allocator->asBinder().get(), instance.c_str());
+  if (status != STATUS_OK) {
+    ALOGW("Failed to register QTI Allocator AIDL as a service (status:%d)", status);
+    return EXIT_FAILURE;
+  }
+  ALOGI("Initialized QTI Allocator AIDL");
+
+  ABinderProcess_setThreadPoolMaxThreadCount(4);
+  ABinderProcess_startThreadPool();
 
   joinRpcThreadpool();
 
