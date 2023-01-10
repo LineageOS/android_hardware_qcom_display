@@ -55,6 +55,12 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <cutils/properties.h>
 #include <errno.h>
 #include <math.h>
@@ -1434,7 +1440,7 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
   HWC2::Error err = SetReadbackBuffer(handle, nullptr, cwb_config, kCWBClientFrameDump);
   if (err != HWC2::Error::None) {
-    munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size);
+    munmap(buffer, output_buffer_info_.alloc_buffer_info.size);
     buffer_allocator_->FreeBuffer(&output_buffer_info_);
     output_buffer_info_ = {};
     dump_frame_count_ = 0;
