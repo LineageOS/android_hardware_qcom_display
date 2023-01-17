@@ -165,6 +165,7 @@
 #define ANTI_AGING_IDLE_TIMER                DISPLAY_PROP("demura_idle_timer")
 #define ANTI_AGING_MEMORY_SIZE               DISPLAY_PROP("demura_memory_size")
 #define ANTI_AGING_RECALIB_TIMER_DIVIDER     DISPLAY_PROP("demura_recalib_timer_divider")
+#define ANTI_AGING_ENABLE_LOGGING            DISPLAY_PROP("antiaging_enable_logging")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
