@@ -97,7 +97,6 @@ cc_library_shared {
         "vendor.qti.hardware.display.mapperextensions@1.1",
         "android.hardware.graphics.mapper@3.0",
         "vendor.qti.hardware.display.mapperextensions@1.2",
-        "vendor.qti.hardware.display.mapperextensions@1.3",
     ],
     cflags: [
         "-DLOG_TAG=\"qdgralloc\"",
@@ -138,7 +137,6 @@ cc_library_shared {
         "android.hardware.graphics.mapper@3.0",
         "android.hardware.graphics.mapper@4.0",
         "vendor.qti.hardware.display.mapperextensions@1.2",
-        "vendor.qti.hardware.display.mapperextensions@1.3",
     ],
     cflags: [
         "-DLOG_TAG=\"qdgralloc\"",
@@ -180,7 +178,6 @@ cc_binary {
         "vendor.qti.hardware.display.mapperextensions@1.0",
         "vendor.qti.hardware.display.mapperextensions@1.1",
         "vendor.qti.hardware.display.mapperextensions@1.2",
-        "vendor.qti.hardware.display.mapperextensions@1.3",
     ],
     cflags: ["-DLOG_TAG=\"qdgralloc\""],
     srcs: [
