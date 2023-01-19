@@ -1435,6 +1435,11 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     return error;
   }
 
+  core_intf_->ReserveDisplay(kVirtual);
+  // Trigger Refresh.
+  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
+  // Ideally we need to wait on all connected displays.
+  WaitForCommitDoneAsync(HWC_DISPLAY_PRIMARY, kClientVirtualDisplay);
   // Lock confined to this scope
   int status = -EINVAL;
   for (auto &map_info : map_info_virtual_) {
@@ -4022,23 +4027,26 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
 int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
   std::chrono::milliseconds span(5000);
-  if (commit_done_future_[display].valid()) {
-    std::future_status status = commit_done_future_[display].wait_for(std::chrono::milliseconds(0));
+  auto &future = client_id == kClientVirtualDisplay ? wfd_refresh_future_ : commit_done_future_[display];
+  if (future.valid()) {
+    if (client_id == kClientVirtualDisplay) {
+      return 0;	
+    }
+    std::future_status status = future.wait_for(std::chrono::milliseconds(0));
     if (status != std::future_status::ready) {
       // Previous task is stuck. Bail out early.
       return -ETIMEDOUT;
     }
   }
 
-  commit_done_future_[display] =
-      std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
-                      return session->WaitForCommitDone(display, client_id);
-                    }, this, display, client_id);
-  if (commit_done_future_[display].wait_for(span) == std::future_status::timeout) {
+  future = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
+                         return session->WaitForCommitDone(display, client_id);
+                         }, this, display, client_id);
+  if (future.wait_for(span) == std::future_status::timeout) {
     DLOGW("WaitForCommitDoneAsync timed out");
     return -ETIMEDOUT;
   }
-  return commit_done_future_[display].get();
+  return future.get();
 }
 
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
