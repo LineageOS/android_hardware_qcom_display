@@ -432,6 +432,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   uint32_t active_refresh_rate_ = 0;
   bool disable_cwb_idle_fallback_ = false;
   bool allow_tonemap_native_ = false;
+  bool avoid_qsync_mode_change_ = false;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
