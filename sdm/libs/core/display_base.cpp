@@ -58,6 +58,11 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <stdio.h>
 #include <malloc.h>
 #include <utils/constants.h>
@@ -1980,7 +1985,12 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   validated_ = false;
   hw_intf_->GetActiveConfig(&active_index);
 
+  // Cache the last refresh rate set by SF
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &display_attributes);
+
   if (active_index == index) {
+    active_refresh_rate_ = display_attributes.fps;
     return kErrorNone;
   }
 
@@ -1990,10 +2000,6 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   }
 
   avoid_qync_mode_change_ = true;
-
-  // Cache last refresh rate set by SF
-  HWDisplayAttributes display_attributes = {};
-  hw_intf_->GetDisplayAttributes(index, &display_attributes);
   active_refresh_rate_ = display_attributes.fps;
 
   return ReconfigureDisplay();
