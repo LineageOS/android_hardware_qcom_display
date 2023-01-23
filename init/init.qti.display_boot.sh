@@ -182,6 +182,9 @@ case "$target" in
         setprop vendor.display.secure_preview_buffer_format 420_sp
         setprop vendor.gralloc.secure_preview_buffer_format 420_sp
         setprop vendor.display.disable_cwb_idle_fallback 1
+        setprop vendor.display.enable_rotator_concurrency 1
+        setprop vendor.display.disable_offline_rotator 0
+        setprop vendor.display.disable_rotator_ubwc 1
         ;;
     esac
     ;;
