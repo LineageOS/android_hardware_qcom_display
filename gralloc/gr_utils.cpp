@@ -1388,6 +1388,9 @@ int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   }
 
   AdrenoMemInfo *adreno_mem_info = AdrenoMemInfo::GetInstance();
+  if (!adreno_mem_info) {
+    return -ENOTSUP;
+  }
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
   uint64_t adreno_usage = info.usage;
   // If gralloc disables UBWC based on any of the checks,
