@@ -55,6 +55,13 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
@@ -368,7 +375,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate);
   virtual void VmReleaseDone(hwc2_display_t display);
-  virtual int NotifyCwbDone(hwc2_display_t display, int32_t status, uint64_t handle_id);
+  virtual int NotifyCwbDone(int dpy_index, int32_t status, uint64_t handle_id);
 
   int32_t SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled);
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
@@ -407,9 +414,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
     int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                        const CwbConfig &cwb_config, const native_handle_t *buffer,
-                       hwc2_display_t display_type);
+                       hwc2_display_t display_type, int dpy_index);
     bool IsCwbActiveOnDisplay(hwc2_display_t disp_type);
-    int OnCWBDone(hwc2_display_t display_type, int32_t status, uint64_t handle_id);
+    int OnCWBDone(int dpy_index, int32_t status, uint64_t handle_id);
 
    private:
     enum CWBNotifiedStatus {
@@ -441,11 +448,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
       bool async_thread_running = false;
     };
 
-    static void AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t display_type);
-    void ProcessCWBStatus(hwc2_display_t display_type);
+    static void AsyncTaskToProcessCWBStatus(CWB *cwb, int dpy_index);
+    void ProcessCWBStatus(int dpy_index);
     void NotifyCWBStatus(int status, std::shared_ptr<QueueNode> cwb_node);
 
-    std::map<hwc2_display_t, DisplayCWBSession> display_cwb_session_map_;
+    std::map<int, DisplayCWBSession> display_cwb_session_map_;
     HWCSession *hwc_session_ = nullptr;
   };
 

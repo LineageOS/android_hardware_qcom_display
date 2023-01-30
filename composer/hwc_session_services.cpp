@@ -63,9 +63,10 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/* Changes from Qualcomm Innovation Center are provided under the following license:
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -1127,7 +1128,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
 
   // Mutex scope
   {
-    SCOPE_LOCK(hwc_session_->locker_[disp_type]);
+    SCOPE_LOCK(hwc_session_->locker_[dpy_index]);
     if (!hwc_session_->hwc_display_[dpy_index]) {
       DLOGW("Display is not created yet with display index = %d and display id = %d!",
             dpy_index, disp_id);
@@ -1147,14 +1148,14 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
         cwb_config.tap_point, roi.left, roi.top, roi.right, roi.bottom);
 
   return hwc_session_->cwb_.PostBuffer(callback_, cwb_config, native_handle_clone(buffer),
-                                       disp_type);
+                                       disp_type, dpy_index);
 }
 
 int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
                                     const CwbConfig &cwb_config, const native_handle_t *buffer,
-                                    hwc2_display_t display_type) {
+                                    hwc2_display_t display_type, int dpy_index) {
   HWC2::Error error = HWC2::Error::None;
-  auto& session_map = display_cwb_session_map_[display_type];
+  auto& session_map = display_cwb_session_map_[dpy_index];
   std::shared_ptr<QueueNode> node = nullptr;
   uint64_t node_handle_id = 0;
   void *hdl = const_cast<native_handle_t *>(buffer);
@@ -1196,9 +1197,9 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
   }
 
   if (error == HWC2::Error::None) {
-    SCOPE_LOCK(hwc_session_->locker_[display_type]);
+    SCOPE_LOCK(hwc_session_->locker_[dpy_index]);
     // Get display instance using display type.
-    HWCDisplay *hwc_display = hwc_session_->hwc_display_[display_type];
+    HWCDisplay *hwc_display = hwc_session_->hwc_display_[dpy_index];
     if (!hwc_display) {
       error = HWC2::Error::BadDisplay;
     } else {
@@ -1232,7 +1233,7 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
     // running thread dissolve on its own.
     // Check, If thread is not running, then need to re-execute the async thread.
     session_map.future = std::async(HWCSession::CWB::AsyncTaskToProcessCWBStatus,
-                                    this, display_type);
+                                    this, dpy_index);
   }
 
   if (node) {
@@ -1243,8 +1244,8 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
 }
 
 
-int HWCSession::CWB::OnCWBDone(hwc2_display_t display_type, int32_t status, uint64_t handle_id) {
-  auto& session_map = display_cwb_session_map_[display_type];
+int HWCSession::CWB::OnCWBDone(int dpy_index, int32_t status, uint64_t handle_id) {
+  auto& session_map = display_cwb_session_map_[dpy_index];
 
   {
     std::unique_lock<std::mutex> lock(session_map.lock);
@@ -1274,12 +1275,12 @@ int HWCSession::CWB::OnCWBDone(hwc2_display_t display_type, int32_t status, uint
   return -1;
 }
 
-void HWCSession::CWB::AsyncTaskToProcessCWBStatus(CWB *cwb, hwc2_display_t display_type) {
-  cwb->ProcessCWBStatus(display_type);
+void HWCSession::CWB::AsyncTaskToProcessCWBStatus(CWB *cwb, int dpy_index) {
+  cwb->ProcessCWBStatus(dpy_index);
 }
 
-void HWCSession::CWB::ProcessCWBStatus(hwc2_display_t display_type) {
-  auto& session_map = display_cwb_session_map_[display_type];
+void HWCSession::CWB::ProcessCWBStatus(int dpy_index) {
+  auto& session_map = display_cwb_session_map_[dpy_index];
   while(true) {
     std::shared_ptr<QueueNode> cwb_node = nullptr;
     {
@@ -1312,7 +1313,7 @@ void HWCSession::CWB::ProcessCWBStatus(hwc2_display_t display_type) {
     // Notify to client, when notification is received successfully for expected input buffer.
     NotifyCWBStatus(cwb_node->notified_status , cwb_node);
   }
-  DLOGI("CWB queue is empty. Display: %d", display_type);
+  DLOGI("CWB queue is empty. display_index: %d", dpy_index);
 }
 
 void HWCSession::CWB::NotifyCWBStatus(int status, std::shared_ptr<QueueNode> cwb_node) {
@@ -1327,13 +1328,25 @@ void HWCSession::CWB::NotifyCWBStatus(int status, std::shared_ptr<QueueNode> cwb
   native_handle_delete(const_cast<native_handle_t *>(cwb_node->buffer));
 }
 
-int HWCSession::NotifyCwbDone(hwc2_display_t display, int32_t status, uint64_t handle_id) {
-    return cwb_.OnCWBDone(display, status, handle_id);
+int HWCSession::NotifyCwbDone(int dpy_index, int32_t status, uint64_t handle_id) {
+    return cwb_.OnCWBDone(dpy_index, status, handle_id);
 }
 
 bool HWCSession::CWB::IsCwbActiveOnDisplay(hwc2_display_t disp_type) {
-  std::unique_lock<std::mutex> lock(display_cwb_session_map_[disp_type].lock);
-  auto &queue = display_cwb_session_map_[disp_type].queue;
+
+  int dpy_index = -1;
+  if (disp_type == HWC_DISPLAY_PRIMARY) {
+    dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_PRIMARY);
+  } else if (disp_type == HWC_DISPLAY_EXTERNAL) {
+    dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  } else if (disp_type == HWC_DISPLAY_BUILTIN_2) {
+    dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_BUILTIN_2);
+  } else {
+    return false;
+  }
+
+  std::unique_lock<std::mutex> lock(display_cwb_session_map_[dpy_index].lock);
+  auto &queue = display_cwb_session_map_[dpy_index].queue;
   return (queue.size() && (queue.front()->display_type == disp_type)) ? true : false;
 }
 
