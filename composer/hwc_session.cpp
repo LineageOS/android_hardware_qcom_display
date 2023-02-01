@@ -3739,7 +3739,8 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
     return HWC2_ERROR_BAD_DISPLAY;
   }
   *type = HwcDisplayConnectionType::EXTERNAL;
-  if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+  if (display == HWC_DISPLAY_PRIMARY ||
+      hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
     *type = HwcDisplayConnectionType::INTERNAL;
   }
 
