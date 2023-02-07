@@ -131,6 +131,15 @@ DisplayError CoreImpl::Init() {
     goto CleanupOnError;
   }
 
+  enable_null_display_ = !comp_mgr_.IsDisplayHWAvailable();
+  if (enable_null_display_) {
+    if (hw_info_intf_) {
+      HWInfoInterface::Destroy(hw_info_intf_);
+    }
+    hw_info_intf_ = new HWInfoDefault();
+    return kErrorNone;
+  }
+
   error = ColorManagerProxy::Init(hw_resource_);
   // if failed, doesn't affect display core functionalities.
   if (error != kErrorNone) {
