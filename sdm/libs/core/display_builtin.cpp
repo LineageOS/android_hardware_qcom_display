@@ -733,7 +733,10 @@ DisplayError DisplayBuiltIn::SetupDemuraT0AndTn() {
   panel_id_ = panel_id;
   DLOGI("panel_id 0x%lx", panel_id_);
 
-#ifndef SDM_UNIT_TESTING
+#if defined SDM_UNIT_TESTING || defined TRUSTED_VM
+  demura_allowed = true;
+  demuratn_allowed = true;
+#else
   if (!feature_license_factory_) {
     DLOGI("Feature license factory is not available");
     return kErrorNone;
@@ -790,9 +793,6 @@ DisplayError DisplayBuiltIn::SetupDemuraT0AndTn() {
     return kErrorUndefined;
   }
   demuratn_allowed = *allowed;
-#else
-  demura_allowed = true;
-  demuratn_allowed = true;
 #endif
 
   DLOGI("Demura enable allowed %d, Anti-aging enable allowed %d", demura_allowed, demuratn_allowed);
