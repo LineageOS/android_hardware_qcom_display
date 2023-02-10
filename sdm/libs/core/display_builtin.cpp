@@ -1092,7 +1092,8 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
 
   // Must only happen after NullCommit and get applied in next frame
   if (demura_intended_ && demura_dynamic_enabled_ &&
-      !comp_manager_->GetDemuraStatusForDisplay(display_id_) && (state == kStateOn)) {
+      !comp_manager_->GetDemuraStatusForDisplay(display_id_) &&
+      (state == kStateOn || state == kStateDoze)) {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
     SetDemuraIntfStatus(true);
   }
