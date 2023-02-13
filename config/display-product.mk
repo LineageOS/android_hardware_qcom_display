@@ -85,7 +85,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_camera_smooth=1 \
     vendor.display.enable_allow_idle_fallback=1 \
     vendor.display.disable_idle_time_video=1 \
-    vendor.display.disable_idle_time_hdr=1
+    vendor.display.disable_idle_time_hdr=1 \
+    debug.sf.predict_hwc_composition_strategy=0
 
 # Enable offline rotator for Bengal, Monaco, Khaje.
 ifneq ($(filter bengal monaco khaje, $(TARGET_BOARD_PLATFORM)),$(TARGET_BOARD_PLATFORM))
@@ -108,6 +109,7 @@ endif
 ifeq ($(TARGET_BOARD_PLATFORM),monaco)
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_layer_stitch=1
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
