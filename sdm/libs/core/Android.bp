@@ -41,6 +41,7 @@ cc_library_shared {
         "hw_events_interface.cpp",
         "hw_info_interface.cpp",
         "hw_interface.cpp",
+        "hw_info_default.cpp",
         "drm/hw_info_drm.cpp",
         "drm/hw_device_drm.cpp",
         "drm/hw_peripheral_drm.cpp",
