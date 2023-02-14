@@ -48,6 +48,7 @@
 #include "display_pluggable.h"
 #include "display_virtual.h"
 #include "display_null.h"
+#include "hw_info_default.h"
 
 #define __CLASS__ "CoreImpl"
 
@@ -102,6 +103,7 @@ DisplayError CoreImpl::Init() {
   enable_null_display_ = (value == 1);
   DLOGI("property: enable_null_display_ = %d", enable_null_display_);
   if (enable_null_display_) {
+    hw_info_intf_ = new HWInfoDefault();
     return kErrorNone;
   }
 
@@ -112,6 +114,7 @@ DisplayError CoreImpl::Init() {
     if ((err != kErrorNone) || !enable_null_display_) {
       goto CleanupOnError;
     }
+    hw_info_intf_ = new HWInfoDefault();
     return kErrorNone;
   }
 
@@ -196,7 +199,12 @@ DisplayError CoreImpl::Deinit() {
     }
   }
 
-  HWInfoInterface::Destroy(hw_info_intf_);
+  if (enable_null_display_) {
+    delete static_cast<HWInfoDefault *>(hw_info_intf_);
+    hw_info_intf_ = nullptr;
+  } else {
+    HWInfoInterface::Destroy(hw_info_intf_);
+  }
 #ifdef TRUSTED_VM
   // release free memory from the heap, needed for Trusted_VM due to the limited
   // carveout size
@@ -386,31 +394,13 @@ DisplayError CoreImpl::SetMaxBandwidthMode(HWBwModes mode) {
 
 DisplayError CoreImpl::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {
   SCOPE_LOCK(locker_);
-  if (enable_null_display_) {
-    hw_disp_info->type = kBuiltIn;
-    hw_disp_info->is_connected = true;
-    return kErrorNone;
-  }
   return hw_info_intf_->GetFirstDisplayInterfaceType(hw_disp_info);
 }
 
 DisplayError CoreImpl::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
   SCOPE_LOCK(locker_);
   DisplayError error = kErrorNone;
-  if (enable_null_display_) {
-    HWDisplayInfo hw_info = {};
-    hw_info.display_type = kBuiltIn;
-    hw_info.is_connected = 1;
-    hw_info.is_primary = 1;
-    hw_info.is_wb_ubwc_supported = 0;
-    hw_info.display_id = 1;
-    (*hw_displays_info)[hw_info.display_id] = hw_info;
-    DLOGI("display: %4d-%d, connected: %s, primary: %s", hw_info.display_id,
-          hw_info.display_type, hw_info.is_connected ? "true" : "false",
-          hw_info.is_primary ? "true" : "false");
-  } else {
-    error = hw_info_intf_->GetDisplaysStatus(hw_displays_info);
-  }
+  error = hw_info_intf_->GetDisplaysStatus(hw_displays_info);
   if (kErrorNone == error) {
     // Needed for error-checking in CreateDisplay(int32_t display_id, ...) and getting display-type.
     hw_displays_info_ = *hw_displays_info;
@@ -420,27 +410,6 @@ DisplayError CoreImpl::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
 
 DisplayError CoreImpl::GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) {
   SCOPE_LOCK(locker_);
-  if (enable_null_display_) {
-    switch (type) {
-      case kPluggable:
-      case kVirtual:
-        *max_displays = 0;
-        break;
-      case kBuiltIn:
-      case kDisplayTypeMax:
-        *max_displays = 1;
-        break;
-      default:
-        DLOGE("Unknown display type %d.", type);
-        return kErrorParameters;
-    }
-    DLOGI("Max %d concurrent displays.", 1);
-    DLOGI("Max %d concurrent displays of type %d (BuiltIn).", 1, kBuiltIn);
-    DLOGI("Max %d concurrent displays of type %d (Pluggable).", 0, kPluggable);
-    DLOGI("Max %d concurrent displays of type %d (Virtual).", 0, kVirtual);
-
-    return kErrorNone;
-  }
   return hw_info_intf_->GetMaxDisplaysSupported(type, max_displays);
 }
 

@@ -39,6 +39,7 @@ cc_library_shared {
         "strategy.cpp",
         "resource_default.cpp",
         "color_manager.cpp",
+        "hw_info_default.cpp",
     ],
 
 }
