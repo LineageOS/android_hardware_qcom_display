@@ -141,9 +141,15 @@ DisplayError DisplayBase::Init() {
   fb_config_ = display_attributes_;
   active_refresh_rate_ = display_attributes_.fps;
 
-  if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
-    if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
-      custom_mixer_resolution_ = true;
+  windowed_display_ = Debug::GetWindowRect(true /*is_primary_*/ , &window_rect_.left,
+                                           &window_rect_.top, &window_rect_.right,
+                                           &window_rect_.bottom) == 0;
+
+  if (!windowed_display_) {
+    if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
+      if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
+        custom_mixer_resolution_ = true;
+      }
     }
   }
 
@@ -246,9 +252,6 @@ DisplayError DisplayBase::InitBorderLayers() {
     return kErrorNone;
   }
 
-  windowed_display_ = Debug::GetWindowRect(true /*is_primary_*/ , &window_rect_.left,
-                                           &window_rect_.top, &window_rect_.right,
-                                           &window_rect_.bottom) == 0;
   if (!windowed_display_) {
     return kErrorNone;
   }
@@ -2855,6 +2858,10 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   DisplayError error = kErrorNone;
 
   DTRACE_SCOPED();
+  if (windowed_display_) {
+    return kErrorNotSupported;
+  }
+
   if (!width || !height) {
     return kErrorParameters;
   }
