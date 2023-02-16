@@ -25,7 +25,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -142,6 +142,7 @@ class ResourceInterface {
   virtual std::string Dump() = 0;
   virtual uint32_t GetMixerCount() = 0;
   virtual void HandleTUITransition(Handle display_ctx, bool tui_active) = 0;
+  virtual DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space) = 0;
 };
 
 }  // namespace sdm

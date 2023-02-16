@@ -25,7 +25,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -40,6 +40,7 @@
 #include <private/extension_interface.h>
 #include <private/spr_intf.h>
 #include <private/demuratn_core_uvm_fact_intf.h>
+#include <private/feature_license_intf.h>
 #include <private/panel_feature_property_intf.h>
 #include <private/panel_feature_factory_intf.h>
 #include <private/hw_events_interface.h>
@@ -235,6 +236,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetupDemuraLayer();
   DisplayError SetupDemuraTn();
   DisplayError EnableDemuraTn(bool enable);
+  DisplayError SetupDemuraT0AndTn();
   DisplayError BuildLayerStackStats(LayerStack *layer_stack) override;
   void UpdateDisplayModeParams();
   void HandleQsyncPostCommit();
@@ -295,6 +297,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::shared_ptr<DemuraIntf> demura_ = nullptr;
   bool demuratn_enabled_ = false;
   std::shared_ptr<DemuraTnCoreUvmIntf> demuratn_ = nullptr;
+  uint64_t panel_id_;
   Layer demura_layer_ = {};
   bool demura_intended_ = false;
   bool demura_dynamic_enabled_ = true;

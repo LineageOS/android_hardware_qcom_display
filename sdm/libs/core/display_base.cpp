@@ -25,7 +25,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -416,6 +416,19 @@ DisplayError DisplayBase::SetupPanelFeatureFactory() {
       DLOGE("Failed to create DemuraTnFactory");
       return kErrorResources;
     }
+  }
+
+  GetFeatureLicenseFactory get_feature_license_factory_ptr = nullptr;
+  if (!feature_impl_lib.Sym(GET_FEATURE_LICENSE_FACTORY,
+                            reinterpret_cast<void **>(&get_feature_license_factory_ptr))) {
+    DLOGW("Unable to load symbols, error = %s", feature_impl_lib.Error());
+    return kErrorUndefined;
+  }
+
+  feature_license_factory_ = get_feature_license_factory_ptr();
+  if (!feature_license_factory_) {
+    DLOGE("Failed to create FeatureLicenseFactory");
+    return kErrorResources;
   }
 
   DLOGI("Setup pf factory and prop intf for Panel Features");

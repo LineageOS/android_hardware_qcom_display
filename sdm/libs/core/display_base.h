@@ -27,7 +27,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -41,6 +41,7 @@
 #include <private/panel_feature_property_intf.h>
 #include <private/panel_feature_factory_intf.h>
 #include <private/demuratn_core_uvm_fact_intf.h>
+#include <private/feature_license_intf.h>
 #include <private/noise_plugin_intf.h>
 #include <private/noise_plugin_dbg.h>
 #include <private/hw_interface.h>
@@ -59,6 +60,7 @@
 
 #define GET_PANEL_FEATURE_FACTORY "GetPanelFeatureFactoryIntf"
 #define GET_DEMURATN_FACTORY "GetDemuraTnCoreUvmFactoryIntf"
+#define GET_FEATURE_LICENSE_FACTORY "GetFeatureLicenseFactoryIntf"
 
 namespace sdm {
 
@@ -70,6 +72,7 @@ using std::lock_guard;
 
 typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
 typedef DemuraTnCoreUvmFactoryIntf* (*GetDemuraTnFactory)();
+typedef FeatureLicenseFactoryIntf* (*GetFeatureLicenseFactory)();
 
 class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
  public:
@@ -415,6 +418,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   PanelFeatureFactoryIntf *pf_factory_ = nullptr;
   PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   DemuraTnCoreUvmFactoryIntf *demuratn_factory_ = nullptr;
+  FeatureLicenseFactoryIntf *feature_license_factory_ = nullptr;
   bool first_cycle_ = true;
   bool registered_hw_events_ = false;
   bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.

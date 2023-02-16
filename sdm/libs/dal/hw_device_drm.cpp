@@ -63,6 +63,12 @@
  *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
@@ -2995,7 +3001,7 @@ bool HWDeviceDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bo
 DisplayError HWDeviceDRM::SetupConcurrentWritebackModes() {
   // To setup Concurrent Writeback topology, get the Connector ID of Virtual display
   if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::VIRTUAL, &cwb_config_.token)) {
-    DLOGE("RegisterDisplay failed for Concurrent Writeback");
+    DLOGW("RegisterDisplay failed for Concurrent Writeback");
     return kErrorResources;
   }
 
