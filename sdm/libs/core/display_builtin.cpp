@@ -211,6 +211,10 @@ DisplayError DisplayBuiltIn::Init() {
   disable_cwb_idle_fallback_ = 1;
 #endif
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(FORCE_LM_TO_FB_CONFIG, &value);
+  force_lm_to_fb_config_ = (value == 1);
+
   NoiseInit();
   InitCWBBuffer();
 
