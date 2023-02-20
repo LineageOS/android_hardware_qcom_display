@@ -86,6 +86,9 @@ LOCAL_CFLAGS                  := $(common_flags) $(qmaa_flags) -DLOG_TAG=\"qdgra
 ifneq ($(TARGET_USES_GRALLOC4),false)
 LOCAL_CFLAGS                  += -DTARGET_USES_GRALLOC4
 endif
+ifeq ($(TARGET_GRALLOC_HANDLE_HAS_RESERVED_SIZE),true)
+LOCAL_CFLAGS                  += -DGRALLOC_HANDLE_HAS_RESERVED_SIZE
+endif
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_allocator.cpp gr_buf_mgr.cpp gr_ion_alloc.cpp
 include $(BUILD_SHARED_LIBRARY)
