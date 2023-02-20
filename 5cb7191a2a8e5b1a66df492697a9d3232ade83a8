@@ -33,6 +33,23 @@
       "message": "Fixes SDM AtomicCommit failure on my sm8350 device with Android 13 blobs.",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ad927713_1be052e5",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2023-02-20T13:29:26Z",
+      "side": 1,
+      "message": "You will first have to communicate with maintainers of existing devices using display compiled from source, since this will break their blobs.",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
