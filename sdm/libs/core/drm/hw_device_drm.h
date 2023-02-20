@@ -48,7 +48,7 @@
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
 #define UI_FBID_LIMIT 4
-#define VIDEO_FBID_LIMIT 16
+#define VIDEO_FBID_LIMIT 36
 #define OFFLINE_ROTATOR_FBID_LIMIT 2
 
 using sde_drm::DRMPowerMode;
@@ -239,6 +239,11 @@ class HWDeviceDRM : public HWInterface {
   };
 
  protected:
+  bool IsSeamlessTransition() {
+    return (hw_panel_info_.dynamic_fps && (vrefresh_ || seamless_mode_switch_)) ||
+     panel_mode_changed_ || bit_clk_rate_;
+  }
+
   const char *device_name_ = {};
   bool default_mode_ = false;
   int32_t display_id_ = -1;
@@ -290,6 +295,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
+  bool seamless_mode_switch_ = false;
 };
 
 }  // namespace sdm

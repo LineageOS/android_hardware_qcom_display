@@ -17,6 +17,42 @@
  * limitations under the License.
  */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <QService.h>
 #include <binder/Parcel.h>
 #include <core/buffer_allocator.h>
@@ -1114,7 +1150,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buff
 }
 
 int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
-  if (display >= HWCCallbacks::kNumDisplays || !hwc_display_[display]) {
+  if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -1128,13 +1164,20 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // When secure session going on primary, if power request comes on second built-in, cache it and
   // process once secure session ends.
   // Allow power off transition during secure session.
-  bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
-  bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
-  if (secure_session_active_ && is_builtin && is_power_off) {
-    if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
-      DLOGI("Secure session in progress, defer power state change");
-      hwc_display_[display]->SetPendingPowerMode(mode);
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    if (!hwc_display_[display]) {
       return HWC2_ERROR_NONE;
+    }
+
+    bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+    bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
+    if (secure_session_active_ && is_builtin && is_power_off) {
+      if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+        DLOGI("Secure session in progress, defer power state change");
+        hwc_display_[display]->SetPendingPowerMode(mode);
+        return HWC2_ERROR_NONE;
+      }
     }
   }
 
@@ -1158,21 +1201,27 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // async_powermode supported for power on and off
   bool override_mode = async_powermode_ && display_ready_.test(UINT32(display)) &&
                        async_power_mode_triggered_;
-  HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
 
-  if (last_power_mode == mode) {
-    return HWC2_ERROR_NONE;
-  }
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    if (!hwc_display_[display]) {
+      return HWC2_ERROR_NONE;
+    }
+    HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
+    if (last_power_mode == mode) {
+      return HWC2_ERROR_NONE;
+    }
 
-  // 1. For power transition cases other than Off->On or On->Off, async power mode
-  // will not be used. Hence, set override_mode to false for them.
-  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
-  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
-  // in main thread path.
-  if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
-     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
-     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
-    override_mode = false;
+    // 1. For power transition cases other than Off->On or On->Off, async power mode
+    // will not be used. Hence, set override_mode to false for them.
+    // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+    // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+    // in main thread path.
+    if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
+       (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+       (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
+      override_mode = false;
+    }
   }
 
   if (!override_mode) {
@@ -1180,6 +1229,12 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     bool needs_validation = false;
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+      // There is possibiliity that pluggable display is already destroyed in other
+      // thread handling hotplug. So when it comes out of this sequence wait lock
+      // hwc_display can be null.
+      if (!hwc_display_[display]) {
+        return HWC2_ERROR_NONE;
+      }
       needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
                           mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
                           active_builtin_disp_id < HWCCallbacks::kNumDisplays);
@@ -1198,6 +1253,9 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
+    if (!hwc_display_[display]) {
+       return HWC2_ERROR_NONE;
+    }
     // Update hwc state for now. Actual poweron will handled through DisplayConfig.
     hwc_display_[display]->UpdatePowerMode(mode);
   }
@@ -3024,7 +3082,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   SCOPE_LOCK(system_locker_);
   {
-    SCOPE_LOCK(locker_[client_id]);
+    SEQUENCE_CANCEL_SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
     if (!hwc_display) {
       return;
