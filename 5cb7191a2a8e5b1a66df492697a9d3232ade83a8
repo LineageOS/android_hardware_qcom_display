@@ -16,6 +16,23 @@
       "message": "The history of this chain is here:\nhttps://github.com/hellobbn/android_hardware_qcom_display/tree/LA.UM.21000-merge",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "be70ff12_6cef81fb",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2023-02-20T06:47:32Z",
+      "side": 1,
+      "message": "Fixes SDM AtomicCommit failure on my sm8350 device with Android 13 blobs.",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
