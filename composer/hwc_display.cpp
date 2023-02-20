@@ -726,6 +726,10 @@ void HWCDisplay::BuildLayerStack() {
       is_secure = true;
     }
 
+    if (IS_RGB_FORMAT(layer->input_buffer.format) && hwc_layer->IsScalingPresent()) {
+      layer_stack_.flags.scaling_rgb_layer_present = true;
+    }
+
     if (hwc_layer->IsSingleBuffered() &&
        !(hwc_layer->IsRotationPresent() || hwc_layer->IsScalingPresent())) {
       layer->flags.single_buffer = true;
