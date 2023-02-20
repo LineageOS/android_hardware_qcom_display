@@ -36,7 +36,10 @@ cc_library_shared {
 //libgralloccore
 cc_library_shared {
     name: "libgralloccore",
-    defaults: ["qtidisplay_defaults"],
+    defaults: [
+        "qtidisplay_defaults",
+        "gralloc_handle_has_reserved_size_defaults",
+    ],
     sanitize: {
         integer_overflow: true,
     },
