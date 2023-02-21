@@ -50,6 +50,23 @@
       "message": "You will first have to communicate with maintainers of existing devices using display compiled from source, since this will break their blobs.",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "65e9e464_902ab9a3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 17649
+      },
+      "writtenOn": "2023-02-21T00:06:04Z",
+      "side": 1,
+      "message": "sake doesn\u0027t like it, even with a13 stock blobs. looks like they didn\u0027t get updated\n\nhttps://katb.in/uqusigezomo\n\nI\u0027ll try kanging the display stack",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
