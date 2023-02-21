@@ -84,6 +84,24 @@
       "message": "At first glance, it seems to work with display stack from pdx215 (61.2.A.0.388).\n\nHad a look at a few other devices (Mi 11 \u0026 variants) but they didn\u0027t get and updated stack apparently.",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "976cf32a_7ab4a483",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2023-02-21T03:13:20Z",
+      "side": 1,
+      "message": "Thanks for the information. Yeah it works for me on pdx215. I will do more investigation this week to see if there is a way to make it work on both old/new display stack.",
+      "parentUuid": "4d206195_47b6b107",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
