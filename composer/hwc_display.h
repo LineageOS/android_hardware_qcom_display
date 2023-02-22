@@ -406,10 +406,7 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_min_luminance);
   virtual HWC2::Error GetPerFrameMetadataKeys(uint32_t *out_num_keys,
                                               PerFrameMetadataKey *out_keys);
-  virtual HWC2::Error SetDisplayAnimating(bool animating) {
-    animating_ = animating;
-    return HWC2::Error::None;
-  }
+  virtual HWC2::Error SetDisplayAnimating(bool animating);
   virtual bool IsDisplayCommandMode();
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
     return HWC2::Error::Unsupported;
