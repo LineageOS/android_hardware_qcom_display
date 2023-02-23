@@ -29,7 +29,7 @@
 
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -823,22 +823,42 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
 }
 
 DisplayError HWCDisplayBuiltIn::TeardownCwbForVirtualDisplay() {
-  DisplayError error = kErrorNotSupported;
   if (Fence::Wait(output_buffer_.release_fence) != kErrorNone) {
     DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
     return kErrorResources;
   }
+
   if (display_intf_) {
-    error = display_intf_->TeardownConcurrentWriteback();
+    if (display_intf_->TeardownConcurrentWriteback() != kErrorNone) {
+      return kErrorNotSupported;
+    }
   }
 
+  if (cwb_client_ == kCWBClientFrameDump) {
+    dump_frame_count_ = 0;
+    dump_output_to_file_ = false;
+    // Unmap and Free buffer
+    if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+      DLOGW("unmap failed with err %d", errno);
+    }
+    if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+      DLOGW("FreeBuffer failed");
+    }
+    output_buffer_info_ = {};
+    output_buffer_base_ = nullptr;
+  } else if (cwb_client_ == kCWBClientColor) {
+    frame_capture_buffer_queued_ = false;
+    frame_capture_status_ = 0;
+  }
+
+  layer_stack_.output_buffer = nullptr;
   readback_buffer_queued_ = false;
   cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
 
-  return error;
+  return kErrorNone;
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
