@@ -102,6 +102,23 @@
       "parentUuid": "4d206195_47b6b107",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "16ac8f33_e3bb7428",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2023-02-28T10:54:27Z",
+      "side": 1,
+      "message": "I have added maintainers of the lahaina or holi platform to the CC list:\n  sony (sm8350), asus (sm8350) and motorola (sm7325).\n\nWith the few exceptions:\n  - android_device_oneplus_dre uses prebuilt display HAL\n  - android_device_oneplus_sm8350-common uses prebuilt display HAL\n  - xiaomi sm8350 does not ship lineage-20\n  \nCan you please test and review this chain? Does it work on your device with Android 13 Blobs?\n\nWorks on pdx215 and does not work on asus, needs to kang blobs.",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
