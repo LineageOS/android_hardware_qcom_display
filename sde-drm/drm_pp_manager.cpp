@@ -30,7 +30,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -92,9 +92,11 @@ DRMPPManager::~DRMPPManager() {
   /* free previously created blob to avoid memory leak */
   for (int i = 0; i < kPPFeaturesMax; i++) {
     prop_info = pp_prop_map_[i];
-    if (prop_info.blob_id > 0) {
-      drmModeDestroyPropertyBlob(fd_, prop_info.blob_id);
-      prop_info.blob_id = 0;
+    for (int j = 0; j < NUM_CACHED_BLOB_ID; j++) {
+      if (prop_info.blob_id[j] > 0) {
+        drmModeDestroyPropertyBlob(fd_, prop_info.blob_id[j]);
+        prop_info.blob_id[j] = 0;
+      }
     }
   }
 #endif
@@ -330,21 +332,21 @@ int DRMPPManager::SetPPBlobProperty(drmModeAtomicReq *req, uint32_t obj_id,
 #ifdef PP_DRM_ENABLE
   uint32_t blob_id = 0;
 
-  /* free previously created blob for this feature if exist */
-  if (prop_info->blob_id > 0) {
-    ret = drmModeDestroyPropertyBlob(fd_, prop_info->blob_id);
-    if (ret) {
-      DRM_LOGE("failed to destroy property blob for feature %d, ret = %d", feature.id, ret);
-      return ret;
-    } else {
-      prop_info->blob_id = 0;
-    }
-  }
-
   if (!feature.payload) {
     // feature disable case
     drmModeAtomicAddProperty(req, obj_id, prop_info->prop_id, 0);
     return 0;
+  }
+
+  /* free previously created blob for this feature if exist */
+  if (prop_info->blob_id[prop_info->blob_id_index] > 0) {
+    ret = drmModeDestroyPropertyBlob(fd_, prop_info->blob_id[prop_info->blob_id_index]);
+    if (ret) {
+      DRM_LOGE("failed to destroy property blob for feature %d, ret = %d", feature.id, ret);
+      return ret;
+    } else {
+      prop_info->blob_id[prop_info->blob_id_index] = 0;
+    }
   }
 
   ret = drmModeCreatePropertyBlob(fd_, feature.payload, feature.payload_size, &blob_id);
@@ -353,7 +355,8 @@ int DRMPPManager::SetPPBlobProperty(drmModeAtomicReq *req, uint32_t obj_id,
     return DRM_ERR_INVALID;
   }
 
-  prop_info->blob_id = blob_id;
+  prop_info->blob_id[prop_info->blob_id_index] = blob_id;
+  prop_info->blob_id_index = (++prop_info->blob_id_index) % NUM_CACHED_BLOB_ID;
   drmModeAtomicAddProperty(req, obj_id, prop_info->prop_id, blob_id);
 
 #endif
