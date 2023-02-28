@@ -20,7 +20,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1164,20 +1164,22 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // When secure session going on primary, if power request comes on second built-in, cache it and
   // process once secure session ends.
   // Allow power off transition during secure session.
+  bool is_builtin = false;
+  bool is_power_off = false;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
     if (!hwc_display_[display]) {
       return HWC2_ERROR_NONE;
     }
 
-    bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
-    bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
-    if (secure_session_active_ && is_builtin && is_power_off) {
-      if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
-        DLOGI("Secure session in progress, defer power state change");
-        hwc_display_[display]->SetPendingPowerMode(mode);
-        return HWC2_ERROR_NONE;
-      }
+    is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+    is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
+  }
+  if (secure_session_active_ && is_builtin && is_power_off) {
+    if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+      DLOGI("Secure session in progress, defer power state change");
+      hwc_display_[display]->SetPendingPowerMode(mode);
+      return HWC2_ERROR_NONE;
     }
   }
 
