@@ -4116,7 +4116,7 @@ int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
                                       return session->WaitForCommitDone(display, client_id);
                                      }, this, display, client_id);
   auto ret = (commit_done_future_[display].wait_for(span) == std::future_status::timeout) ?
-             -EINVAL : commit_done_future_[display].get();
+             -ETIMEDOUT : commit_done_future_[display].get();
   return ret;
 }
 
@@ -4347,7 +4347,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
         DLOGE("Device unassign failed with error %d", ret);
       }
       TUITransitionUnPrepare(disp_id);
-      return -EINVAL;
+      return 0;
     }
   }
 
@@ -4386,6 +4386,9 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   for (auto &info : map_info) {
     bool needs_refresh = false;
     {
+      if (info.client_id == target_display) {
+        continue;
+      }
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
       if (hwc_display_[info.client_id]) {
         if (info.disp_type == kPluggable && pending_hotplug_event_ == kHotPlugEvent) {
