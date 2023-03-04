@@ -5,9 +5,6 @@ cc_library_shared {
         integer_overflow: true,
     },
     vendor: true,
-    header_libs: [
-        "qti_display_kernel_headers",
-    ],
     cflags: [
         "-fno-operator-names",
         "-Wno-unused-parameter",
