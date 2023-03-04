@@ -154,6 +154,24 @@
       "parentUuid": "680bc5f5_f5a8bd0e",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c75fd36d_8c2da9bd",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2023-03-04T04:22:27Z",
+      "side": 1,
+      "message": "\u003e recently I talked with Jake from AOSP,  and he also pointed out that it might cause UDFPS issue, and using newer blobs might fix it. here is the quote:\n\u003e \n\u003e \u003e I have heard of this causing UDFPS issues on other devices.  I believe as long as libsdmextension and the other proprietary display binaries are recent enough (Nothing Phone 1 Android 13 builds seem to be the most recent I have found), there should not be issues with UDFPS\n\n*AOSPA, sorry",
+      "parentUuid": "431ea719_3214da21",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
