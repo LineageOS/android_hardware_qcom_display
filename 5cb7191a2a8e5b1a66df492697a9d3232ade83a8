@@ -172,6 +172,24 @@
       "parentUuid": "431ea719_3214da21",
       "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7771e014_26ba1573",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19252
+      },
+      "writtenOn": "2023-03-05T03:33:43Z",
+      "side": 1,
+      "message": "Ok cool, looks like you\u0027re right! Using Motorola Edge 30 Fusion (tundra) latest stock ROM blobs for graphics does work fine with this for UDFPS. Tbh I\u0027m a little hesitant on using non-Motorola blobs as I remembered before that some Motorola devices get picky trying to swap away from Motorola blobs but who knows that could have changed (albeit, probably not for IMS since I\u0027m guessing Motorola still tweaks that stack/firmware).\n\nI do need to do a little more testing though to make sure no graphical glitches pop up. On current dubai blobs I was getting stuff like gBoard flickering when using an app like Telegram Plus when a notification pops up...",
+      "parentUuid": "c75fd36d_8c2da9bd",
+      "revId": "5cb7191a2a8e5b1a66df492697a9d3232ade83a8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
