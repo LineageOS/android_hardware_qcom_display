@@ -1589,7 +1589,7 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   }
 
   int level = 0;
-  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+  if (first_cycle_ && (hw_intf_->GetPanelBrightness(&level) == kErrorNone)) {
     comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
   }
 

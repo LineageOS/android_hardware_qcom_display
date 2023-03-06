@@ -59,6 +59,13 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
@@ -1215,7 +1222,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     return kErrorNone;
   }
 
-  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
+  if (tui_state_ != kTUIStateNone) {
     DLOGI("Request deferred TUI state %d", tui_state_);
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;

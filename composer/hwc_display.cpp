@@ -3155,7 +3155,7 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   }
 
   if (update_event_only) {
-    secure_event_ = secure_event;
+    secure_event_ = (secure_event == kTUITransitionUnPrepare) ? kSecureEventMax : secure_event;
     return kErrorNone;
   }
 

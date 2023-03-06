@@ -3739,7 +3739,8 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
     return HWC2_ERROR_BAD_DISPLAY;
   }
   *type = HwcDisplayConnectionType::EXTERNAL;
-  if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+  if (display == HWC_DISPLAY_PRIMARY ||
+      hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
     *type = HwcDisplayConnectionType::INTERNAL;
   }
 
@@ -4186,7 +4187,8 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
 
   int timeout_ms = -1;
   {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    std::lock_guard<std::mutex> command_seq_lock(command_seq_mutex_);
+    SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart, &needs_refresh,
                                                           false) != kErrorNone) {

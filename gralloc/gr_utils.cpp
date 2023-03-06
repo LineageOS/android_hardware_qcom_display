@@ -1293,6 +1293,8 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, alignment);
       break;
     case HAL_PIXEL_FORMAT_RAW16:
+      aligned_w = width;
+      break;
     case HAL_PIXEL_FORMAT_Y16:
     case HAL_PIXEL_FORMAT_Y8:
       aligned_w = ALIGN(width, 16);
