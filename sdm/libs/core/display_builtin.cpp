@@ -211,6 +211,10 @@ DisplayError DisplayBuiltIn::Init() {
   disable_cwb_idle_fallback_ = 1;
 #endif
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(FORCE_LM_TO_FB_CONFIG, &value);
+  force_lm_to_fb_config_ = (value == 1);
+
   NoiseInit();
   InitCWBBuffer();
 
@@ -733,7 +737,10 @@ DisplayError DisplayBuiltIn::SetupDemuraT0AndTn() {
   panel_id_ = panel_id;
   DLOGI("panel_id 0x%lx", panel_id_);
 
-#ifndef SDM_UNIT_TESTING
+#if defined SDM_UNIT_TESTING || defined TRUSTED_VM
+  demura_allowed = true;
+  demuratn_allowed = true;
+#else
   if (!feature_license_factory_) {
     DLOGI("Feature license factory is not available");
     return kErrorNone;
@@ -790,9 +797,6 @@ DisplayError DisplayBuiltIn::SetupDemuraT0AndTn() {
     return kErrorUndefined;
   }
   demuratn_allowed = *allowed;
-#else
-  demura_allowed = true;
-  demuratn_allowed = true;
 #endif
 
   DLOGI("Demura enable allowed %d, Anti-aging enable allowed %d", demura_allowed, demuratn_allowed);
@@ -1092,7 +1096,8 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
 
   // Must only happen after NullCommit and get applied in next frame
   if (demura_intended_ && demura_dynamic_enabled_ &&
-      !comp_manager_->GetDemuraStatusForDisplay(display_id_) && (state == kStateOn)) {
+      !comp_manager_->GetDemuraStatusForDisplay(display_id_) &&
+      (state == kStateOn || state == kStateDoze)) {
     comp_manager_->SetDemuraStatusForDisplay(display_id_, true);
     SetDemuraIntfStatus(true);
   }

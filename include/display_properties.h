@@ -30,7 +30,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -106,6 +106,7 @@
 #define DROP_SKEWED_VSYNC                    DISPLAY_PROP("drop_skewed_vsync")
 #define DISABLE_FAST_PATH                    DISPLAY_PROP("disable_fast_path")
 #define DISABLE_SYSTEM_LOAD_CHECK            DISPLAY_PROP("disable_system_load_check")
+#define ASPECT_RATIO_THRESHOLD               DISPLAY_PROP("aspect_ratio_threshold")
 // Disable microidle condition
 #define DISABLE_SINGLE_LM_SPLIT_PROP         DISPLAY_PROP("disable_single_lm_split")
 // Enable posted start dynamic
@@ -116,7 +117,6 @@
 // Disable 3d tonemap support for UI layers
 #define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
 #define QDCM_DISABLE_FACTORY_MODE_PROP       DISPLAY_PROP("qdcm.disable_factory_mode")
-#define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
 #define ENABLE_GPU_TONEMAPPER_PROP           DISPLAY_PROP("enable_gpu_tonemapper")
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
@@ -165,6 +165,7 @@
 #define ANTI_AGING_IDLE_TIMER                DISPLAY_PROP("demura_idle_timer")
 #define ANTI_AGING_MEMORY_SIZE               DISPLAY_PROP("demura_memory_size")
 #define ANTI_AGING_RECALIB_TIMER_DIVIDER     DISPLAY_PROP("demura_recalib_timer_divider")
+#define ANTI_AGING_ENABLE_LOGGING            DISPLAY_PROP("antiaging_enable_logging")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
@@ -217,6 +218,7 @@
 #define DISABLE_CWB_IDLE_FALLBACK            DISPLAY_PROP("disable_cwb_idle_fallback")
 #define PRIORITIZE_CLIENT_CWB                DISPLAY_PROP("prioritize_client_cwb")
 #define TRANSIENT_FPS_CYCLE_COUNT            DISPLAY_PROP("transient_fps_cycle_count")
+#define FORCE_LM_TO_FB_CONFIG                DISPLAY_PROP("force_lm_to_fb_config")
 
 // Add all other.properties above
 // End of property

@@ -141,9 +141,15 @@ DisplayError DisplayBase::Init() {
   fb_config_ = display_attributes_;
   active_refresh_rate_ = display_attributes_.fps;
 
-  if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
-    if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
-      custom_mixer_resolution_ = true;
+  windowed_display_ = Debug::GetWindowRect(true /*is_primary_*/ , &window_rect_.left,
+                                           &window_rect_.top, &window_rect_.right,
+                                           &window_rect_.bottom) == 0;
+
+  if (!windowed_display_) {
+    if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
+      if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
+        custom_mixer_resolution_ = true;
+      }
     }
   }
 
@@ -246,9 +252,6 @@ DisplayError DisplayBase::InitBorderLayers() {
     return kErrorNone;
   }
 
-  windowed_display_ = Debug::GetWindowRect(true /*is_primary_*/ , &window_rect_.left,
-                                           &window_rect_.top, &window_rect_.right,
-                                           &window_rect_.bottom) == 0;
   if (!windowed_display_) {
     return kErrorNone;
   }
@@ -2845,6 +2848,10 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   DisplayError error = kErrorNone;
 
   DTRACE_SCOPED();
+  if (windowed_display_) {
+    return kErrorNotSupported;
+  }
+
   if (!width || !height) {
     return kErrorParameters;
   }
@@ -2899,17 +2906,19 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {
-    DLOGV_IF(kTagDisplay, "Found concurrent writeback, configure LM width:%d height:%d",
-             fb_width, fb_height);
-    *new_mixer_width = fb_width;
-    *new_mixer_height = fb_height;
-    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
-  }
-
   if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
     *new_mixer_width = display_width;
     *new_mixer_height = display_height;
+    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
+  }
+
+  if (force_lm_to_fb_config_ ||
+      (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer)) {
+    DLOGV_IF(kTagDisplay, "CWB:%d, force_lm_to_fb_config_:%d, configure LM width:%d height:%d",
+             (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer),
+             force_lm_to_fb_config_, fb_width, fb_height);
+    *new_mixer_width = fb_width;
+    *new_mixer_height = fb_height;
     return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
   }
 

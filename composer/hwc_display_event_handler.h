@@ -63,6 +63,13 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __HWC_DISPLAY_EVENT_HANDLER_H__
 #define __HWC_DISPLAY_EVENT_HANDLER_H__
 
@@ -74,7 +81,7 @@ class HWCDisplayEventHandler {
   virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
                                     uint32_t refresh_rate, uint32_t qsync_refresh_rate) = 0;
   virtual void VmReleaseDone(hwc2_display_t display) = 0;
-  virtual int NotifyCwbDone(hwc2_display_t display, int32_t status, uint64_t handle_id) = 0;
+  virtual int NotifyCwbDone(int dpy_index, int32_t status, uint64_t handle_id) = 0;
 
  protected:
   virtual ~HWCDisplayEventHandler() {}
