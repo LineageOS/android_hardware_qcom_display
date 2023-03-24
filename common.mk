@@ -16,7 +16,7 @@ display_config_version := $(shell \
 
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
-common_flags += -Wconversion -Wall -Werror
+common_flags += -Wno-sign-conversion -Wall -Werror
 ifeq ($(TARGET_IS_HEADLESS), true)
     common_flags += -DTARGET_HEADLESS
     LOCAL_CLANG := false
