@@ -16,6 +16,24 @@
       "message": "wat",
       "revId": "ca2c562c1a221114553ce4dcb692b43ff75c78d0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a220f5de_ba02c6c4",
+        "filename": "msm8084/common.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2023-03-25T18:16:19Z",
+      "side": 1,
+      "message": "Looks like copy-pasting my find -name into nano failed me lol",
+      "parentUuid": "b1d8b375_50b01f9d",
+      "revId": "ca2c562c1a221114553ce4dcb692b43ff75c78d0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
