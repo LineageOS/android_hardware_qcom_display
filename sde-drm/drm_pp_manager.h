@@ -35,13 +35,16 @@
 #include "drm_interface.h"
 #include "drm_property.h"
 
+#define NUM_CACHED_BLOB_ID 2
+
 namespace sde_drm {
 
 struct DRMPPPropInfo {
   DRMProperty prop_enum;
   uint32_t version = std::numeric_limits<uint32_t>::max();
   uint32_t prop_id;
-  uint32_t blob_id;
+  uint32_t blob_id[NUM_CACHED_BLOB_ID];
+  uint32_t blob_id_index;
 };
 
 class DRMPPManager {
