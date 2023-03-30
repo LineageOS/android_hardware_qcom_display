@@ -1320,6 +1320,23 @@ void HWCSession::GetVirtualDisplayList() {
 
     virtual_display_list_.push_back(info);
   }
+
+  if (virtual_display_list_.empty() && virtual_display_factory_.IsGPUColorConvertSupported()) {
+    AddGpuBasedVirtualDisplay(&hw_displays_info);
+  }
+}
+
+void HWCSession::AddGpuBasedVirtualDisplay(const HWDisplaysInfo* const hw_displays_info) {
+  HWDisplayInfo hw_info = {};
+  hw_info.display_type = kVirtual;
+  hw_info.is_connected = true;
+  hw_info.is_primary = false;
+  hw_info.is_wb_ubwc_supported = true;
+  hw_info.display_id = 0;
+  while (hw_displays_info->find(hw_info.display_id) != hw_displays_info->end()) {
+    hw_info.display_id++;
+  }
+  virtual_display_list_.push_back(hw_info);
 }
 
 HWC2::Error HWCSession::CheckWbAvailability() {

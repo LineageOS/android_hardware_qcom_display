@@ -610,6 +610,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void GetVirtualDisplayList();
   HWC2::Error CheckWbAvailability();
   bool IsHWDisplayConnected(hwc2_display_t client_id);
+  void AddGpuBasedVirtualDisplay(const HWDisplaysInfo* const hw_displays_info);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
