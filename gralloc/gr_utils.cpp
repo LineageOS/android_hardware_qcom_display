@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -2288,7 +2288,6 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
       return metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(
           ::android::gralloc4::MetadataType_BlendMode.value)];
     case QTI_VT_TIMESTAMP:
-    case QTI_COLOR_METADATA:
     case QTI_PP_PARAM_INTERLACED:
     case QTI_VIDEO_PERF_MODE:
     case QTI_GRAPHICS_METADATA:
@@ -2306,6 +2305,16 @@ bool getGralloc4Array(MetaData_t *metadata, int64_t paramType) {
     case QTI_S3D_FORMAT:
     case QTI_BUFFER_PERMISSION:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(paramType)];
+    case QTI_COLOR_METADATA:
+      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_COLOR_METADATA)] ||
+             metadata->isStandardMetadataSet[
+             GET_STANDARD_METADATA_STATUS_INDEX((int64_t)StandardMetadataType::DATASPACE)] ||
+             metadata->isStandardMetadataSet[
+             GET_STANDARD_METADATA_STATUS_INDEX((int64_t)StandardMetadataType::SMPTE2086)] ||
+             metadata->isStandardMetadataSet[
+             GET_STANDARD_METADATA_STATUS_INDEX((int64_t)StandardMetadataType::CTA861_3)] ||
+             metadata->isStandardMetadataSet[
+             GET_STANDARD_METADATA_STATUS_INDEX((int64_t)StandardMetadataType::SMPTE2094_40)];
     case QTI_COLORSPACE:
       // QTI_COLORSPACE is derived from QTI_COLOR_METADATA
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_COLOR_METADATA)];
