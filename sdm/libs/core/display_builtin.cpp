@@ -294,7 +294,6 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
     }
   } else {
     if (CanSkipDisplayPrepare(layer_stack)) {
-      UpdateQsyncMode();
       return kErrorNone;
     }
   }
@@ -332,10 +331,12 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 
   DisplayError error = PrePrepare(layer_stack);
   if (error == kErrorNone) {
+    UpdateQsyncMode();
     return kErrorNone;
   }
 
   if (error == kErrorNeedsLutRegen && (ForceToneMapUpdate(layer_stack) == kErrorNone)) {
+    UpdateQsyncMode();
     return kErrorNone;
   }
 
