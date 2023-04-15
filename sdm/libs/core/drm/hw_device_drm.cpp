@@ -29,7 +29,7 @@
 
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -2210,7 +2210,21 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
   return kErrorNotSupported;
 }
 
-
+DisplayError HWDeviceDRM::GetConfigIndexForFps(uint32_t refresh_rate, uint32_t *config) {
+  // Check if requested refresh rate is valid
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (current_mode.flags == connector_info_.modes[mode_index].mode.flags) &&
+        (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
+      *config = mode_index;
+      DLOGV_IF(kTagDriverConfig, "Config index for fps %d is %d", refresh_rate, *config);
+      return kErrorNone;
+    }
+  }
+  return kErrorNotSupported;
+}
 
 DisplayError HWDeviceDRM::GetHWScanInfo(HWScanInfo *scan_info) {
   return kErrorNotSupported;
