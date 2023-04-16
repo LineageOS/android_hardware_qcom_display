@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "26f3f14f_942d0d91",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 21290
+      },
+      "writtenOn": "2023-04-16T16:19:48Z",
+      "side": 1,
+      "message": "Works with Sony XQ-BC72 61.2.A.0.410 display blobs and moto tundra S3SJS32.1-86-1-4 libhdr_tm, that combination seems to match this tag and the blobs are not modified by the oems",
+      "revId": "dd4417456b200408644124d14e5e3c0cd1e054d2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
