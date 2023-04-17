@@ -570,8 +570,8 @@ int HWCSession::DisplayConfigImpl::DisplayBWTransactionPending(bool *status) {
 int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGE("No active displays");
-    return -EINVAL;
+    DLOGW("No active displays");
+    return 0;
   }
   bool needs_refresh = false;
   {
