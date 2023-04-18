@@ -33,11 +33,13 @@ cc_library_shared {
         "display_builtin.cpp",
         "display_pluggable.cpp",
         "display_virtual.cpp",
+        "display_null.cpp",
         "noise_plugin_intf_impl.cpp",
         "comp_manager.cpp",
         "strategy.cpp",
         "resource_default.cpp",
         "color_manager.cpp",
+        "hw_info_default.cpp",
     ],
 
 }

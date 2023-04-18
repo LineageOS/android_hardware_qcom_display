@@ -27,6 +27,13 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include "hwc_display_virtual_gpu.h"
 #include "hwc_session.h"
 #include "QtiGralloc.h"
@@ -39,8 +46,13 @@ int HWCDisplayVirtualGPU::Init() {
   // Create client target.
   client_target_ = new HWCLayer(id_, buffer_allocator_);
 
-  // Calls into SDM need to be dropped. Create Null Display interface.
-  display_intf_ = new DisplayNull();
+  // Create Null Display interface.
+  DisplayError error = core_intf_->CreateNullDisplay(&display_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Null Display create failed. Error = %d display_id = %d disp_intf = %p",
+          error, sdm_id_, display_intf_);
+    return -EINVAL;
+  }
 
   disable_animation_ = Debug::IsExtAnimDisabled();
 
@@ -53,7 +65,12 @@ int HWCDisplayVirtualGPU::Deinit() {
     color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeDestroyInstance, nullptr);
   }
 
-  delete static_cast<DisplayNull *>(display_intf_);
+  DisplayError error = core_intf_->DestroyNullDisplay(display_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Null Display destroy failed. Error = %d", error);
+    return -EINVAL;
+  }
+
   delete client_target_;
 
   for (auto hwc_layer : layer_set_) {
@@ -79,7 +96,6 @@ HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *ou
   layer_requests_.clear();
 
   // Mark all layers to GPU if there is no need to bypass.
-  bool fbt_compatible = true;
   bool needs_gpu_bypass = NeedsGPUBypass() || FreezeScreen();
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
@@ -104,9 +120,7 @@ HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *ou
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());;
   has_client_composition_ = !needs_gpu_bypass;
-
-  // FBT is compatible if all layers are compatible or gpu is bypassed.
-  fbt_compatible_ = has_client_composition_ && fbt_compatible;
+  validate_done_ = true;
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
@@ -117,12 +131,9 @@ HWC2::Error HWCDisplayVirtualGPU::CommitOrPrepare(bool validate_only,
                                                   uint32_t *out_num_requests, bool *needs_commit) {
   // Perform validate and commit.
   auto status = Validate(out_num_types, out_num_requests);
-  if (!fbt_compatible_) {
-    *needs_commit = true;
-    return status;
-  }
 
-  return Present(out_retire_fence);
+  *needs_commit = true;
+  return status;
 }
 
 HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf,
@@ -144,6 +155,16 @@ HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf,
     if (!buffer_allocator_->GetBufferGeometry(hnd, slice_width, slice_height)) {
       output_buffer_.unaligned_width = slice_width;
       output_buffer_.unaligned_height = slice_height;
+      // Update buffer width and height.
+      int new_aligned_w = 0;
+      int new_aligned_h = 0;
+      int output_handle_format = 0;;
+      buffer_allocator_->GetFormat(hnd, output_handle_format);
+      buffer_allocator_->GetAlignedWidthAndHeight(INT(slice_width), INT(slice_height),
+                                                  output_handle_format, 0, &new_aligned_w,
+                                                  &new_aligned_h);
+      output_buffer_.width = UINT32(new_aligned_w);
+      output_buffer_.height = UINT32(new_aligned_h);
       color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeReset, nullptr);
     }
   }

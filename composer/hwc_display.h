@@ -41,7 +41,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "display_null.h"
 #include "histogram_collector.h"
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
@@ -646,6 +645,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::condition_variable cwb_cv_;
   std::map<CWBClient, CWBCaptureResponse> cwb_capture_status_map_;
   static constexpr unsigned int kCwbWaitMs = 100;
+  bool validate_done_ = false;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
@@ -653,7 +653,6 @@ class HWCDisplay : public DisplayEventHandler {
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
-  int null_display_mode_ = 0;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   shared_ptr<Fence> release_fence_ = nullptr;
   hwc2_config_t pending_config_index_ = 0;
@@ -662,7 +661,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool game_supported_ = false;
   uint64_t elapse_timestamp_ = 0;
   bool draw_method_set_ = false;
-  bool validate_done_ = false;
   bool client_target_3_1_set_ = false;
   bool is_client_up_ = false;
 };

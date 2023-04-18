@@ -1,8 +1,6 @@
 /*
 * Copyright (c) 2014 - 2016, 2018, 2020-2021 The Linux Foundation. All rights reserved.
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
 *    * Redistributions of source code must retain the above copyright notice, this list of
@@ -24,6 +22,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #include <dlfcn.h>
 #include <signal.h>
 #include <malloc.h>
@@ -42,6 +47,8 @@
 #include "display_builtin.h"
 #include "display_pluggable.h"
 #include "display_virtual.h"
+#include "display_null.h"
+#include "hw_info_default.h"
 
 #define __CLASS__ "CoreImpl"
 
@@ -91,9 +98,24 @@ DisplayError CoreImpl::Init() {
 #endif
   }
 
+  int value = 0;
+  Debug::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &value);
+  enable_null_display_ = (value == 1);
+  DLOGI("property: enable_null_display_ = %d", enable_null_display_);
+  if (enable_null_display_) {
+    hw_info_intf_ = new HWInfoDefault();
+    return kErrorNone;
+  }
+
   error = HWInfoInterface::Create(&hw_info_intf_);
   if (error != kErrorNone) {
-    goto CleanupOnError;
+    DisplayError err = HandleNullDisplay();
+
+    if ((err != kErrorNone) || !enable_null_display_) {
+      goto CleanupOnError;
+    }
+    hw_info_intf_ = new HWInfoDefault();
+    return kErrorNone;
   }
 
   error = hw_info_intf_->GetHWResourceInfo(&hw_resource_);
@@ -107,6 +129,15 @@ DisplayError CoreImpl::Init() {
 
   if (error != kErrorNone) {
     goto CleanupOnError;
+  }
+
+  enable_null_display_ = !comp_mgr_.IsDisplayHWAvailable();
+  if (enable_null_display_) {
+    if (hw_info_intf_) {
+      HWInfoInterface::Destroy(hw_info_intf_);
+    }
+    hw_info_intf_ = new HWInfoDefault();
+    return kErrorNone;
   }
 
   error = ColorManagerProxy::Init(hw_resource_);
@@ -177,7 +208,12 @@ DisplayError CoreImpl::Deinit() {
     }
   }
 
-  HWInfoInterface::Destroy(hw_info_intf_);
+  if (enable_null_display_) {
+    delete static_cast<HWInfoDefault *>(hw_info_intf_);
+    hw_info_intf_ = nullptr;
+  } else {
+    HWInfoInterface::Destroy(hw_info_intf_);
+  }
 #ifdef TRUSTED_VM
   // release free memory from the heap, needed for Trusted_VM due to the limited
   // carveout size
@@ -192,6 +228,10 @@ DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *even
 
   if (!event_handler || !intf) {
     return kErrorParameters;
+  }
+
+  if (enable_null_display_) {
+    return CreateNullDisplayLocked(intf);
   }
 
   DisplayBase *display_base = NULL;
@@ -234,6 +274,10 @@ DisplayError CoreImpl::CreateDisplay(int32_t display_id, DisplayEventHandler *ev
 
   if (!event_handler || !intf) {
     return kErrorParameters;
+  }
+
+  if (enable_null_display_) {
+    return CreateNullDisplayLocked(intf);
   }
 
   auto iter = hw_displays_info_.find(display_id);
@@ -279,6 +323,34 @@ DisplayError CoreImpl::CreateDisplay(int32_t display_id, DisplayEventHandler *ev
   return kErrorNone;
 }
 
+DisplayError CoreImpl::CreateNullDisplay(DisplayInterface **intf) {
+  SCOPE_LOCK(locker_);
+
+  if (!intf) {
+    return kErrorParameters;
+  }
+
+  return CreateNullDisplayLocked(intf);
+}
+
+DisplayError CoreImpl::CreateNullDisplayLocked(DisplayInterface **intf) {
+  DisplayNull *display_null = new DisplayNull();
+
+  if (!display_null) {
+    return kErrorMemory;
+  }
+
+  DisplayError error = display_null->Init();
+  if (error != kErrorNone) {
+    delete display_null;
+    return error;
+  }
+
+  *intf = display_null;
+
+  return kErrorNone;
+}
+
 DisplayError CoreImpl::DestroyDisplay(DisplayInterface *intf) {
   SCOPE_LOCK(locker_);
 
@@ -286,10 +358,40 @@ DisplayError CoreImpl::DestroyDisplay(DisplayInterface *intf) {
     return kErrorParameters;
   }
 
+  if (enable_null_display_) {
+    delete static_cast<DisplayNull *>(intf);
+    return kErrorNone;
+  }
+
   DisplayBase *display_base = static_cast<DisplayBase *>(intf);
   display_base->Deinit();
   delete display_base;
 
+  return kErrorNone;
+}
+
+DisplayError CoreImpl::DestroyNullDisplay(DisplayInterface *intf) {
+  SCOPE_LOCK(locker_);
+
+  if (!intf) {
+    return kErrorParameters;
+  }
+
+  delete static_cast<DisplayNull *>(intf);
+
+  return kErrorNone;
+}
+
+DisplayError CoreImpl::HandleNullDisplay() {
+  // Initializing comp_mgr with default hw resource
+  DisplayError error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_,
+                                      socket_handler_);
+  if (error != kErrorNone) {
+    DLOGW("comp manager initialization failed");
+    return error;
+  }
+  DLOGI("comp manager successfully initialized with default hw resources");
+  enable_null_display_ = !comp_mgr_.IsDisplayHWAvailable();
   return kErrorNone;
 }
 
@@ -306,7 +408,8 @@ DisplayError CoreImpl::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_d
 
 DisplayError CoreImpl::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
   SCOPE_LOCK(locker_);
-  DisplayError error = hw_info_intf_->GetDisplaysStatus(hw_displays_info);
+  DisplayError error = kErrorNone;
+  error = hw_info_intf_->GetDisplaysStatus(hw_displays_info);
   if (kErrorNone == error) {
     // Needed for error-checking in CreateDisplay(int32_t display_id, ...) and getting display-type.
     hw_displays_info_ = *hw_displays_info;

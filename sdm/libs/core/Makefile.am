@@ -7,10 +7,12 @@ c_sources = core_interface.cpp \
             noise_plugin_intf_impl.cpp \
             display_pluggable.cpp \
             display_virtual.cpp \
+            display_null.cpp \
             comp_manager.cpp \
             strategy.cpp \
             resource_default.cpp \
-            color_manager.cpp
+            color_manager.cpp \
+            hw_info_default.cpp
 
 core_h_sources = $(HEADER_PATH)/core/*.h
 

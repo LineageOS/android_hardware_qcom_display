@@ -117,6 +117,9 @@ bool IsYuvFormat(int format) {
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
       return true;
     default:
       return false;
@@ -215,6 +218,9 @@ bool IsCameraCustomFormat(int format, uint64_t usage) {
     case static_cast<int>(PixelFormat::RAW_OPAQUE):
     case static_cast<int>(PixelFormat::RAW10):
     case static_cast<int>(PixelFormat::RAW12):
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
       if (usage & GRALLOC_USAGE_HW_COMPOSER) {
         ALOGW("%s: HW_Composer flag is set for camera custom format: 0x%x, Usage: 0x%" PRIx64,
               __FUNCTION__, format, usage);
@@ -1388,6 +1394,9 @@ int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   }
 
   AdrenoMemInfo *adreno_mem_info = AdrenoMemInfo::GetInstance();
+  if (!adreno_mem_info) {
+    return -ENOTSUP;
+  }
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
   uint64_t adreno_usage = info.usage;
   // If gralloc disables UBWC based on any of the checks,

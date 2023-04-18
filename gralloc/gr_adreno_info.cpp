@@ -27,12 +27,17 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <log/log.h>
 #include <cutils/properties.h>
 #include <dlfcn.h>
 #include <mutex>
+#include <fstream>
 
 #include "gr_adreno_info.h"
 #include "gr_utils.h"
@@ -41,10 +46,12 @@
 
 using std::lock_guard;
 using std::mutex;
+using std::fstream;
 
 namespace gralloc {
 
 AdrenoMemInfo *AdrenoMemInfo::s_instance = nullptr;
+char kgsl_path[] = "/dev/kgsl-3d0";
 
 AdrenoMemInfo *AdrenoMemInfo::GetInstance() {
   static mutex s_lock;
@@ -57,6 +64,18 @@ AdrenoMemInfo *AdrenoMemInfo::GetInstance() {
 }
 
 AdrenoMemInfo::AdrenoMemInfo() {
+  char property[PROPERTY_VALUE_MAX];
+  property_get(DISABLE_UBWC_PROP, property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+    gfx_ubwc_disable_ = true;
+  }
+
+  fstream fs(kgsl_path, fstream::in);
+  if (!fs.is_open()) {
+    return;
+  }
+
   libadreno_utils_ = ::dlopen("libadreno_utils.so", RTLD_NOW);
   if (libadreno_utils_) {
     *reinterpret_cast<void **>(&LINK_adreno_compute_aligned_width_and_height) =
@@ -79,12 +98,6 @@ AdrenoMemInfo::AdrenoMemInfo() {
         ::dlsym(libadreno_utils_, "adreno_get_aligned_gpu_buffer_size");
   } else {
     ALOGE(" Failed to load libadreno_utils.so");
-  }
-  char property[PROPERTY_VALUE_MAX];
-  property_get(DISABLE_UBWC_PROP, property, "0");
-  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
-      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
-    gfx_ubwc_disable_ = true;
   }
 }
 
