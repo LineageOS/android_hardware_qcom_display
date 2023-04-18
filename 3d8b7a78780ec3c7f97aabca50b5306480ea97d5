@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3d05846a_68b2c4c3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 5
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19252
+      },
+      "writtenOn": "2023-04-18T22:00:53Z",
+      "side": 1,
+      "message": "still fine on dubai using tundra blobs and sony sm8350 SDM blobs on top",
+      "revId": "3d8b7a78780ec3c7f97aabca50b5306480ea97d5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
