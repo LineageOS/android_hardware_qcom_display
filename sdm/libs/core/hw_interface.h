@@ -177,6 +177,7 @@ class HWInterface {
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) = 0;
   virtual DisplayError TeardownConcurrentWriteback(void) = 0;
+  virtual DisplayError CancelDeferredPowerMode() = 0;
 
  protected:
   virtual ~HWInterface() { }
