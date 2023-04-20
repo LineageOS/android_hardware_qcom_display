@@ -22,6 +22,12 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 /*! @file layer_stack.h
   @brief File for display layer stack structure which represents a drawing buffer.
 
@@ -501,6 +507,8 @@ struct Layer {
   uint64_t layer_id = 0;                           //!< A Unique Layer Id which will persist across
                                                    //!< frames until layer gets removed from stack,
                                                    //!< if LayerStackFlag layer_id_support is True.
+
+  std::string layer_name = "";                     //!< Layer full name
 };
 
 /*! @brief This structure defines the color space + transfer of a given layer.

@@ -30,7 +30,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -67,9 +67,11 @@
 #define __GR_UTILS_H__
 
 #include <android/hardware/graphics/common/1.2/types.h>
-
+#include <gralloctypes/Gralloc4.h>
 #include <limits>
+#include <vector>
 
+#include "QtiGrallocPriv.h"
 #include "gralloc_priv.h"
 #include "qdMetaData.h"
 
@@ -270,6 +272,18 @@ bool HasAlphaComponent(int32_t format);
 void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
                   uint64_t *drm_format_modifier);
 bool CanAllocateZSLForSecureCamera();
+
+uint64_t GetMetaDataSize(uint64_t reserved_region_size);
+void UnmapAndReset(private_handle_t *handle, uint64_t reserved_region_size = 0);
+int ValidateAndMap(private_handle_t *handle, uint64_t reserved_region_size = 0);
+Error GetColorSpaceFromColorMetaData(ColorMetaData color_metadata, uint32_t *color_space);
+Error GetMetaDataByReference(void *buffer, int64_t type, void **out);
+Error GetMetaDataValue(void *buffer, int64_t type, void *in);
+Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out);
+Error ColorMetadataToDataspace(ColorMetaData color_metadata,
+                               aidl::android::hardware::graphics::common::Dataspace *dataspace);
+Error GetPlaneLayout(private_handle_t *handle,
+                     std::vector<aidl::android::hardware::graphics::common::PlaneLayout> *out);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__
