@@ -565,6 +565,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   DisplayError err = hw_intf_->SetPanelBrightness(level);
   if (err == kErrorNone) {
     level_remainder_ = level_remainder;
+    pending_brightness_ = false;
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
   } else if (err == kErrorDeferred) {
