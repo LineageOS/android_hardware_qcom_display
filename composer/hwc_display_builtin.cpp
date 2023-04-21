@@ -1100,7 +1100,6 @@ void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_
 void HWCDisplayBuiltIn::HandleFrameOutput() {
   if (readback_buffer_queued_) {
     DLOGV_IF(kTagQDCM, "No pending readback buffer found on the queue.");
-    validated_ = false;
   }
 
   if (frame_capture_buffer_queued_) {
