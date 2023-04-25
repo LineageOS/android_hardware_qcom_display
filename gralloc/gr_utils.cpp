@@ -2735,15 +2735,6 @@ static Error getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &com
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010):
-      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value ||
-          comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value ||
-          comp.type.value == android::gralloc4::PlaneLayoutComponentType_CR.value) {
-        comp.offsetInBits = 0;
-        comp.sizeInBits = 10;
-      } else {
-        return Error::BAD_VALUE;
-      }
-      break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS):
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value ||
           comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value) {
