@@ -2111,7 +2111,7 @@ std::string DisplayBase::Dump() {
     return os.str();
   }
 
-  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
+  std::shared_ptr<LayerBuffer> out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
@@ -3893,7 +3893,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
 
 DisplayError DisplayBase::GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence) {
   ClientLock lock(disp_mutex_);
-  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
+  std::shared_ptr<LayerBuffer> out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer == nullptr) {
     return kErrorNotSupported;
   }

@@ -27,8 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+/* Changes from Qualcomm Innovation Center are provided under the following license:
  *
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -144,17 +143,17 @@ HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf,
   }
 
   native_handle_t *hnd = const_cast<native_handle_t *>(buf);
-  buffer_allocator_->GetWidth(hnd, output_buffer_.width);
-  buffer_allocator_->GetHeight(hnd, output_buffer_.height);
-  buffer_allocator_->GetUnalignedWidth(hnd, output_buffer_.unaligned_width);
-  buffer_allocator_->GetUnalignedHeight(hnd, output_buffer_.unaligned_height);
+  buffer_allocator_->GetWidth(hnd, output_buffer_->width);
+  buffer_allocator_->GetHeight(hnd, output_buffer_->height);
+  buffer_allocator_->GetUnalignedWidth(hnd, output_buffer_->unaligned_width);
+  buffer_allocator_->GetUnalignedHeight(hnd, output_buffer_->unaligned_height);
 
   // Update active dimensions.
   if (qtigralloc::getMetadataState(hnd, android::gralloc4::MetadataType_Crop.value)) {
     int32_t slice_width = 0, slice_height = 0;
     if (!buffer_allocator_->GetBufferGeometry(hnd, slice_width, slice_height)) {
-      output_buffer_.unaligned_width = slice_width;
-      output_buffer_.unaligned_height = slice_height;
+      output_buffer_->unaligned_width = slice_width;
+      output_buffer_->unaligned_height = slice_height;
       // Update buffer width and height.
       int new_aligned_w = 0;
       int new_aligned_h = 0;
@@ -163,8 +162,8 @@ HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf,
       buffer_allocator_->GetAlignedWidthAndHeight(INT(slice_width), INT(slice_height),
                                                   output_handle_format, 0, &new_aligned_w,
                                                   &new_aligned_h);
-      output_buffer_.width = UINT32(new_aligned_w);
-      output_buffer_.height = UINT32(new_aligned_h);
+      output_buffer_->width = UINT32(new_aligned_w);
+      output_buffer_->height = UINT32(new_aligned_h);
       color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeReset, nullptr);
     }
   }
@@ -177,7 +176,7 @@ HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
 
   auto status = HWC2::Error::None;
 
-  if (!output_buffer_.buffer_id) {
+  if (!output_buffer_->buffer_id) {
     return HWC2::Error::NoResources;
   }
 
@@ -185,7 +184,7 @@ HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
     return status;
   }
 
-  layer_stack_.output_buffer = &output_buffer_;
+  layer_stack_.output_buffer = output_buffer_;
 
   // Ensure that blit is initialized.
   // GPU context gets in secure or non-secure mode depending on output buffer provided.
@@ -206,10 +205,10 @@ HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
   LayerBuffer &input_buffer = sdm_layer->input_buffer;
   ctx.src_hnd = reinterpret_cast<const native_handle_t *>(input_buffer.buffer_id);
   ctx.dst_hnd = reinterpret_cast<const native_handle_t *>(output_handle_);
-  ctx.dst_rect = {0, 0, FLOAT(output_buffer_.unaligned_width),
-                  FLOAT(output_buffer_.unaligned_height)};
+  ctx.dst_rect = {0, 0, FLOAT(output_buffer_->unaligned_width),
+                  FLOAT(output_buffer_->unaligned_height)};
   ctx.src_acquire_fence = input_buffer.acquire_fence;
-  ctx.dst_acquire_fence = output_buffer_.acquire_fence;
+  ctx.dst_acquire_fence = output_buffer_->acquire_fence;
 
   color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeBlit, &ctx);
 
@@ -225,7 +224,7 @@ void HWCDisplayVirtualGPU::OnTask(const ColorConvertTaskCode &task_code,
                                   SyncTask<ColorConvertTaskCode>::TaskContext *task_context) {
   switch (task_code) {
     case ColorConvertTaskCode::kCodeGetInstance: {
-        gl_color_convert_ = GLColorConvert::GetInstance(kTargetYUV, output_buffer_.flags.secure);
+        gl_color_convert_ = GLColorConvert::GetInstance(kTargetYUV, output_buffer_->flags.secure);
       }
       break;
     case ColorConvertTaskCode::kCodeBlit: {

@@ -1776,7 +1776,7 @@ std::string DisplayBuiltIn::Dump() {
     return os.str();
   }
 
-  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
+  std::shared_ptr<LayerBuffer> out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
