@@ -63,8 +63,9 @@ case "$target" in
     #SOC ID for Kalama is 519
     #SOC ID for Kalama SG36 is 600
     #SOC ID for Kalama SG p is 601
+    #SOC ID for Kalama APQ 536
     case "$soc_hwid" in
-       519|600|601|603|604)
+       519|600|601|603|604|536)
         #Set property for kalama
         #SOC ID for QCS Kalama is 603
         #SOC ID for QCM Kalama is 604
