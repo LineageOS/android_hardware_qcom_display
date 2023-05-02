@@ -30,11 +30,12 @@ DisplayError HWInfoDefault::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo 
 
 DisplayError HWInfoDefault::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
   HWDisplayInfo hw_info = {};
+
   hw_info.display_type = kBuiltIn;
-  hw_info.is_connected = 1;
-  hw_info.is_primary = 1;
-  hw_info.is_wb_ubwc_supported = 0;
-  hw_info.display_id = 1;
+  hw_info.is_connected = true;
+  hw_info.is_primary = true;
+  hw_info.is_wb_ubwc_supported = false;
+  hw_info.display_id = 0;
   (*hw_displays_info)[hw_info.display_id] = hw_info;
   DLOGI("display: %4d-%d, connected: %s, primary: %s", hw_info.display_id, hw_info.display_type,
         hw_info.is_connected ? "true" : "false", hw_info.is_primary ? "true" : "false");

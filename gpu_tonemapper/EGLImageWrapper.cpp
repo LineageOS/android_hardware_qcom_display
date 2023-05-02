@@ -4,8 +4,6 @@
  *
  * Copyright 2015 The Android Open Source Project
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +15,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "EGLImageWrapper.h"
@@ -128,7 +133,7 @@ static EGLImageBuffer *L_wrap(const private_handle_t *src)
   CropRectangle_t crop;
   if (gralloc::GetMetaDataValue(const_cast<private_handle_t *>(src),
                                 (int64_t)StandardMetadataType::CROP,
-                                &crop) != gralloc::Error::NONE) {
+                                &crop) == gralloc::Error::NONE) {
     unaligned_width = crop.right;
     unaligned_height = crop.bottom;
     uint32_t aligned_height = 0;
