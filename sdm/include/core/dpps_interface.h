@@ -27,13 +27,18 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __DPPS_INTERFACE_H__
 #define __DPPS_INTERFACE_H__
 
 #include <core/sdm_types.h>
-#if !defined(LINUX_COMPILE) && !defined(WIN32) && !defined(_WIN64) && !defined(__APPLE__)
 #include <core/display_interface.h>
-#endif
 #include <color_metadata.h>
 
 #include <string>
@@ -95,7 +100,8 @@ class DppsPropIntf {
 
 class DppsInterface {
  public:
-  virtual int Init(DppsPropIntf* intf, const std::string &panel_name) = 0;
+  virtual int Init(DppsPropIntf *intf, const std::string &panel_name,
+                   DisplayInterface *display_intf) = 0;
   virtual int Deinit() = 0;
   virtual int DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) = 0;
 
@@ -105,9 +111,11 @@ class DppsInterface {
 
 class DppsDummyImpl : public DppsInterface {
  public:
-  int Init(DppsPropIntf* intf, const std::string &panel_name) {
+  int Init(DppsPropIntf *intf, const std::string &panel_name,
+           DisplayInterface *display_intf = nullptr) {
     (void)intf;
     (void)panel_name;
+    (void)display_intf;
     return 0;
   }
   int Deinit() {
