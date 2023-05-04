@@ -69,6 +69,9 @@ else
     soc_hwid=`cat /sys/devices/system/soc/soc0/id`
 fi
 
+#Set default value for properties common to all targets
+setprop vendor.display.supports_background_blur 1
+
 case "$target" in
     "taro")
     #Set property to differentiate Taro
@@ -141,6 +144,7 @@ case "$target" in
         setprop vendor.display.secure_preview_buffer_format 420_sp
         setprop vendor.gralloc.secure_preview_buffer_format 420_sp
         setprop vendor.display.disable_non_wfd_vds 1
+        setprop vendor.display.supports_background_blur 0
         ;;
         568|602)
         # Set property for Ravelin
@@ -163,6 +167,7 @@ case "$target" in
         setprop vendor.display.enable_rotator_concurrency 1
         setprop vendor.display.disable_offline_rotator 0
         setprop vendor.display.disable_rotator_ubwc 1
+        setprop vendor.display.supports_background_blur 0
         ;;
         581|582)
         # Set property for Montague
@@ -185,6 +190,7 @@ case "$target" in
         setprop vendor.display.enable_rotator_concurrency 1
         setprop vendor.display.disable_offline_rotator 0
         setprop vendor.display.disable_rotator_ubwc 1
+        setprop vendor.display.supports_background_blur 0
         ;;
     esac
     ;;
