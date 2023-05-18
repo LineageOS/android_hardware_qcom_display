@@ -451,6 +451,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool async_powermode_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};  // +1 to account for primary.
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
+  bool override_doze_mode_ = false;
 };
 
 }  // namespace sdm
