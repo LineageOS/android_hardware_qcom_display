@@ -124,6 +124,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual bool IsSmartPanelConfig(uint32_t config_id);
+  virtual bool HasOverridenDozeMode(void) {
+    return override_doze_mode_;
+  }
   virtual bool HasSmartPanelConfig(void);
   virtual int Deinit();
   virtual int PostInit();
@@ -217,6 +220,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool disable_dyn_fps_ = false;
   bool enable_round_corner_ = false;
   bool enhance_idle_time_ = false;
+  bool override_doze_mode_ = false;
   shared_ptr<Fence> retire_fence_ = nullptr;
   std::unordered_map<int32_t, int32_t> mixed_mode_threshold_;
   int alternate_config_ = -1;

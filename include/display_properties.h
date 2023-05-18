@@ -201,6 +201,7 @@
 #define TRACK_INPUT_FENCES                   DISPLAY_PROP("track_input_fences")
 #define ENABLE_ROTATOR_CONCURRENCY           DISPLAY_PROP("enable_rotator_concurrency")
 #define FORCE_GPU_COMPOSITION                DISPLAY_PROP("force_gpu_composition")
+#define OVERRIDE_DOZE_MODE_PROP              DISPLAY_PROP("override_doze_mode")
 
 // Add all other.properties above
 // End of property
