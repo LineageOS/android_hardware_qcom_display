@@ -201,6 +201,11 @@ int HWCDisplayBuiltIn::Init() {
   DebugHandler::Get()->GetProperty(ENABLE_ROUNDED_CORNER, &value);
   enable_round_corner_ = (value == 1);
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(OVERRIDE_DOZE_MODE_PROP, &value);
+  override_doze_mode_ = (value == 1);
+  DLOGI("override_doze_mode: %d", override_doze_mode_);
+
   uint32_t config_index = 0;
   GetActiveDisplayConfig(&config_index);
   DisplayConfigVariableInfo attr = {};
@@ -1609,6 +1614,10 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
   }
 
   return HWC2::Error::None;
+}
+
+bool HWCDisplayBuiltIn::HasOverridenDozeMode(void) {
+  return override_doze_mode_;
 }
 
 bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
