@@ -1153,7 +1153,13 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
     return HWC2_ERROR_NONE;
   }
 
-  *out_support = hwc_session->hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
+  int value = 0;
+  bool override_doze_mode = false;
+  if (Debug::Get()->GetProperty(OVERRIDE_DOZE_MODE_PROP, &value) == kErrorNone) {
+    override_doze_mode = (value == 1);
+  }
+
+  *out_support = hwc_session->hwc_display_[display]->HasSmartPanelConfig() || override_doze_mode ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }
