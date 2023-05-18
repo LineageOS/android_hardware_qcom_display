@@ -186,6 +186,10 @@ int HWCDisplayBuiltIn::Init() {
     SetVsyncsApplyRateChange(UINT32(vsyncs));
   }
 
+  value = 0;
+  HWCDebugHandler::Get()->GetProperty(OVERRIDE_DOZE_MODE_PROP, &value);
+  override_doze_mode_ = (value == 1);
+
   pmic_intf_ = new PMICInterface();
   pmic_intf_->Init();
 
@@ -1058,6 +1062,10 @@ bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
 }
 
 bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
+  if (override_doze_mode_) {
+    return true;
+  }
+
   if (!enable_poms_during_doze_) {
     uint32_t config = 0;
     GetActiveDisplayConfig(&config);

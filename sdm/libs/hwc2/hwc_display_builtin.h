@@ -159,6 +159,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   // PMIC interface to notify secure display start/end
   PMICInterface *pmic_intf_ = nullptr;
   bool pmic_notification_pending_ = false;
+
+  bool override_doze_mode_ = false;
 };
 
 }  // namespace sdm
