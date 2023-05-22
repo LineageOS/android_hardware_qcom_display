@@ -79,7 +79,9 @@ class DisplayNull : public DisplayInterface {
   virtual void FlushConcurrentWriteback() {}
   virtual void ScreenRefresh() { }
   virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
-  virtual void Abort() {};
+  virtual void Abort() {}
+  virtual DisplayError GetDisplayId(int32_t *display_id);
+  virtual DisplayError GetDisplayType(DisplayType *display_type);
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))
@@ -120,8 +122,6 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetMixerResolution(uint32_t, uint32_t))
   MAKE_NO_OP(SetDetailEnhancerData(const DisplayDetailEnhancerData &))
   MAKE_NO_OP(GetDisplayPort(DisplayPort *))
-  MAKE_NO_OP(GetDisplayId(int32_t *))
-  MAKE_NO_OP(GetDisplayType(DisplayType *))
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))

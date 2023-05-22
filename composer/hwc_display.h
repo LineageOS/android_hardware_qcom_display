@@ -41,7 +41,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "display_null.h"
 #include "histogram_collector.h"
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
@@ -654,7 +653,6 @@ class HWCDisplay : public DisplayEventHandler {
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
-  int null_display_mode_ = 0;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   shared_ptr<Fence> release_fence_ = nullptr;
   hwc2_config_t pending_config_index_ = 0;

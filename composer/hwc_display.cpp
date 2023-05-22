@@ -488,25 +488,15 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
-  HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
-
-  if (null_display_mode_) {
-    DisplayNull *disp_null = new DisplayNull();
-    disp_null->Init();
-    layer_stack_.flags.use_metadata_refresh_rate = false;
-    display_intf_ = disp_null;
-    DLOGI("Enabling null display mode for display type %d", type_);
-  } else {
-    error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
-    if (error != kErrorNone) {
-      if (kErrorDeviceRemoved == error) {
-        DLOGW("Display creation cancelled. Display %d-%d removed.", sdm_id_, type_);
-        return -ENODEV;
-      } else {
-        DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
-              error, sdm_id_, this, &display_intf_);
-        return -EINVAL;
-      }
+  error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
+  if (error != kErrorNone) {
+    if (kErrorDeviceRemoved == error) {
+      DLOGW("Display creation cancelled. Display %d-%d removed.", sdm_id_, type_);
+      return -ENODEV;
+    } else {
+      DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+            error, sdm_id_, this, display_intf_);
+      return -EINVAL;
     }
   }
 
@@ -593,24 +583,20 @@ void HWCDisplay::UpdateConfigs() {
 }
 
 int HWCDisplay::Deinit() {
-  if (null_display_mode_) {
-    delete static_cast<DisplayNull *>(display_intf_);
-    display_intf_ = nullptr;
-  } else {
-    {
-      std::lock_guard<std::mutex> lock(cwb_state_lock_);
-      if (cwb_state_.cwb_disp_id == id_) {
-        // If CWB is requested or configured or tearing-down on disp id_,
-        // then flush cwb setup before the display is deleted.
-        ResetCwbState();
-        display_intf_->FlushConcurrentWriteback();
-      }
-    }  // releasing the cwb state lock
-    DisplayError error = core_intf_->DestroyDisplay(display_intf_);
-    if (error != kErrorNone) {
-      DLOGE("Display destroy failed. Error = %d", error);
-      return -EINVAL;
+
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (cwb_state_.cwb_disp_id == id_) {
+      // If CWB is requested or configured or tearing-down on disp id_,
+      // then flush cwb setup before the display is deleted.
+      ResetCwbState();
+      display_intf_->FlushConcurrentWriteback();
     }
+  }  // releasing the cwb state lock
+  DisplayError error = core_intf_->DestroyDisplay(display_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Display destroy failed. Error = %d", error);
+    return -EINVAL;
   }
 
   delete client_target_;

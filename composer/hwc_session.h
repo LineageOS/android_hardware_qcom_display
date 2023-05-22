@@ -494,7 +494,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   void ResetPanel();
   void InitSupportedDisplaySlots();
-  void InitSupportedNullDisplaySlots();
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
   int HandleBuiltInDisplays();
@@ -631,7 +630,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   static bool pending_power_mode_[HWCCallbacks::kNumDisplays];
-  static int null_display_mode_;
   HotPlugEvent pending_hotplug_event_ = kHotPlugNone;
   hwc2_display_t virtual_id_ = HWCCallbacks::kNumDisplays;
   Locker pluggable_handler_lock_;

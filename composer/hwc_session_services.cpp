@@ -526,10 +526,6 @@ int HWCSession::DisplayConfigImpl::GetHDRCapabilities(DispType dpy,
 }
 
 int HWCSession::SetCameraLaunchStatus(uint32_t on) {
-  if (null_display_mode_) {
-    return 0;
-  }
-
   if (!core_intf_) {
     DLOGW("core_intf_ not initialized.");
     return -ENOENT;

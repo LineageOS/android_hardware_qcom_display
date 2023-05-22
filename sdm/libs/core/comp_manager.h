@@ -117,6 +117,7 @@ class CompManager {
   DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError GetDefaultQosData(Handle display_ctx, HWQosData *qos_data);
   DisplayError HandleCwbFrequencyBoost(bool isRequest);
+  bool IsDisplayHWAvailable();
 
  private:
   static const int kMaxThermalLevel = 3;
