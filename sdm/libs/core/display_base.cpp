@@ -4215,9 +4215,11 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
 
 /* this func is called by DC dimming feature only after PCC updates */
 void DisplayBase::ScreenRefresh() {
-  ClientLock lock(disp_mutex_);
-  /* do not skip validate */
-  validated_ = false;
+  {
+    ClientLock lock(disp_mutex_);
+    /* do not skip validate */
+    validated_ = false;
+  }
   event_handler_->Refresh();
 }
 
