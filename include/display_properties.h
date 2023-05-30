@@ -199,6 +199,7 @@
 #define WAIT_FOR_PRIMARY_DISPLAY             DISPLAY_PROP("wait_for_primary_display")
 #define TRACK_INPUT_FENCES                   DISPLAY_PROP("track_input_fences")
 #define ENABLE_ROTATOR_CONCURRENCY           DISPLAY_PROP("enable_rotator_concurrency")
+#define FORCE_GPU_COMPOSITION                DISPLAY_PROP("force_gpu_composition")
 
 // Add all other.properties above
 // End of property

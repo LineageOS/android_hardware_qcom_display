@@ -163,6 +163,7 @@ class CompManager {
   bool demura_enabled_ = false;
   std::map<int32_t /* display_id */, bool> display_demura_status_;
   SecureEvent secure_event_ = kSecureEventMax;
+  bool force_gpu_comp_ = false;
 };
 
 }  // namespace sdm
