@@ -4162,15 +4162,22 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
   }
 
   std::bitset<kSecureMax> secure_sessions = 0;
+  HWC2::PowerMode current_power_mode = HWC2::PowerMode::Off;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
       hwc_display_[target_display]->GetActiveSecureSession(&secure_sessions);
+      current_power_mode = hwc_display_[target_display]->GetCurrentPowerMode();
     }
   }
 
   if (secure_sessions[kSecureCamera]) {
     DLOGW("TUI session not allowed during ongoing Secure Camera session");
+    return -ENOTSUP;
+  }
+
+  if (current_power_mode != HWC2::PowerMode::On) {
+    DLOGW("TUI session not allowed as target display is not powered On");
     return -ENOTSUP;
   }
 
