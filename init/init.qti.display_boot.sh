@@ -88,7 +88,12 @@ case "$target" in
             setprop vendor.display.disable_system_load_check 1
         fi
         ;;
-        608)
+    esac
+    ;;
+    "crow")
+    #SOC ID for Crow is 608
+    case "$soc_hwid" in
+       608)
         #SOC ID for Crow is 608
         setprop vendor.display.enable_fb_scaling 0
         setprop vendor.display.target.version 4
