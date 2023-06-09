@@ -27,8 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+/* Changes from Qualcomm Innovation Center are provided under the following license:
  *
  * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -114,7 +113,7 @@ class HWDeviceDRM : public HWInterface {
                                 int64_t *release_fence_fd);
   DisplayError TeardownConcurrentWriteback(void);
   void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
-  void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
+  void PostCommitConcurrentWriteback(std::shared_ptr<LayerBuffer> output_buffer);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeature(PPFeatureInfo *feature);
   // This API is no longer supported, expectation is to call the correct API on HWEvents
@@ -262,7 +261,7 @@ class HWDeviceDRM : public HWInterface {
     // Find handle_id in the layer map. Else create fb_id and add <handle_id,fb_id> in map.
     void MapBufferToFbId(Layer* layer, const LayerBuffer &buffer);
     // Find handle_id in output buffer map. Else create fb_id and add <handle_id,fb_id> in map.
-    void MapOutputBufferToFbId(LayerBuffer* buffer);
+    void MapOutputBufferToFbId(std::shared_ptr<LayerBuffer> buffer);
     // Find fb_id for given handle_id in the layer map.
     uint32_t GetFbId(Layer *layer, uint64_t handle_id);
     // Find fb_id for given handle_id in output buffer map.
