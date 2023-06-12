@@ -181,10 +181,6 @@ HWC2::Error HWCDisplayPluggable::PostCommitLayerStack(shared_ptr<Fence> *out_ret
   auto status = HWC2::Error::None;
 
   HandleFrameOutput();
-
-  if (flush_ && layer_stack_.output_buffer == nullptr) {
-    display_intf_->FlushConcurrentWriteback();
-  }
   status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 
   return status;
