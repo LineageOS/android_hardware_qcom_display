@@ -1386,10 +1386,6 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retir
   HandleFrameOutput();
   PostCommitStitchLayers();
 
-  if (flush_ && layer_stack_.output_buffer == nullptr) {
-    display_intf_->FlushConcurrentWriteback();
-  }
-
   auto status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 /*  display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;
