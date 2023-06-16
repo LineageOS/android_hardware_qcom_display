@@ -307,6 +307,11 @@ enum InlineRotationVersion {
   kInlineRotationV2,
 };
 
+enum DDRVersion {
+  kDDRVersion4,
+  kDDRVersion5,
+};
+
 struct InlineRotationInfo {
   InlineRotationVersion inrot_version = kInlineRotationNone;
   std::vector<LayerBufferFormat> inrot_fmts_supported;
@@ -393,6 +398,7 @@ struct HWResourceInfo {
   bool skip_inline_rot_threshold = false;
   bool has_noise_layer = false;
   uint32_t dsc_block_count = 0;
+  DDRVersion ddr_version = kDDRVersion5;
 };
 
 struct HWSplitInfo {
