@@ -22,6 +22,7 @@ cc_library_shared {
         "-Wall",
         "-std=c++11",
         "-Werror",
+        "-Wno-format",
         "-fno-operator-names",
     ],
     clang: true,

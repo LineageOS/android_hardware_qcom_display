@@ -21,6 +21,7 @@ cc_library_shared {
 
     cflags: [
         "-DLOG_TAG=\"qdhdmi_cec\"",
+        "-Wno-format",
         "-Wno-sign-conversion",
     ],
     clang: true,

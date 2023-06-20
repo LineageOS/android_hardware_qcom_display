@@ -38,6 +38,7 @@ cc_library_shared {
         "-Werror",
         "-fno-operator-names",
         "-Wthread-safety",
+        "-Wno-format",
     ],
     clang: true,
     srcs: [
