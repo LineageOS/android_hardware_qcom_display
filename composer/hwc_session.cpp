@@ -3025,33 +3025,30 @@ bool HWCSession::IsHWDisplayConnected(hwc2_display_t client_id) {
 }
 
 int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
+  SCOPE_LOCK(pluggable_handler_lock_);
   HWDisplaysInfo hw_displays_info = {};
-  {
-    SCOPE_LOCK(pluggable_handler_lock_);
+  hwc2_display_t virtual_display_index =
+      (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  std::bitset<kSecureMax> secure_sessions = 0;
 
-    hwc2_display_t virtual_display_index =
-        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-    std::bitset<kSecureMax> secure_sessions = 0;
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
+    Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
+    hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+  }
 
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-      Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
-      hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
-    }
+  if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
+    // Defer hotplug handling.
+    DLOGI("Marking hotplug pending...");
+    pending_hotplug_event_ = kHotPlugEvent;
+    return -EAGAIN;
+  }
 
-    if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
-      // Defer hotplug handling.
-      DLOGI("Marking hotplug pending...");
-      pending_hotplug_event_ = kHotPlugEvent;
-      return -EAGAIN;
-    }
-
-    DLOGI("Handling hotplug...");
-    DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
-    if (error != kErrorNone) {
-      DLOGE("Failed to get connected display list. Error = %d", error);
-      return -EINVAL;
-    }
+  DLOGI("Handling hotplug...");
+  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    DLOGE("Failed to get connected display list. Error = %d", error);
+    return -EINVAL;
   }
 
   int status = HandleDisconnectedDisplays(&hw_displays_info);
