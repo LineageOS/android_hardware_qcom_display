@@ -12,6 +12,7 @@ cc_library_shared {
         "-DLOG_TAG=\"SDM\"",
         "-Wall",
         "-Werror",
+        "-Wno-format",
         "-fno-operator-names",
     ],
     export_include_dirs: ["."],
