@@ -25,6 +25,7 @@ cc_library_shared {
         "-DLOG_TAG=\"qdgralloc\"",
         "-D__QTI_DISPLAY_GRALLOC__",
         "-Wno-sign-conversion",
+        "-Wno-format",
         "-Wno-unused-parameter",
         "-Wno-unused-variable",
     ],
@@ -66,6 +67,7 @@ cc_library_shared {
     cflags: [
         "-DLOG_TAG=\"qdgralloc\"",
         "-D__QTI_DISPLAY_GRALLOC__",
+        "-Wno-format",
         "-Wno-sign-conversion",
         "-Wno-unused-parameter",
     ],
@@ -83,6 +85,7 @@ cc_library_shared {
     name: "libgralloc.qti",
     vendor: true,
     cflags: [
+        "-Wno-format",
         "-Wno-sign-conversion",
         "-DLOG_TAG=\"qtigralloc\"",
         "-D__QTI_DISPLAY_GRALLOC__",
