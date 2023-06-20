@@ -7,6 +7,7 @@ cc_library_shared {
     vendor: true,
     cflags: [
         "-fno-operator-names",
+        "-Wno-format",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDM\"",
     ],
