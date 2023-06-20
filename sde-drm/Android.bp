@@ -20,6 +20,7 @@ cc_library_shared {
         "-Wall",
         "-Werror",
         "-fno-operator-names",
+        "-Wno-format",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDE_DRM\"",
     ],
