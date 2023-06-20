@@ -22,6 +22,7 @@ cc_library_shared {
         "-Wno-missing-field-initializers",
         "-Wall",
         "-Wno-unused-parameter",
+        "-Wno-format",
         "-DLOG_TAG=\"GPU_TONEMAPPER\"",
         "-DTARGET_ION_ABI_VERSION=2",
     ],
