@@ -13,6 +13,7 @@ cc_library_shared {
         "-Wno-format",
         "-Wall",
         "-fcolor-diagnostics",
+        "-Wno-format",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDM\"",
     ],
