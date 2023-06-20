@@ -2,6 +2,7 @@ cc_library_shared {
     name: "libdisplayconfig.qti",
     vendor: true,
     cflags: [
+        "-Wno-format",
         "-Wno-sign-conversion",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"libdisplayconfigqti\"",
