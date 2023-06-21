@@ -472,7 +472,7 @@ class DisplayEventHandler {
   virtual void MMRMEvent(bool restricted) = 0;
 
   /*! @brief Event handler for sending status of Qsync */
-  virtual DisplayError HandleQsyncState(const QsyncEventData &event_data) { return kErrorNone; }
+  virtual DisplayError HandleQsyncState(const QsyncEventData &) { return kErrorNone; }
 
   /*! @brief Event handler for sending concurrency fps */
   virtual DisplayError NotifyFpsMitigation(const float fps, DisplayConcurrencyType concurrency,
