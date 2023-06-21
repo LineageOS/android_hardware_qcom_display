@@ -463,7 +463,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   }
   buffer_flipped_ = reinterpret_cast<uint64_t>(handle) != layer_buffer->buffer_id;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
-  int64_t hd_id, hd_usage;
+  [[maybe_unused]] int64_t hd_id, hd_usage;
   err = gralloc::GetMetaDataValue(hnd, (int64_t)StandardMetadataType::BUFFER_ID,
                                   &layer_buffer->handle_id);
   if (err != gralloc::Error::NONE) {
