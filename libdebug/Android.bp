@@ -13,6 +13,7 @@ cc_library_shared {
         "-Wall",
         "-Werror",
         "-Wno-format",
+        "-Wno-unused-parameter",
         "-fno-operator-names",
     ],
     export_include_dirs: ["."],
