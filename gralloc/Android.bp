@@ -74,6 +74,7 @@ cc_library_shared {
         "-Wno-format",
         "-Wno-sign-conversion",
         "-Wno-unused-parameter",
+        "-Wno-unused-variable",
     ],
     srcs: [
         "gr_allocator.cpp",
@@ -91,6 +92,7 @@ cc_library_shared {
     cflags: [
         "-Wno-format",
         "-Wno-sign-conversion",
+        "-Wno-unused-variable",
         "-DLOG_TAG=\"qtigralloc\"",
     ],
     shared_libs: [
