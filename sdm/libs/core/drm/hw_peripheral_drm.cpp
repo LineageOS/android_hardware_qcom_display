@@ -517,6 +517,11 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
                                                int64_t *release_fence_fd) {
   bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.stack->output_buffer;
   if (!(enable || cwb_config_.enabled)) {
+    if (cwb_cached_conn_id_ > 0 && !validate) {
+      DLOGI("Actual Tear down CWB");
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_cached_conn_id_, 0);
+      cwb_cached_conn_id_ = 0;
+    }
     return false;
   }
 
@@ -549,8 +554,8 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
 DisplayError HWPeripheralDRM::TeardownConcurrentWriteback(void) {
   if (cwb_config_.enabled) {
     // Tear down the Concurrent Writeback topology.
-    DLOGI("Tear down the Concurrent Writeback topology");
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    DLOGI("Cache CWB conn id to Tear down the Concurrent Writeback topology");
+    cwb_cached_conn_id_ = cwb_config_.token.conn_id;
     drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
     cwb_config_.enabled = false;
     registry_.Clear();
