@@ -30,7 +30,7 @@
 
 # Changes from Qualcomm Innovation Center are provided under the following license:
 #
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted (subject to the limitations in the
@@ -132,10 +132,11 @@ case "$target" in
         setprop vendor.display.enable_allow_idle_fallback 1
         setprop vendor.display.enable_rc_support 1
         ;;
-        507|565|578)
+        507|565|578|628)
         # Set property for blair
         # SOC ID for blair APQ is 565
         # SOC Id for Blair Lite is 578
+        # SOC ID for Strait APQ is 628
         setprop vendor.display.target.version 3
         setprop vendor.display.disable_offline_rotator 0
         setprop vendor.display.disable_rotator_ubwc 1
