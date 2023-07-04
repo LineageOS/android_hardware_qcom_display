@@ -27,6 +27,13 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <drm.h>
@@ -454,6 +461,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string dspp_count = "dspp_count=";
   string skip_inline_rot_threshold="skip_inline_rot_threshold=";
   string dsc_block_count = "dsc_block_count=";
+  string ddr_version = "DDR version=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -584,6 +592,12 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
         std::stoi(string(line, skip_inline_rot_threshold.length()));
     } else if (line.find(dsc_block_count) != string::npos) {
       crtc_info_.dsc_block_count = std::stoi(string(line, dsc_block_count.length()));
+    } else if (line.find(ddr_version) != string::npos) {
+      if (string(line, ddr_version.length()) == "DDR4") {
+        crtc_info_.ddr_version = DDRVersion::kDDRVersion4;
+      } else if(string(line, ddr_version.length()) == "DDR5") {
+        crtc_info_.ddr_version = DDRVersion::kDDRVersion5;
+        }
     }
   }
   drmModeFreePropertyBlob(blob);
