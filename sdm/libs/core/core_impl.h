@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018, 2020, 2021 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018, 2020-2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -25,37 +25,8 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef __CORE_IMPL_H__
@@ -129,7 +100,9 @@ class CoreImpl : public CoreInterface {
                                      DisplayInterface **intf);
   virtual DisplayError CreateDisplay(int32_t display_id, DisplayEventHandler *event_handler,
                                      DisplayInterface **intf);
+  virtual DisplayError CreateNullDisplay(DisplayInterface **intf);
   virtual DisplayError DestroyDisplay(DisplayInterface *intf);
+  virtual DisplayError DestroyNullDisplay(DisplayInterface *intf);
   virtual DisplayError SetMaxBandwidthMode(HWBwModes mode);
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
   virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info);
@@ -141,6 +114,8 @@ class CoreImpl : public CoreInterface {
   void InitializeSDMUtils();
   void ReleaseDemuraResources();
   void OverRideDemuraPanelIds(std::vector<uint64_t> *panel_ids);
+  DisplayError CreateNullDisplayLocked(DisplayInterface **intf);
+  DisplayError HandleNullDisplay();
 
   Locker locker_;
   BufferAllocator *buffer_allocator_ = NULL;
@@ -159,9 +134,10 @@ class CoreImpl : public CoreInterface {
   CoreIPCVmCallbackImpl* vm_cb_intf_ = nullptr;
   std::vector<uint64_t> *panel_ids_;
   std::shared_ptr<DemuraParserManagerIntf> pm_intf_ = nullptr;
-  bool reserve_done_  = false;
+  bool reserve_done_ = false;
   char *raw_mapped_buffer_ = nullptr;
   std::vector<uint32_t> demura_display_ids_;
+  bool enable_null_display_ = false;
 };
 
 }  // namespace sdm

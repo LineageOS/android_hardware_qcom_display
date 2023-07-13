@@ -22,6 +22,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __RESOURCE_DEFAULT_H__
 #define __RESOURCE_DEFAULT_H__
 
@@ -94,6 +101,7 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError ForceToneMapConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
     return kErrorNotSupported;
   }
+  virtual bool IsDisplayHWAvailable() { return true; }
 
  private:
   enum PipeOwner {

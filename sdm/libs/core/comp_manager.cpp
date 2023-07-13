@@ -806,6 +806,16 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   return false;
 }
 
+bool CompManager::IsDisplayHWAvailable() {
+  std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
+  if (resource_intf_) {
+    return resource_intf_->IsDisplayHWAvailable();
+  }
+
+  return false;
+}
+
+
 DisplayError CompManager::FreeDemuraFetchResources(const uint32_t &display_id) {
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   return resource_intf_->FreeDemuraFetchResources(display_id);

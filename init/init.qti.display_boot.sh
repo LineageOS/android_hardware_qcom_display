@@ -232,9 +232,9 @@ case "$target" in
             setprop vendor.display.thermal.version 1
             setprop vendor.display.target.version 3
             setprop vendor.display.disable_mitigated_fps 1
-            setprop vendor.display.disable_cwb_idle_fallback 1
             setprop vendor.display.wait_for_primary_display 1
             setprop vendor.display.force_gpu_composition 1
+            setprop vendor.display.enable_rounded_corner 0
         ;;
     esac
     ;;

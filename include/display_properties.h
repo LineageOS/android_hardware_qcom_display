@@ -66,6 +66,7 @@
 #define DISABLE_PARTIAL_SPLIT_PROP           DISPLAY_PROP("disable_partial_split")
 #define PREFER_SOURCE_SPLIT_PROP             DISPLAY_PROP("prefer_source_split")
 #define MIXER_RESOLUTION_PROP                DISPLAY_PROP("mixer_resolution")
+#define NULL_DISPLAY_RESOLUTION_PROP         DISPLAY_PROP("null_display_resolution")
 #define SIMULATED_CONFIG_PROP                DISPLAY_PROP("simulated_config")
 #define MAX_SECONDARY_FETCH_LAYERS_PROP      DISPLAY_PROP("max_secondary_fetch_layers")
 #define ENABLE_EXTERNAL_DOWNSCALE_PROP       DISPLAY_PROP("enable_external_downscale")
@@ -116,7 +117,6 @@
 // Disable 3d tonemap support for UI layers
 #define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
 #define QDCM_DISABLE_FACTORY_MODE_PROP       DISPLAY_PROP("qdcm.disable_factory_mode")
-#define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
 #define ENABLE_GPU_TONEMAPPER_PROP           DISPLAY_PROP("enable_gpu_tonemapper")
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
