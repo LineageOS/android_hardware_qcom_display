@@ -87,7 +87,6 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/smomo_setting.xml:$(TARGET_CO
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
     persist.sys.sf.color_saturation=1.0 \
-    persist.sys.sf.color_mode=9 \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
@@ -145,11 +144,13 @@ endif
 ifeq ($(TARGET_BOARD_PLATFORM),parrot)
 PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_hwc_vds=false \
-    vendor.display.vds_allow_hwc=true
+    vendor.display.vds_allow_hwc=true \
+    persist.sys.sf.color_mode=7
 else
 PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_hwc_vds=1 \
-    vendor.display.vds_allow_hwc=0
+    vendor.display.vds_allow_hwc=0 \
+    persist.sys.sf.color_mode=9
 endif
 
 #Set WCG properties
