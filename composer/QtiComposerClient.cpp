@@ -17,6 +17,13 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <vector>
 #include <string>
 
@@ -2105,15 +2112,14 @@ Error QtiComposerClient::CommandReader::lookupBufferCacheEntryLocked(BufferCache
 Error QtiComposerClient::CommandReader::lookupBuffer(BufferCache cache, uint32_t slot,
                                                      bool useCache, buffer_handle_t handle,
                                                      buffer_handle_t* outHandle) {
+  std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
+  BufferCacheEntry* entry;
+  Error error = lookupBufferCacheEntryLocked(cache, slot, &entry);
+  if (error != Error::NONE) {
+    return error;
+  }
+
   if (useCache) {
-    std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
-
-    BufferCacheEntry* entry;
-    Error error = lookupBufferCacheEntryLocked(cache, slot, &entry);
-    if (error != Error::NONE) {
-      return error;
-    }
-
     // input handle is ignored
     *outHandle = entry->getHandle();
   } else if (cache == BufferCache::LAYER_SIDEBAND_STREAMS) {
