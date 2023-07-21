@@ -109,6 +109,7 @@ case "$target" in
         setprop vendor.display.enable_inline_writeback 0
         setprop vendor.display.timed_render_enable 1
         setprop debug.sf.disable_client_composition_cache 0
+        setprop vendor.display.enable_qsync_idle 1
         ;;
     esac
     ;;
