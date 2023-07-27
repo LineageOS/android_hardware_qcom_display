@@ -511,7 +511,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
       case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
-        size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV21, width, height);
+        mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
+                                                                  MMM_COLOR_FMT_NV21;
+        size = MMM_COLOR_FMT_BUFFER_SIZE(mmm_color_format, width, height);
         break;
       case HAL_PIXEL_FORMAT_BLOB:
         if (height != 1) {
@@ -1377,8 +1379,11 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(mmm_color_format, height));
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
-      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
+    case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
+      mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
+                                                                MMM_COLOR_FMT_NV21;
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(mmm_color_format, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(mmm_color_format, height));
       break;
     case HAL_PIXEL_FORMAT_BLOB:
       break;
