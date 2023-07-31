@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f536df21_96edfc6d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 6
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T22:48:40Z",
+      "side": 1,
+      "message": "You need to double check if all of this is needed. Only a few was needed in the sm8550 branch.",
+      "revId": "e06ac8704a09a1198b3f920580b95d1426e9c27e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
