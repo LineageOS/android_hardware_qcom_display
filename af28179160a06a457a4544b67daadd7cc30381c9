@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1234879b_35c0acee",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T22:14:11Z",
+      "side": 1,
+      "message": "Can you verify this commit again? I have updated it on sm8550. Doesn\u0027t make too much sense to do this and then add the -Wno-unused-variables cflag later on.",
+      "revId": "af28179160a06a457a4544b67daadd7cc30381c9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
