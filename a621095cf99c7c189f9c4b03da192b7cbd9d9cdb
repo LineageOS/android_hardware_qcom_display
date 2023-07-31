@@ -16,6 +16,24 @@
       "message": "Already here.",
       "revId": "a621095cf99c7c189f9c4b03da192b7cbd9d9cdb",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0fb8d7bd_d0937fcd",
+        "filename": "oem_services/Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T21:25:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bc58cfe8_25367d2f",
+      "revId": "a621095cf99c7c189f9c4b03da192b7cbd9d9cdb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
