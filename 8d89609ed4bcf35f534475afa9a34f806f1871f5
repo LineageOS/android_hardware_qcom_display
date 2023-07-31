@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "4b4cb515_e43ac5ea",
+        "filename": "gralloc/Android.bp",
+        "patchSetId": 5
+      },
+      "lineNbr": 73,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T22:15:21Z",
+      "side": 1,
+      "message": "Please check.",
+      "revId": "8d89609ed4bcf35f534475afa9a34f806f1871f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "88af2ad2_b7340349",
+        "filename": "gralloc/Android.bp",
+        "patchSetId": 5
+      },
+      "lineNbr": 92,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T22:15:21Z",
+      "side": 1,
+      "message": "This wasn\u0027t needed on sm8550. Double check.",
+      "revId": "8d89609ed4bcf35f534475afa9a34f806f1871f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b654aee8_ac2ca6a3",
+        "filename": "libdebug/Android.bp",
+        "patchSetId": 5
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T22:15:21Z",
+      "side": 1,
+      "message": "Same as sm8550, no needed. Double check.",
+      "revId": "8d89609ed4bcf35f534475afa9a34f806f1871f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "973cfb8a_9259f9e8",
+        "filename": "sdm/libs/utils/Android.bp",
+        "patchSetId": 5
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-07-31T22:15:21Z",
+      "side": 1,
+      "message": "Same as sm8550, no needed. Double check.",
+      "revId": "8d89609ed4bcf35f534475afa9a34f806f1871f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
