@@ -119,6 +119,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "bba2852e_01e38405",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-01T10:45:52Z",
+      "side": 1,
+      "message": "Acknowledged",
+      "parentUuid": "4f6d2f79_b5313321",
+      "range": {
+        "startLine": 15,
+        "startChar": 0,
+        "endLine": 15,
+        "endChar": 13
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b39d254c_01d0d35e",
