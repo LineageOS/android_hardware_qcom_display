@@ -3,6 +3,29 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "b39d254c_01d0d35e",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 18590
+      },
+      "writtenOn": "2023-08-01T01:27:05Z",
+      "side": 1,
+      "message": "alias for std::string",
+      "range": {
+        "startLine": 19,
+        "startChar": 27,
+        "endLine": 19,
+        "endChar": 50
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "16b57350_1c054150",
         "filename": "gralloc/vmmem.h",
         "patchSetId": 2
