@@ -24,6 +24,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "050bdf0c_acdb898e",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-08-01T10:36:49Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bad2535f_68c655d8",
+      "range": {
+        "startLine": 11,
+        "startChar": 0,
+        "endLine": 13,
+        "endChar": 21
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b9d6c9cb_cc6ec4e8",
@@ -37,6 +61,30 @@
       "writtenOn": "2023-08-01T08:58:57Z",
       "side": 1,
       "message": "why do we need virtual in these functions?",
+      "range": {
+        "startLine": 15,
+        "startChar": 0,
+        "endLine": 15,
+        "endChar": 13
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "bff2f5b3_6eaa45f6",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-08-01T10:36:49Z",
+      "side": 1,
+      "message": "error: \u0027~VmMem\u0027 is not virtual and cannot be declared pure\n\nAs for the others, I get linkage errors if not virtual.",
+      "parentUuid": "b9d6c9cb_cc6ec4e8",
       "range": {
         "startLine": 15,
         "startChar": 0,
@@ -94,6 +142,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "01110079_fe869334",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-08-01T10:36:49Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "95499e8c_b86afc7d",
+      "range": {
+        "startLine": 19,
+        "startChar": 27,
+        "endLine": 19,
+        "endChar": 50
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "16b57350_1c054150",
@@ -131,6 +203,30 @@
       "side": 1,
       "message": "const VmPerm\u0026",
       "parentUuid": "16b57350_1c054150",
+      "range": {
+        "startLine": 20,
+        "startChar": 33,
+        "endLine": 20,
+        "endChar": 74
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "137ad30b_41e54446",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-08-01T10:36:49Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "a701b8ee_103d1c3c",
       "range": {
         "startLine": 20,
         "startChar": 33,
