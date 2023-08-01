@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "16b57350_1c054150",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 18590
+      },
+      "writtenOn": "2023-08-01T01:26:48Z",
+      "side": 1,
+      "message": "why not just use VmPerm here",
+      "range": {
+        "startLine": 20,
+        "startChar": 33,
+        "endLine": 20,
+        "endChar": 74
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
