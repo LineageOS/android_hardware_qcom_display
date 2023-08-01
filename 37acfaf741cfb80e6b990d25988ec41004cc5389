@@ -3,6 +3,52 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "bad2535f_68c655d8",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-01T08:58:57Z",
+      "side": 1,
+      "message": "using VmHandle \u003d int;\nusing VmPerm \u003d std::vector\u003cstd::pair\u003cVmHandle, unsigned int\u003e\u003e;\n\nI\u0027d expect unsigned int to be something more specific like uint32_t\n\nusing VmPerm \u003d std::vector\u003cstd::pair\u003cVmHandle, uint32_t\u003e\u003e;",
+      "range": {
+        "startLine": 11,
+        "startChar": 0,
+        "endLine": 13,
+        "endChar": 21
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b9d6c9cb_cc6ec4e8",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-01T08:58:57Z",
+      "side": 1,
+      "message": "why do we need virtual in these functions?",
+      "range": {
+        "startLine": 15,
+        "startChar": 0,
+        "endLine": 15,
+        "endChar": 13
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "b39d254c_01d0d35e",
         "filename": "gralloc/vmmem.h",
         "patchSetId": 2
@@ -26,6 +72,30 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "95499e8c_b86afc7d",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-01T08:58:57Z",
+      "side": 1,
+      "message": "let\u0027s make it const std::string\u0026",
+      "parentUuid": "b39d254c_01d0d35e",
+      "range": {
+        "startLine": 19,
+        "startChar": 27,
+        "endLine": 19,
+        "endChar": 50
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "16b57350_1c054150",
         "filename": "gralloc/vmmem.h",
         "patchSetId": 2
@@ -37,6 +107,30 @@
       "writtenOn": "2023-08-01T01:26:48Z",
       "side": 1,
       "message": "why not just use VmPerm here",
+      "range": {
+        "startLine": 20,
+        "startChar": 33,
+        "endLine": 20,
+        "endChar": 74
+      },
+      "revId": "37acfaf741cfb80e6b990d25988ec41004cc5389",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a701b8ee_103d1c3c",
+        "filename": "gralloc/vmmem.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-01T08:58:57Z",
+      "side": 1,
+      "message": "const VmPerm\u0026",
+      "parentUuid": "16b57350_1c054150",
       "range": {
         "startLine": 20,
         "startChar": 33,
