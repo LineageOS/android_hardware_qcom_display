@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e3ef3feb_582fd272",
+        "filename": "composer/hwc_session.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 4023,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-01T09:02:44Z",
+      "side": 0,
+      "message": ":/",
+      "revId": "64945b709079081dcdb03874724e44a5965f6abb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
