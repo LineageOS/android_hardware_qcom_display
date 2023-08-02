@@ -1,7 +1,7 @@
 soong_namespace {
     imports: [
-        "hardware/qcom-caf/sm8350/display",
-        "hardware/qcom-caf/sm8350/display/libdebug",
+        "hardware/qcom-caf/sm8450/display",
+        "hardware/qcom-caf/sm8450/display/libdebug",
     ],
 }
 
