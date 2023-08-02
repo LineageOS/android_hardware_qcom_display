@@ -16,6 +16,24 @@
       "message": "sm8350?",
       "revId": "d789b02e55810a5340e18c178d547627cdbb47d3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "5f47a8e9_cf1d94e3",
+        "filename": "qmaa/Android.bp",
+        "patchSetId": 1
+      },
+      "lineNbr": 4,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-08-02T20:54:33Z",
+      "side": 1,
+      "message": ":/",
+      "parentUuid": "0853b9df_84e29b38",
+      "revId": "d789b02e55810a5340e18c178d547627cdbb47d3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ],
   "submitRequirementResults": []
