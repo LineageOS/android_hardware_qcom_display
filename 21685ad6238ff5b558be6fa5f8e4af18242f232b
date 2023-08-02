@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "bf1a8e2d_7f51dcde",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2023-08-02T20:26:26Z",
+      "side": 1,
+      "message": "I guess that this is what QCOM wanted to do in the first place when they introduced this: https://github.com/LineageOS/android_hardware_qcom_display/commit/4dc072e9cbb9e3399779a6b6106c962d23fc33b0 .",
+      "revId": "21685ad6238ff5b558be6fa5f8e4af18242f232b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
