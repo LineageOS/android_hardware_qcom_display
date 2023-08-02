@@ -911,7 +911,7 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
   auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
 
   void *metadata_ptr = nullptr;
-  Error error = Error::NONE;
+  Error error = GetMetaDataByReference(handle, metadatatype_value, &metadata_ptr);
   switch (metadatatype_value) {
     case (int64_t)StandardMetadataType::BUFFER_ID:
       if (metadata_ptr != nullptr) {
