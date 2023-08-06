@@ -128,7 +128,7 @@ case "$target" in
     ;;
     "parrot")
     case "$soc_hwid" in
-        537 | 583 | 613)
+        537 | 583 | 613 | 631)
         # Set property for Parrot
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
