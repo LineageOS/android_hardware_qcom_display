@@ -1208,6 +1208,15 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     }
   }
 
+  if (tui_start_success_ && is_builtin && is_power_off) {
+    DLOGI("TUI session in progress, defer power state change");
+    SCOPE_LOCK(locker_[display]);
+    if (hwc_display_[display]) {
+      hwc_display_[display]->SetPendingPowerMode(mode);
+      return HWC2_ERROR_NONE;
+    }
+  }
+
   if (secure_session_active_ && is_builtin && is_power_off) {
     if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
       DLOGI("Secure session in progress, defer power state change");
@@ -4271,6 +4280,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     }
   }
 
+  tui_start_success_ = true;
   return 0;
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
@@ -4295,10 +4305,12 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd, &needs_refresh,
                                                           false) != kErrorNone) {
+        tui_start_success_ = false;
         return -EINVAL;
       }
     } else {
       DLOGW("Target display %d is not ready", disp_id);
+      tui_start_success_ = false;
       return -ENODEV;
     }
   }
@@ -4311,6 +4323,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
         DLOGE("Device unassign failed with error %d", ret);
       }
       TUITransitionUnPrepare(disp_id);
+      tui_start_success_ = false;
       return 0;
     }
   }
@@ -4377,6 +4390,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   }
   // Reset tui session state variable.
   DLOGI("End of TUI session on display %d", disp_id);
+  tui_start_success_ = false;
   return 0;
 }
 
