@@ -361,6 +361,11 @@ void HWCSession::InitSupportedDisplaySlots() {
   // Init slots in accordance to h/w capability.
   uint32_t disp_count = UINT32(std::min(max_pluggable, HWCCallbacks::kNumPluggable));
   hwc2_display_t base_id = qdutils::DISPLAY_EXTERNAL;
+  // if external displays are ZERO, then initialize it to 2 as 1 is reserved for external.
+  if (!disp_count) {
+    base_id = qdutils::DISPLAY_BUILTIN_2 - 1;
+  }
+
   map_info_pluggable_.resize(disp_count);
   for (auto &map_info : map_info_pluggable_) {
     map_info.client_id = base_id++;
