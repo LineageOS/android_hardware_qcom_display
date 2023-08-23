@@ -35,6 +35,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "b26003fb_7a8802a8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 6
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 22465
+      },
+      "writtenOn": "2023-08-23T15:13:07Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "7a6f5e2a_85d6681d",
+      "revId": "0da3d80b44cdb6681e59a9318a8e20159094d437",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "c7e51ad9_0b1a3e1e",
@@ -48,6 +66,30 @@
       "writtenOn": "2023-08-23T10:01:57Z",
       "side": 1,
       "message": "override_doze_mode_ ? 1 : 0\ncasting bool to int works, but since they do the same for HasSmartPanelConfig it would be better to follow that as well.",
+      "range": {
+        "startLine": 1161,
+        "startChar": 17,
+        "endLine": 1161,
+        "endChar": 49
+      },
+      "revId": "0da3d80b44cdb6681e59a9318a8e20159094d437",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0437bc68_815e00e4",
+        "filename": "sdm/libs/hwc2/hwc_session.cpp",
+        "patchSetId": 6
+      },
+      "lineNbr": 1161,
+      "author": {
+        "id": 22465
+      },
+      "writtenOn": "2023-08-23T15:13:07Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "c7e51ad9_0b1a3e1e",
       "range": {
         "startLine": 1161,
         "startChar": 17,
