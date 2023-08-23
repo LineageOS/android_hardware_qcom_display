@@ -16,6 +16,46 @@
       "message": "Works on sweet and mojito",
       "revId": "0da3d80b44cdb6681e59a9318a8e20159094d437",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7a6f5e2a_85d6681d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 6
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-23T10:01:57Z",
+      "side": 1,
+      "message": "I\u0027d move the override to HasSmartPanelConfig() if possible.",
+      "revId": "0da3d80b44cdb6681e59a9318a8e20159094d437",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c7e51ad9_0b1a3e1e",
+        "filename": "sdm/libs/hwc2/hwc_session.cpp",
+        "patchSetId": 6
+      },
+      "lineNbr": 1161,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2023-08-23T10:01:57Z",
+      "side": 1,
+      "message": "override_doze_mode_ ? 1 : 0\ncasting bool to int works, but since they do the same for HasSmartPanelConfig it would be better to follow that as well.",
+      "range": {
+        "startLine": 1161,
+        "startChar": 17,
+        "endLine": 1161,
+        "endChar": 49
+      },
+      "revId": "0da3d80b44cdb6681e59a9318a8e20159094d437",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
