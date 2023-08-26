@@ -1,0 +1,26 @@
+
+cc_library_shared {
+
+    name: "libsdmutils",
+    defaults: ["display_defaults"],
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+
+    header_libs: ["display_headers"],
+    cflags: [
+        "-Wno-implicit-float-conversion",
+        "-DLOG_TAG=\"SDM\""
+    ],
+    srcs: [
+        "debug.cpp",
+        "rect.cpp",
+        "sys.cpp",
+        "fence.cpp",
+        "formats.cpp",
+        "utils.cpp",
+    ],
+
+    shared_libs: ["libdisplaydebug"],
+}
