@@ -673,15 +673,6 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
     }
   }
 
-  if (vsync_enable_) {
-    DTRACE_BEGIN("RegisterVsync");
-    // wait for previous frame's retire fence to signal.
-    Fence::Wait(retire_fence_);
-
-    // Register for vsync and then commit the frame.
-    hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
-    DTRACE_END();
-  }
   // effectively drmModeAtomicAddProperty for SDE_DSPP_HIST_IRQ_V1
   if (histogramSetup) {
     SetDppsFeatureLocked(&histogramIRQ, sizeof(histogramIRQ));
