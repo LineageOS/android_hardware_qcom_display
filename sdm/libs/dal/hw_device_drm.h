@@ -334,6 +334,7 @@ class HWDeviceDRM : public HWInterface {
   static HWCwbConfig cwb_config_;
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
   uint32_t transfer_time_updated_ = 0;
+  bool force_tonemapping_ = false;
 
  private:
   void GetCWBCapabilities();
