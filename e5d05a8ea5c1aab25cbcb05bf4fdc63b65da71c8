@@ -33,6 +33,24 @@
       "message": "Perhaps you can return the value directly on the composer/hwc_display_builtin.h file.",
       "revId": "e5d05a8ea5c1aab25cbcb05bf4fdc63b65da71c8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ae9f3aae_cdeeabca",
+        "filename": "composer/hwc_display_builtin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1619,
+      "author": {
+        "id": 29080
+      },
+      "writtenOn": "2023-08-30T16:26:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0bd28a61_698b2ffa",
+      "revId": "e5d05a8ea5c1aab25cbcb05bf4fdc63b65da71c8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
