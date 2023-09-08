@@ -24,7 +24,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1261,6 +1261,7 @@ void HWCLayer::ValidateAndSetCSC(const native_handle_t *handle) {
         layer_->update_mask.set(kMetadataUpdate);
       }
       if (new_metadata.dynamicMetaDataValid &&
+          new_metadata.dynamicMetaDataLen < HDR_DYNAMIC_META_DATA_SZ &&
           ((new_metadata.dynamicMetaDataLen != layer_buffer->color_metadata.dynamicMetaDataLen) ||
             !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
                         new_metadata.dynamicMetaDataPayload, new_metadata.dynamicMetaDataLen))) {

@@ -201,4 +201,8 @@ HWC2::Error HWCDisplayVirtual::SetColorMode(ColorMode mode) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayVirtual::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm
