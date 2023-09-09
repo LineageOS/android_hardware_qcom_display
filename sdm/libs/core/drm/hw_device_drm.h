@@ -264,7 +264,7 @@ class HWDeviceDRM : public HWInterface {
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
-  DisplayError SetDimmingConfig(void *payload, size_t size);
+  DisplayError SetPPConfig(void *payload, size_t size);
   DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
   void SetTopologyMuxUsage(HWTopology hw_topology, bool *is_3d_mux_used);
 

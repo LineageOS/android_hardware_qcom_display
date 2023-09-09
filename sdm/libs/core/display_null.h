@@ -137,7 +137,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
   MAKE_NO_OP(SetBLScale(uint32_t))
   MAKE_NO_OP(GetPanelBlMaxLvl(uint32_t *))
-  MAKE_NO_OP(SetDimmingConfig(void *, size_t))
+  MAKE_NO_OP(SetPPConfig(void *, size_t))
   MAKE_NO_OP(SetDimmingEnable(int int_enabled))
   MAKE_NO_OP(SetDimmingMinBl(int min_bl))
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))

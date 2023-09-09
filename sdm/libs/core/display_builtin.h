@@ -22,6 +22,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __DISPLAY_BUILTIN_H__
 #define __DISPLAY_BUILTIN_H__
 
@@ -85,7 +92,7 @@ struct DeferFpsConfig {
 
 class DppsInfo {
  public:
-  void Init(DppsPropIntf *intf, const std::string &panel_name);
+  void Init(DppsPropIntf *intf, const std::string &panel_name, DisplayInterface *display_intf);
   void Deinit();
   void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
   bool disable_pu_ = false;

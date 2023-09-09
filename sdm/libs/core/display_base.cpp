@@ -4064,6 +4064,19 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
         }
       }
 
+      switch (de_tuning_cfg_data->params.content_type) {
+        case kDeContentTypeVideo:
+          de_data.content_type = kContentTypeVideo;
+          break;
+        case kDeContentTypeGraphics:
+          de_data.content_type = kContentTypeGraphics;
+          break;
+        case kDeContentTypeUnknown:
+        default:
+          de_data.content_type = kContentTypeUnknown;
+          break;
+      }
+
       if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeBlend) {
         de_data.override_flags |= kOverrideDEBlend;
         de_data.de_blend = de_tuning_cfg_data->params.de_blend;
@@ -4102,14 +4115,14 @@ DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
   return err;
 }
 
-DisplayError DisplayBase::SetDimmingConfig(void *payload, size_t size) {
+DisplayError DisplayBase::SetPPConfig(void *payload, size_t size) {
   ClientLock lock(disp_mutex_);
 
-  DisplayError err = hw_intf_->SetDimmingConfig(payload, size);
+  DisplayError err = hw_intf_->SetPPConfig(payload, size);
   if (err) {
-    DLOGE("Failed to set dimming config %d", err);
+    DLOGE("Failed to set PP Event %d", err);
   } else {
-    DLOGI_IF(kTagDisplay, "Dimimng config is set successfully");
+    DLOGI_IF(kTagDisplay, "PP Event is set successfully");
     event_handler_->Refresh();
   }
   return err;
@@ -4127,6 +4140,7 @@ DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
   }
 
   *bl_ctrl = int_enabled? true : false;
+  info.object_type = DRM_MODE_OBJECT_CONNECTOR;
   info.id = sde_drm::kFeatureDimmingDynCtrl;
   info.type = sde_drm::kPropRange;
   info.version = 0;
@@ -4136,7 +4150,7 @@ DisplayError DisplayBase::SetDimmingEnable(int int_enabled) {
 
   DLOGV_IF(kTagDisplay, "Display %d-%d set dimming enable %d", display_id_,
     display_type_, int_enabled);
-  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+  return SetPPConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
@@ -4151,6 +4165,7 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
   }
 
   *bl = min_bl;
+  info.object_type = DRM_MODE_OBJECT_CONNECTOR;
   info.id = sde_drm::kFeatureDimmingMinBl;
   info.type = sde_drm::kPropRange;
   info.version = 0;
@@ -4160,7 +4175,7 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
 
   DLOGV_IF(kTagDisplay, "Display %d-%d set dimming min_bl %d", display_id_,
     display_type_, min_bl);
-  return SetDimmingConfig(reinterpret_cast<void *>(&info), sizeof(info));
+  return SetPPConfig(reinterpret_cast<void *>(&info), sizeof(info));
 }
 
 /* this func is called by DC dimming feature only after PCC updates */

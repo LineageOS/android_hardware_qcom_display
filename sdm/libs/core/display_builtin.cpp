@@ -789,7 +789,7 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
     dpps_pu_nofiy_pending_ = false;
     dpps_pu_lock_.Broadcast();
   }
-  dpps_info_.Init(this, hw_panel_info_.panel_name);
+  dpps_info_.Init(this, hw_panel_info_.panel_name, this);
 
   HandleQsyncPostCommit();
 
@@ -1708,12 +1708,13 @@ std::string DisplayBuiltIn::Dump() {
 DppsInterface* DppsInfo::dpps_intf_ = NULL;
 std::vector<int32_t> DppsInfo::display_id_ = {};
 
-void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
+void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name,
+                    DisplayInterface *display_intf) {
   std::lock_guard<std::mutex> guard(lock_);
   int error = 0;
 
-  if (!intf) {
-    DLOGE("Invalid intf is null");
+  if (!intf || !display_intf) {
+    DLOGE("Invalid intf %pK display_intf %pK", intf, display_intf);
     return;
   }
 
@@ -1747,7 +1748,7 @@ void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
       goto exit;
     }
   }
-  error = dpps_intf_->Init(intf, panel_name);
+  error = dpps_intf_->Init(intf, panel_name, display_intf);
   if (error) {
     DLOGE("DPPS Interface init failure with err %d", error);
     goto exit;
