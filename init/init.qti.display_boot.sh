@@ -128,8 +128,11 @@ case "$target" in
     ;;
     "parrot")
     case "$soc_hwid" in
-        537 | 583 | 613 | 631)
+        537 | 583 | 613 | 631 | 633 | 634 | 638)
         # Set property for Parrot
+        # SOC ID for Gaming SKU with Modem is 633
+        # SOC ID for Gaming SKU without Modem is 634
+        # SOC ID for SM7435 P is 638
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_allow_idle_fallback 1
