@@ -217,7 +217,9 @@ int HWCDisplayBuiltIn::Init() {
 
 void HWCDisplayBuiltIn::Dump(std::ostringstream *os) {
   HWCDisplay::Dump(os);
+#ifndef TARGET_HEADLESS
   *os << histogram.Dump();
+#endif
 }
 
 void HWCDisplayBuiltIn::ValidateUiScaling() {
@@ -1245,11 +1247,13 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabledVndService(bool
   std::unique_lock<decltype(sampling_mutex)> lk(sampling_mutex);
   vndservice_sampling_vote = enabled;
   if (api_sampling_vote || vndservice_sampling_vote) {
+#ifndef TARGET_HEADLESS
     histogram.start();
     display_intf_->colorSamplingOn();
   } else {
     display_intf_->colorSamplingOff();
     histogram.stop();
+#endif
   }
   return HWC2::Error::None;
 }
@@ -1270,6 +1274,7 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabled(int32_t enable
 
   auto start = api_sampling_vote || vndservice_sampling_vote;
   if (start && max_frames == 0) {
+#ifndef TARGET_HEADLESS
     histogram.start();
     display_intf_->colorSamplingOn();
   } else if (start) {
@@ -1278,20 +1283,26 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabled(int32_t enable
   } else {
     display_intf_->colorSamplingOff();
     histogram.stop();
+#endif
   }
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplayBuiltIn::GetDisplayedContentSamplingAttributes(
     int32_t *format, int32_t *dataspace, uint8_t *supported_components) {
-  return histogram.getAttributes(format, dataspace, supported_components);
+#ifndef TARGET_HEADLESS
+ return histogram.getAttributes(format, dataspace, supported_components);
+#endif
+ return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplayBuiltIn::GetDisplayedContentSample(
     uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
     int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
     uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]) {
+#ifndef TARGET_HEADLESS
   histogram.collect(max_frames, timestamp, samples_size, samples, numFrames);
+#endif
   return HWC2::Error::None;
 }
 
@@ -1522,8 +1533,9 @@ int HWCDisplayBuiltIn::Deinit() {
   if (gl_layer_stitch_) {
     layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeDestroyInstance, nullptr);
   }
-
+#ifndef TARGET_HEADLESS
   histogram.stop();
+#endif
   return HWCDisplay::Deinit();
 }
 
@@ -1656,7 +1668,9 @@ void HWCDisplayBuiltIn::AppendStitchLayer() {
 }
 
 DisplayError HWCDisplayBuiltIn::HistogramEvent(int fd, uint32_t blob_id) {
+#ifndef TARGET_HEADLESS
   histogram.notify_histogram_event(fd, blob_id);
+#endif
   return kErrorNone;
 }
 
@@ -1674,6 +1688,13 @@ int HWCDisplayBuiltIn::PostInit() {
 bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
+
+  uint32_t width = UINT32(window_rect_.right + window_rect_.left);
+  uint32_t height = UINT32(window_rect_.bottom + window_rect_.top);
+  if (width > 0 || height > 0) {
+     DLOGE("No ReadBackBuffersupport on window_rect width = %u - height = %u",width,height);
+     return false;
+  }
 
   return fixed_info.readback_supported;
 }
