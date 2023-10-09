@@ -24,7 +24,6 @@ cc_library_shared {
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDE_DRM\"",
     ],
-    clang: true,
     srcs: [
         "drm_manager.cpp",
         "drm_connector.cpp",

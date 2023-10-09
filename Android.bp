@@ -81,7 +81,6 @@ qtidisplay_cc_defaults {
         "libcutils",
         "libutils",
     ],
-    clang: true,
     soong_config_variables: {
         drmpp: {
             cflags: ["-DPP_DRM_ENABLE"],
