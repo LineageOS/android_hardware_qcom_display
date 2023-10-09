@@ -22,7 +22,6 @@ cc_library_shared {
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"MEM-UTILS\"",
     ],
-    clang: true,
     srcs: [
         "membuf_wrapper.cpp",
     ],

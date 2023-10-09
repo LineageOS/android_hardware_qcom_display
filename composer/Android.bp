@@ -19,7 +19,6 @@ cc_binary {
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDM\"",
     ],
-    clang: true,
 
     shared_libs: [
         "libbinder",

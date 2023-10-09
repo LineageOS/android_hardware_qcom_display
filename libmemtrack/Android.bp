@@ -9,7 +9,6 @@ cc_library_shared {
         "-Werror",
         "-Wno-sign-conversion",
     ],
-    clang: true,
     shared_libs: ["liblog"],
     header_libs: ["libhardware_headers"],
     srcs: [
