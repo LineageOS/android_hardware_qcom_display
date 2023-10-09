@@ -15,6 +15,5 @@ cc_library_shared {
         "-fno-operator-names",
     ],
     export_include_dirs: ["."],
-    clang: true,
     srcs: ["debug_handler.cpp"],
 }

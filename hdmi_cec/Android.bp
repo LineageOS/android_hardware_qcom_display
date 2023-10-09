@@ -23,7 +23,6 @@ cc_library_shared {
         "-DLOG_TAG=\"qdhdmi_cec\"",
         "-Wno-sign-conversion",
     ],
-    clang: true,
     srcs: [
         "qhdmi_cec.cpp",
         "QHDMIClient.cpp",
