@@ -1551,7 +1551,7 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
   if (release) {
     if (hwc_tid_ != tid) {
       DLOGV_IF(kTagResources, "HWC's tid:%d is updated to :%d", hwc_tid_, tid);
-      int ret = cpu_hint_->ReqHint(kHWC, hwc_tid_);
+      int ret = cpu_hint_->ReqTidChangeOffload(kHWC, tid);
       if (!ret) {
         hwc_tid_ = tid;
       }
