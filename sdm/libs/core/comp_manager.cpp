@@ -56,9 +56,11 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   if (extension_intf) {
     extension_intf->CreateCwbManagerExtn(this, &cwb_mgr_intf_);
     error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, &resource_intf_);
+    DLOGE("BBN: Got resource_intf_ from extension_intf %llx", (uint64_t)resource_intf_);
     extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
     extension_intf->CreateCapabilitiesExtn(&cap_intf_);
   } else {
+    DLOGE("BBN: Got resource_intf_ from default");
     error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);
   }
 
@@ -811,12 +813,16 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
 }
 
 bool CompManager::IsDisplayHWAvailable() {
+#ifndef SDMCORE_HAS_IS_DISPLAY_HW_AVAILABLE_FUNC
   std::lock_guard<std::recursive_mutex> obj(comp_mgr_mutex_);
   if (resource_intf_) {
     return resource_intf_->IsDisplayHWAvailable();
   }
 
   return false;
+#else
+  return true;
+#endif
 }
 
 
