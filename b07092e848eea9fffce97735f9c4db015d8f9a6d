@@ -16,6 +16,24 @@
       "message": "@Mike, maybe move to lineage-20.0-* branch, merge there and then fast forward to lineage-21.0-*, since we didn\u0027t diverge yet.",
       "revId": "b07092e848eea9fffce97735f9c4db015d8f9a6d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "79c540ad_36f172a3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2023-11-30T10:55:22Z",
+      "side": 1,
+      "message": "We have diverged already, 21.0 contains this commit https://review.lineageos.org/q/I189094739247e092f657769d751d7c142694f7d5",
+      "parentUuid": "709e01a8_0dfee95d",
+      "revId": "b07092e848eea9fffce97735f9c4db015d8f9a6d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
