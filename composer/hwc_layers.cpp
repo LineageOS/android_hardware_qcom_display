@@ -24,7 +24,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1079,9 +1079,6 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
   if (gralloc::GetMetaDataValue(handle, qtigralloc::MetadataType_LinearFormat.value,
                                 &linear_format) == gralloc::Error::NONE) {
     layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
-    if (layer_buffer->format == kFormatInvalid) {
-      return kErrorNotSupported;
-    }
   }
 
   if ((interlace != layer_buffer->flags.interlace) || (frame_rate != layer->frame_rate)) {
@@ -1102,9 +1099,6 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
       gralloc::Error::NONE) {
     // Only copy top layer for now as only top field for interlaced is used
     GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
-    if (cr_stats[0].version < 0 || cr_stats[0].version >= UBWC_MAX_VERSION) {
-      return kErrorNotSupported;
-    }
   }
 
   uint32_t single_buffer = 0;
@@ -1267,6 +1261,7 @@ void HWCLayer::ValidateAndSetCSC(const native_handle_t *handle) {
         layer_->update_mask.set(kMetadataUpdate);
       }
       if (new_metadata.dynamicMetaDataValid &&
+          new_metadata.dynamicMetaDataLen < HDR_DYNAMIC_META_DATA_SZ &&
           ((new_metadata.dynamicMetaDataLen != layer_buffer->color_metadata.dynamicMetaDataLen) ||
             !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
                         new_metadata.dynamicMetaDataPayload, new_metadata.dynamicMetaDataLen))) {

@@ -666,6 +666,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool async_vds_creation_ = false;
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
   bool secure_session_active_ = false;
+  bool tui_start_success_ = false;
   bool is_client_up_ = false;
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
   bool primary_pending_ = true;

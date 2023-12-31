@@ -56,6 +56,7 @@ PRODUCT_VENDOR_PROPERTIES += \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
+    debug.sf.auto_latch_unsignaled=0 \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.gralloc.enable_logs=0 \
@@ -124,7 +125,13 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
+
+#BG blur support
+ifeq ($(TARGET_BOARD_PLATFORM),kalama)
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.supports_background_blur=1
+else
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.supports_background_blur=0
+endif
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled

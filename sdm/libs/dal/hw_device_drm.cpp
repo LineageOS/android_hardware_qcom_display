@@ -27,8 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+/* Changes from Qualcomm Innovation Center are provided under the following license:
  *
  * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -429,7 +428,7 @@ void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, const LayerBuffer &buf
   }
 }
 
-void HWDeviceDRM::Registry::MapOutputBufferToFbId(LayerBuffer *output_buffer) {
+void HWDeviceDRM::Registry::MapOutputBufferToFbId(std::shared_ptr<LayerBuffer> output_buffer) {
   if (output_buffer->planes[0].fd < 0) {
     return;
   }
@@ -568,6 +567,12 @@ DisplayError HWDeviceDRM::Init() {
   if (Debug::GetProperty(ASPECT_RATIO_THRESHOLD, &value) == kErrorNone) {
     aspect_ratio_threshold_ = 1 + (FLOAT(value) / 100);
     DLOGI("aspect_ratio_threshold_: %f", aspect_ratio_threshold_);
+  }
+
+  value = 0;
+  if (Debug::GetProperty(FORCE_TONEMAPPING, &value) == kErrorNone) {
+    force_tonemapping_ = (value == 1);
+    DLOGI("force_tonemapping_ %d", force_tonemapping_);
   }
 
   return kErrorNone;
@@ -1524,6 +1529,37 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
           SetSsppTonemapFeatures(pipe_info);
         } else if (update_luts) {
+          if (force_tonemapping_) {
+            sde_drm::DRMFp16CscType fp16_csc_type = sde_drm::DRMFp16CscType::kFP16CscTypeMax;
+            int fp16_igc_en = 0;
+            int fp16_unmult_en = 0;
+            drm_msm_fp16_gc fp16_gc_config = {.flags = 0, .mode = FP16_GC_MODE_INVALID};
+            SelectFp16Config(layer.input_buffer, &fp16_igc_en, &fp16_unmult_en, &fp16_csc_type,
+                             &fp16_gc_config, layer.blending);
+
+            // Account for PMA block activation directly at translation time to preserve layer
+            // blending definition and avoid issues when a layer structure is reused.
+            DRMBlendType blending = DRMBlendType::UNDEFINED;
+            LayerBlending layer_blend = layer.blending;
+            if (layer_blend == kBlendingPremultiplied) {
+              // If blending type is premultiplied alpha and FP16 unmult is enabled,
+              // prevent performing alpha unmultiply twice
+              if (fp16_unmult_en) {
+                layer_blend = kBlendingCoverage;
+                pipe_info->inverse_pma_info.inverse_pma = false;
+                pipe_info->inverse_pma_info.op = kReset;
+                DLOGI_IF(kTagDriverConfig,
+                         "PMA handled by FP16 UNMULT block - Pipe id: %u", pipe_id);
+              } else if (pipe_info->inverse_pma_info.inverse_pma) {
+                layer_blend = kBlendingCoverage;
+                DLOGI_IF(kTagDriverConfig,
+                         "PMA handled by Inverse PMA block - Pipe id: %u", pipe_id);
+              }
+            }
+            SetBlending(layer_blend, &blending);
+            drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
+          }
+
           SetSsppTonemapFeatures(pipe_info);
         }
 
@@ -1953,11 +1989,25 @@ DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   // dpps commit feature ops doesn't use the obj id, set it as -1
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, -1);
 
+  if (cwb_config_.cwb_disp_id == display_id_ && cwb_config_.enabled) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    DLOGI("Tearing down the CWB topology");
+  }
+
   int ret = NullCommit(sync_commit /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
     return kErrorHardware;
   }
+
+  if (cwb_config_.cwb_disp_id == display_id_) {
+    if (cwb_config_.enabled) {
+      FlushConcurrentWriteback();
+    } else {
+      cwb_config_.cwb_disp_id = -1;
+    }
+  }
+
   return kErrorNone;
 }
 
@@ -2999,7 +3049,7 @@ DisplayError HWDeviceDRM::SetupConcurrentWritebackModes() {
 
 void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info) {
   CwbConfig *cwb_config = hw_layer_info.hw_cwb_config;
-  LayerBuffer *output_buffer = hw_layer_info.output_buffer;
+  std::shared_ptr<LayerBuffer> output_buffer = hw_layer_info.output_buffer;
   registry_.MapOutputBufferToFbId(output_buffer);
   uint32_t &vitual_conn_id = cwb_config_.token.conn_id;
 
@@ -3094,7 +3144,7 @@ DisplayError HWDeviceDRM::TeardownConcurrentWriteback(void) {
   return kErrorNone;
 }
 
-void HWDeviceDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {
+void HWDeviceDRM::PostCommitConcurrentWriteback(std::shared_ptr<LayerBuffer> output_buffer) {
   if (hw_resource_.has_concurrent_writeback && output_buffer) {
     return;
   }

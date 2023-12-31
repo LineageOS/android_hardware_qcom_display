@@ -2101,7 +2101,7 @@ std::string DisplayBase::Dump() {
     return os.str();
   }
 
-  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
+  std::shared_ptr<LayerBuffer> out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
@@ -3883,7 +3883,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
 
 DisplayError DisplayBase::GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence) {
   ClientLock lock(disp_mutex_);
-  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
+  std::shared_ptr<LayerBuffer> out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer == nullptr) {
     return kErrorNotSupported;
   }
@@ -4067,6 +4067,19 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
         }
       }
 
+      switch (de_tuning_cfg_data->params.content_type) {
+        case kDeContentTypeVideo:
+          de_data.content_type = kContentTypeVideo;
+          break;
+        case kDeContentTypeGraphics:
+          de_data.content_type = kContentTypeGraphics;
+          break;
+        case kDeContentTypeUnknown:
+        default:
+          de_data.content_type = kContentTypeUnknown;
+          break;
+      }
+
       if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeBlend) {
         de_data.override_flags |= kOverrideDEBlend;
         de_data.de_blend = de_tuning_cfg_data->params.de_blend;
@@ -4179,9 +4192,11 @@ DisplayError DisplayBase::SetDimmingMinBl(int min_bl) {
 
 /* this func is called by DC dimming feature only after PCC updates */
 void DisplayBase::ScreenRefresh() {
-  ClientLock lock(disp_mutex_);
-  /* do not skip validate */
-  validated_ = false;
+  {
+    ClientLock lock(disp_mutex_);
+    /* do not skip validate */
+    validated_ = false;
+  }
   event_handler_->Refresh();
 }
 
