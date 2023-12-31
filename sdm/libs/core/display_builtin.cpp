@@ -673,15 +673,6 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
     }
   }
 
-  if (vsync_enable_) {
-    DTRACE_BEGIN("RegisterVsync");
-    // wait for previous frame's retire fence to signal.
-    Fence::Wait(retire_fence_);
-
-    // Register for vsync and then commit the frame.
-    hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
-    DTRACE_END();
-  }
   // effectively drmModeAtomicAddProperty for SDE_DSPP_HIST_IRQ_V1
   if (histogramSetup) {
     SetDppsFeatureLocked(&histogramIRQ, sizeof(histogramIRQ));
@@ -949,11 +940,14 @@ DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
 
 DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
   DisplayBase::PostCommit(hw_layers_info);
-
-  if (pending_brightness_) {
-    Fence::Wait(retire_fence_);
-    SetPanelBrightness(cached_brightness_);
-    pending_brightness_ = false;
+  // Mutex scope
+  {
+    lock_guard<recursive_mutex> obj(brightness_lock_);
+    if (pending_brightness_) {
+      Fence::Wait(retire_fence_);
+      SetPanelBrightness(cached_brightness_);
+      pending_brightness_ = false;
+    }
   }
 
   if (commit_event_enabled_) {
@@ -990,7 +984,7 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
     dpps_pu_nofiy_pending_ = false;
     dpps_pu_lock_.Broadcast();
   }
-  dpps_info_.Init(this, hw_panel_info_.panel_name);
+  dpps_info_.Init(this, hw_panel_info_.panel_name, this);
 
   if (demuratn_)
     EnableDemuraTn(true);
@@ -1776,7 +1770,7 @@ std::string DisplayBuiltIn::Dump() {
     return os.str();
   }
 
-  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
+  std::shared_ptr<LayerBuffer> out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
@@ -1927,12 +1921,13 @@ std::string DisplayBuiltIn::Dump() {
 DppsInterface* DppsInfo::dpps_intf_ = NULL;
 std::vector<int32_t> DppsInfo::display_id_ = {};
 
-void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
+void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name,
+                    DisplayInterface *display_intf) {
   std::lock_guard<std::mutex> guard(lock_);
   int error = 0;
 
-  if (!intf) {
-    DLOGE("Invalid intf is null");
+  if (!intf || !display_intf) {
+    DLOGE("Invalid intf %pK display_intf %pK", intf, display_intf);
     return;
   }
 
@@ -1967,7 +1962,7 @@ void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
       goto exit;
     }
   }
-  error = dpps_intf_->Init(intf, panel_name);
+  error = dpps_intf_->Init(intf, panel_name, display_intf);
   if (error) {
     DLOGE("DPPS Interface init failure with err %d", error);
     goto exit;
@@ -2532,10 +2527,10 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   // Checking library support for HDR10+
   comp_manager_->GetHDRCapability(&hdr_plus_supported, &dolby_vision_supported);
 
-  fixed_info->hdr_supported = hw_resource_info.has_hdr;
+  fixed_info->hdr_supported = hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled;
   // Built-in displays always support HDR10+ when the target supports HDR
-  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr && hdr_plus_supported;
-  fixed_info->dolby_vision_supported = hw_resource_info.has_hdr && dolby_vision_supported;
+  fixed_info->hdr_plus_supported = fixed_info->hdr_supported && hdr_plus_supported;
+  fixed_info->dolby_vision_supported = fixed_info->hdr_supported && dolby_vision_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;

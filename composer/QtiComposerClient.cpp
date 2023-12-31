@@ -17,6 +17,13 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <vector>
 #include <string>
 
@@ -1989,7 +1996,7 @@ bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadataBlobs(uint16
   for (const auto& m : metadata) {
     keys.push_back(static_cast<int32_t>(m.key));
     sizes_of_metablob_.push_back(m.blob.size());
-    for (uint8_t i = 0; i < m.blob.size(); i++) {
+    for (size_t i = 0; i < m.blob.size(); i++) {
       blob_of_data_.push_back(m.blob[i]);
     }
   }
@@ -2105,15 +2112,14 @@ Error QtiComposerClient::CommandReader::lookupBufferCacheEntryLocked(BufferCache
 Error QtiComposerClient::CommandReader::lookupBuffer(BufferCache cache, uint32_t slot,
                                                      bool useCache, buffer_handle_t handle,
                                                      buffer_handle_t* outHandle) {
+  std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
+  BufferCacheEntry* entry;
+  Error error = lookupBufferCacheEntryLocked(cache, slot, &entry);
+  if (error != Error::NONE) {
+    return error;
+  }
+
   if (useCache) {
-    std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
-
-    BufferCacheEntry* entry;
-    Error error = lookupBufferCacheEntryLocked(cache, slot, &entry);
-    if (error != Error::NONE) {
-      return error;
-    }
-
     // input handle is ignored
     *outHandle = entry->getHandle();
   } else if (cache == BufferCache::LAYER_SIDEBAND_STREAMS) {

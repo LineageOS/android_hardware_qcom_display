@@ -94,7 +94,7 @@ struct DeferFpsConfig {
 
 class DppsInfo {
  public:
-  void Init(DppsPropIntf *intf, const std::string &panel_name);
+  void Init(DppsPropIntf *intf, const std::string &panel_name, DisplayInterface *display_intf);
   void Deinit();
   void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
   bool disable_pu_ = false;

@@ -1208,6 +1208,15 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     }
   }
 
+  if (tui_start_success_ && is_builtin && is_power_off) {
+    DLOGI("TUI session in progress, defer power state change");
+    SCOPE_LOCK(locker_[display]);
+    if (hwc_display_[display]) {
+      hwc_display_[display]->SetPendingPowerMode(mode);
+      return HWC2_ERROR_NONE;
+    }
+  }
+
   if (secure_session_active_ && is_builtin && is_power_off) {
     if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
       DLOGI("Secure session in progress, defer power state change");
@@ -3025,33 +3034,30 @@ bool HWCSession::IsHWDisplayConnected(hwc2_display_t client_id) {
 }
 
 int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
+  SCOPE_LOCK(pluggable_handler_lock_);
   HWDisplaysInfo hw_displays_info = {};
-  {
-    SCOPE_LOCK(pluggable_handler_lock_);
+  hwc2_display_t virtual_display_index =
+      (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  std::bitset<kSecureMax> secure_sessions = 0;
 
-    hwc2_display_t virtual_display_index =
-        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-    std::bitset<kSecureMax> secure_sessions = 0;
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
+    Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
+    hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+  }
 
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-      Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
-      hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
-    }
+  if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
+    // Defer hotplug handling.
+    DLOGI("Marking hotplug pending...");
+    pending_hotplug_event_ = kHotPlugEvent;
+    return -EAGAIN;
+  }
 
-    if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
-      // Defer hotplug handling.
-      DLOGI("Marking hotplug pending...");
-      pending_hotplug_event_ = kHotPlugEvent;
-      return -EAGAIN;
-    }
-
-    DLOGI("Handling hotplug...");
-    DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
-    if (error != kErrorNone) {
-      DLOGE("Failed to get connected display list. Error = %d", error);
-      return -EINVAL;
-    }
+  DLOGI("Handling hotplug...");
+  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    DLOGE("Failed to get connected display list. Error = %d", error);
+    return -EINVAL;
   }
 
   int status = HandleDisconnectedDisplays(&hw_displays_info);
@@ -4162,15 +4168,22 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
   }
 
   std::bitset<kSecureMax> secure_sessions = 0;
+  HWC2::PowerMode current_power_mode = HWC2::PowerMode::Off;
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
       hwc_display_[target_display]->GetActiveSecureSession(&secure_sessions);
+      current_power_mode = hwc_display_[target_display]->GetCurrentPowerMode();
     }
   }
 
   if (secure_sessions[kSecureCamera]) {
     DLOGW("TUI session not allowed during ongoing Secure Camera session");
+    return -ENOTSUP;
+  }
+
+  if (current_power_mode != HWC2::PowerMode::On) {
+    DLOGW("TUI session not allowed as target display is not powered On");
     return -ENOTSUP;
   }
 
@@ -4267,6 +4280,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     }
   }
 
+  tui_start_success_ = true;
   return 0;
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
@@ -4291,10 +4305,12 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd, &needs_refresh,
                                                           false) != kErrorNone) {
+        tui_start_success_ = false;
         return -EINVAL;
       }
     } else {
       DLOGW("Target display %d is not ready", disp_id);
+      tui_start_success_ = false;
       return -ENODEV;
     }
   }
@@ -4307,6 +4323,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
         DLOGE("Device unassign failed with error %d", ret);
       }
       TUITransitionUnPrepare(disp_id);
+      tui_start_success_ = false;
       return 0;
     }
   }
@@ -4373,6 +4390,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   }
   // Reset tui session state variable.
   DLOGI("End of TUI session on display %d", disp_id);
+  tui_start_success_ = false;
   return 0;
 }
 
