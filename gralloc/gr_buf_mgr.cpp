@@ -1470,7 +1470,10 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       if (android::gralloc4::decodeDataspace(in, &dataspace)) {
         return Error::UNSUPPORTED;
       }
-      dataspaceToColorMetadata(dataspace, &metadata->color);
+      // Avoid setting standard dataspace flag for unknown/invalid dataspace
+      if (dataspaceToColorMetadata(dataspace, &metadata->color) != Error::NONE) {
+        return Error::NONE;
+      }
       break;
     case (int64_t)StandardMetadataType::BLEND_MODE:
       BlendMode mode;
