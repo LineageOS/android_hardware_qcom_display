@@ -154,11 +154,11 @@ ifneq ($(PLATFORM_VERSION), 10)
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),parrot)
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     debug.sf.enable_hwc_vds=false \
     vendor.display.vds_allow_hwc=true
 else
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
     debug.sf.enable_hwc_vds=1 \
     vendor.display.vds_allow_hwc=0
 endif
