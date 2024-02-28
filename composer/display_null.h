@@ -30,7 +30,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -108,6 +108,7 @@ class DisplayNull : public DisplayInterface {
   virtual void FlushConcurrentWriteback() {}
   virtual void ScreenRefresh() { }
   virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
+  virtual void Abort() {};
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))

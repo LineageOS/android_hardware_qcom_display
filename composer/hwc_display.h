@@ -20,7 +20,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -244,7 +244,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int Perform(uint32_t operation, ...);
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
                                   bool *power_on_pending, bool is_active_secure_display);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh,
+                                         bool update_event_only);
   virtual DisplayError PostHandleSecureEvent(SecureEvent secure_event);
   virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) { return 0; };
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
@@ -508,6 +509,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
                              int active_config_index, uint32_t num_configs) {};
   virtual void MarkClientActive(bool is_client_up);
+  virtual void Abort();
 
  protected:
   static uint32_t throttling_refresh_rate_;

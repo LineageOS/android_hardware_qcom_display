@@ -134,6 +134,10 @@ DisplayError ResourceDefault::Deinit() {
   return kErrorNone;
 }
 
+DisplayError ResourceDefault::ReserveDisplay(DisplayType type) {
+  return kErrorNone;
+}
+
 DisplayError ResourceDefault::RegisterDisplay(int32_t display_id, DisplayType type,
                                               const HWDisplayAttributes &display_attributes,
                                               const HWPanelInfo &hw_panel_info,

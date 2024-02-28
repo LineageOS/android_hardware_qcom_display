@@ -27,40 +27,10 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
- *  Changes from Qualcomm Innovation Center are provided under the following license:
+/* Changes from Qualcomm Innovation Center are provided under the following license:
  *
- *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted (subject to the limitations in the
- *  disclaimer below) provided that the following conditions are met:
- *
- *      * Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *
- *      * Redistributions in binary form must reproduce the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer in the documentation and/or other materials provided
- *        with the distribution.
- *
- *      * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *        contributors may be used to endorse or promote products derived
- *        from this software without specific prior written permission.
- *
- *  NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- *  GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- *  HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- *   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- *  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- *  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef __DISPLAY_PROPERTIES_H__
@@ -150,6 +120,7 @@
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
 #define ENABLE_ASYNC_VDS_CREATION            DISPLAY_PROP("enable_async_vds_creation")
+#define MAX_PRIMARY_LAYERS                   DISPLAY_PROP("max_primary_layers")
 #define ENABLE_HISTOGRAM_INTR                DISPLAY_PROP("enable_hist_intr")
 #define DISABLE_MMRM_PROP                    DISPLAY_PROP("disable_mmrm_prop")
 #define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")
@@ -200,6 +171,8 @@
 #define ENABLE_VERBOSE_LOG                   DISPLAY_PROP("enable_verbose_log")
 // HDR10 GPU Target
 #define ENABLE_HDR10_GPU_TARGET              DISPLAY_PROP("enable_hdr10_gpu_target")
+// Restrict max powered on displays
+#define RESTRICT_MAX_POWERON_DISPLAYS        DISPLAY_PROP("restrict_max_poweron_displays")
 
 // Add all vendor.display properties above
 
@@ -225,6 +198,7 @@
 #define ENABLE_PANEL_INVERSE_MOUNT           DISPLAY_PROP("enable_panel_inverse_mount")
 #define WAIT_FOR_PRIMARY_DISPLAY             DISPLAY_PROP("wait_for_primary_display")
 #define TRACK_INPUT_FENCES                   DISPLAY_PROP("track_input_fences")
+#define ENABLE_ROTATOR_CONCURRENCY           DISPLAY_PROP("enable_rotator_concurrency")
 
 // Add all other.properties above
 // End of property

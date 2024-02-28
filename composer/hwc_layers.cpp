@@ -20,7 +20,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1006,6 +1006,10 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
   private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
+
+  std::string name = "";
+  gralloc::GetMetaDataValue(handle, android::gralloc4::MetadataType_Name.value, &name);
+  name_ = name;
 
   float fps = 0;
   uint32_t frame_rate = layer->frame_rate;

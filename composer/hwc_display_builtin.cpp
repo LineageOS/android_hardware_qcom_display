@@ -1343,7 +1343,7 @@ bool HWCDisplayBuiltIn::NeedsLargeCompPerfHint() {
     return false;
   }
 
-  if (active_refresh_rate_ < 120) {
+  if (active_refresh_rate_ < 90) {
     return false;
   }
 
