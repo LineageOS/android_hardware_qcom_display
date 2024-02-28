@@ -3154,12 +3154,11 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         auto error = GetColorSpaceFromColorMetaData(data->color, &colorspace);
         if (error == Error::NONE) {
           *(reinterpret_cast<uint32_t *>(in)) = colorspace;
-          break;
         } else {
           ret = Error::BAD_VALUE;
-          break;
         }
       }
+      break;
     }
     case QTI_YUV_PLANE_INFO: {
       if (copy) {
@@ -3185,10 +3184,8 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
                 layout[0].chromaStep);
 
           memcpy(in, layout, YCBCR_LAYOUT_ARRAY_SIZE * sizeof(qti_ycbcr));
-          break;
         } else {
           ret = Error::BAD_BUFFER;
-          break;
         }
       }
       break;
@@ -3199,12 +3196,11 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         int32_t height;
         if (GetCustomDimensions(handle, &stride, &height) == 0) {
           *(reinterpret_cast<int32_t *>(in)) = stride;
-          break;
         } else {
           ret = Error::BAD_VALUE;
-          break;
         }
       }
+      break;
     }
     case QTI_CUSTOM_DIMENSIONS_HEIGHT: {
       if (copy) {
@@ -3212,24 +3208,22 @@ Error GetMetaDataInternal(void *buffer, int64_t type, void *in, void **out) {
         int32_t height = handle->height;
         if (GetCustomDimensions(handle, &stride, &height) == 0) {
           *(reinterpret_cast<int32_t *>(in)) = height;
-          break;
         } else {
           ret = Error::BAD_VALUE;
-          break;
         }
       }
+      break;
     }
     case QTI_RGB_DATA_ADDRESS: {
       if (copy) {
         void *rgb_data = nullptr;
         if (GetRgbDataAddress(handle, &rgb_data) == 0) {
           *(reinterpret_cast<void **>(in)) = rgb_data;
-          break;
         } else {
           ret = Error::BAD_BUFFER;
-          break;
         }
       }
+      break;
     }
     case QTI_BUFFER_TYPE:
       if (copy) {
