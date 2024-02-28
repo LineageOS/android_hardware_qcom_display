@@ -30,7 +30,7 @@
 
 # Changes from Qualcomm Innovation Center are provided under the following license:
 #
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted (subject to the limitations in the
@@ -125,7 +125,7 @@ case "$target" in
     ;;
     "parrot")
     case "$soc_hwid" in
-        537)
+        537 | 583 | 613)
         # Set property for Parrot
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.enable_posted_start_dyn 2
@@ -160,6 +160,31 @@ case "$target" in
         setprop vendor.display.secure_preview_buffer_format 420_sp
         setprop vendor.gralloc.secure_preview_buffer_format 420_sp
         setprop vendor.display.disable_cwb_idle_fallback 1
+        setprop vendor.display.enable_rotator_concurrency 1
+        setprop vendor.display.disable_offline_rotator 0
+        setprop vendor.display.disable_rotator_ubwc 1
+        ;;
+        581|582)
+        # Set property for Montague
+        # SOC ID for Montague QCM is 581
+        # SOC ID for Montague QCS is 582
+        setprop vendor.gralloc.use_dma_buf_heaps 1
+        setprop vendor.display.enable_posted_start_dyn 2
+        setprop vendor.display.enable_allow_idle_fallback 1
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_rotator_ui 1
+        setprop vendor.display.enable_spec_fence 1
+        setprop vendor.display.thermal.version 1
+        setprop vendor.display.enable_rc_support 1
+        setprop vendor.display.target.version 2
+        setprop vendor.display.enable_qsync_idle 1
+        setprop vendor.display.disable_mitigated_fps 1
+        setprop vendor.display.secure_preview_buffer_format 420_sp
+        setprop vendor.gralloc.secure_preview_buffer_format 420_sp
+        setprop vendor.display.disable_cwb_idle_fallback 1
+        setprop vendor.display.enable_rotator_concurrency 1
+        setprop vendor.display.disable_offline_rotator 0
+        setprop vendor.display.disable_rotator_ubwc 1
         ;;
     esac
     ;;

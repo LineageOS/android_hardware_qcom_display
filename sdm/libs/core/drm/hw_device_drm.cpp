@@ -29,7 +29,7 @@
 
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -58,6 +58,13 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define __STDC_FORMAT_MACROS
 
@@ -1215,7 +1222,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     return kErrorNone;
   }
 
-  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
+  if (tui_state_ != kTUIStateNone) {
     DLOGI("Request deferred TUI state %d", tui_state_);
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;
@@ -2203,7 +2210,21 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
   return kErrorNotSupported;
 }
 
-
+DisplayError HWDeviceDRM::GetConfigIndexForFps(uint32_t refresh_rate, uint32_t *config) {
+  // Check if requested refresh rate is valid
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (current_mode.flags == connector_info_.modes[mode_index].mode.flags) &&
+        (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
+      *config = mode_index;
+      DLOGV_IF(kTagDriverConfig, "Config index for fps %d is %d", refresh_rate, *config);
+      return kErrorNone;
+    }
+  }
+  return kErrorNotSupported;
+}
 
 DisplayError HWDeviceDRM::GetHWScanInfo(HWScanInfo *scan_info) {
   return kErrorNotSupported;

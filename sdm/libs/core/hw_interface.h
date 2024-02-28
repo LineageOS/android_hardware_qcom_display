@@ -24,7 +24,7 @@
 
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -121,6 +121,7 @@ class HWInterface {
   virtual DisplayError Deinit() = 0;
   virtual DisplayError GetDisplayId(int32_t *display_id) = 0;
   virtual DisplayError GetActiveConfig(uint32_t *active_config) = 0;
+  virtual DisplayError GetConfigIndexForFps(uint32_t refresh_rate, uint32_t *config) = 0;
   virtual DisplayError GetDefaultConfig(uint32_t *default_config) = 0;
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count) = 0;
   virtual DisplayError GetDisplayAttributes(uint32_t index,

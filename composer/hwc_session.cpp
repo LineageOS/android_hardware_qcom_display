@@ -20,7 +20,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1435,6 +1435,11 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     return error;
   }
 
+  core_intf_->ReserveDisplay(kVirtual);
+  // Trigger Refresh.
+  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
+  // Ideally we need to wait on all connected displays.
+  WaitForCommitDoneAsync(HWC_DISPLAY_PRIMARY, kClientVirtualDisplay);
   // Lock confined to this scope
   int status = -EINVAL;
   for (auto &map_info : map_info_virtual_) {
@@ -2952,7 +2957,10 @@ int HWCSession::HandleBuiltInDisplays() {
 
       DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id,
             UINT32(client_id));
+      // Free lock before the callback
+      primary_display_lock_.Unlock();
       callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+      primary_display_lock_.Lock();
       break;
     }
   }
@@ -2961,32 +2969,37 @@ int HWCSession::HandleBuiltInDisplays() {
 }
 
 int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
-  SCOPE_LOCK(pluggable_handler_lock_);
-  if (null_display_mode_) {
-    DLOGW("Skipped pluggable display handling in null-display mode");
-    return 0;
-  }
-  hwc2_display_t virtual_display_index =
-      (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-  std::bitset<kSecureMax> secure_sessions = 0;
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-    Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
-    hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
-  }
-  if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
-    // Defer hotplug handling.
-    DLOGI("Marking hotplug pending...");
-    pending_hotplug_event_ = kHotPlugEvent;
-    return -EAGAIN;
-  }
-
-  DLOGI("Handling hotplug...");
   HWDisplaysInfo hw_displays_info = {};
-  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
-  if (error != kErrorNone) {
-    DLOGE("Failed to get connected display list. Error = %d", error);
-    return -EINVAL;
+  {
+    SCOPE_LOCK(pluggable_handler_lock_);
+    if (null_display_mode_) {
+      DLOGW("Skipped pluggable display handling in null-display mode");
+      return 0;
+    }
+
+    hwc2_display_t virtual_display_index =
+        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    std::bitset<kSecureMax> secure_sessions = 0;
+
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
+      Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
+      hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+    }
+
+    if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
+      // Defer hotplug handling.
+      DLOGI("Marking hotplug pending...");
+      pending_hotplug_event_ = kHotPlugEvent;
+      return -EAGAIN;
+    }
+
+    DLOGI("Handling hotplug...");
+    DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+    if (error != kErrorNone) {
+      DLOGE("Failed to get connected display list. Error = %d", error);
+      return -EINVAL;
+    }
   }
 
   HandlePluggablePrimaryDisplay(&hw_displays_info);
@@ -3190,13 +3203,12 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
     if (disconnect) {
       hwc2_display_t client_id = map_info.client_id;
       bool is_valid_pluggable_display = false;
-      {
-        SCOPE_LOCK(locker_[client_id]);
-        auto &hwc_display = hwc_display_[client_id];
-        if (hwc_display) {
-          is_valid_pluggable_display = true;
-        }
+      auto &hwc_display = hwc_display_[client_id];
+      if (hwc_display) {
+        is_valid_pluggable_display = true;
+        hwc_display->Abort();
       }
+
       DestroyDisplay(&map_info);
       if (enable_primary_reconfig_req_ && is_valid_pluggable_display) {
         hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
@@ -3735,7 +3747,8 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
     return HWC2_ERROR_BAD_DISPLAY;
   }
   *type = HwcDisplayConnectionType::EXTERNAL;
-  if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+  if (display == HWC_DISPLAY_PRIMARY ||
+      hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
     *type = HwcDisplayConnectionType::INTERNAL;
   }
 
@@ -3966,15 +3979,14 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
       {
         std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
         resource_ready_ = false;
-        if (hotplug_cv_.wait_for(caller_lock, std::chrono::seconds(5))
-            == std::cv_status::timeout) {
-          if (!client_connected_) {
-            DLOGW("Client is not connected!");
-            break;
-          } else {
-            continue;
-          }
+
+        const uint32_t min_vsync_period_ms = 100;
+        auto timeout = std::chrono::system_clock::now() +
+                         std::chrono::milliseconds(min_vsync_period_ms);
+        if (hotplug_cv_.wait_until(caller_lock, timeout) == std::cv_status::timeout) {
+          DLOGW("hotplug timeout");
         }
+
         if (active_display_id_ == active_builtin_id && needs_active_builtin_reconfig &&
             cached_retire_fence_) {
           Fence::Wait(cached_retire_fence_);
@@ -4022,14 +4034,26 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
 int HWCSession::WaitForCommitDoneAsync(hwc2_display_t display, int client_id) {
   std::chrono::milliseconds span(5000);
-  commit_done_future_ = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
-                                      return session->WaitForCommitDone(display, client_id);
-                                     }, this, display, client_id);
-  if (commit_done_future_.wait_for(span) == std::future_status::timeout) {
+  auto &future = client_id == kClientVirtualDisplay ? wfd_refresh_future_ : commit_done_future_[display];
+  if (future.valid()) {
+    if (client_id == kClientVirtualDisplay) {
+      return 0;	
+    }
+    std::future_status status = future.wait_for(std::chrono::milliseconds(0));
+    if (status != std::future_status::ready) {
+      // Previous task is stuck. Bail out early.
+      return -ETIMEDOUT;
+    }
+  }
+
+  future = std::async([](HWCSession* session, hwc2_display_t display, int client_id) {
+                         return session->WaitForCommitDone(display, client_id);
+                         }, this, display, client_id);
+  if (future.wait_for(span) == std::future_status::timeout) {
     DLOGW("WaitForCommitDoneAsync timed out");
     return -ETIMEDOUT;
   }
-  return commit_done_future_.get();
+  return future.get();
 }
 
 int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
@@ -4120,11 +4144,9 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
   for (auto &info : map_info) {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
     if (hwc_display_[info.client_id]) {
-      if (info.client_id == target_display) {
-        continue;
-      }
-      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionPrepare,
-                                                          &needs_refresh) != kErrorNone) {
+      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionPrepare, &needs_refresh,
+                                                           info.client_id == target_display) !=
+                                                           kErrorNone) {
         return -EINVAL;
       }
     }
@@ -4173,10 +4195,11 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
 
   int timeout_ms = -1;
   {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+    std::lock_guard<std::mutex> command_seq_lock(command_seq_mutex_);
+    SCOPE_LOCK(locker_[target_display]);
     if (hwc_display_[target_display]) {
-      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart,
-                                                          &needs_refresh) != kErrorNone) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart, &needs_refresh,
+                                                          false) != kErrorNone) {
         return -EINVAL;
       }
       uint32_t config = 0;
@@ -4241,8 +4264,8 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
     hwc_display_[target_display]->SetIdleTimeoutMs(idle_time_active_ms_, idle_time_inactive_ms_);
     hwc_display_[target_display]->SetQSyncMode(hwc_display_qsync_[target_display]);
     if (hwc_display_[target_display]) {
-      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd,
-                                                          &needs_refresh) != kErrorNone) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd, &needs_refresh,
+                                                          false) != kErrorNone) {
         return -EINVAL;
       }
     } else {
@@ -4258,6 +4281,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       if (ret != -ETIMEDOUT) {
         DLOGE("Device unassign failed with error %d", ret);
       }
+      TUITransitionUnPrepare(disp_id);
       tui_start_success_ = false;
       return -EINVAL;
     }
@@ -4300,14 +4324,12 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
       if (hwc_display_[info.client_id]) {
-        if (info.client_id == target_display) {
-          continue;
-        }
         if (info.disp_type == kPluggable && pending_hotplug_event_ == kHotPlugEvent) {
           continue;
         }
-        if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare,
-                                                            &needs_refresh) != kErrorNone) {
+        if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare, &needs_refresh,
+                                                            info.client_id == target_display) !=
+                                                            kErrorNone) {
           return -EINVAL;
         }
       }
@@ -4321,6 +4343,7 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
         if (ret != -ETIMEDOUT) {
           DLOGE("WaitForCommitDone failed with error %d", ret);
         }
+        tui_start_success_ = false;
         return -EINVAL;
       }
     }

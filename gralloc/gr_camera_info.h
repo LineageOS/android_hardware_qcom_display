@@ -27,6 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef __GR_CAMERA_INFO_H__
 #define __GR_CAMERA_INFO_H__
 
@@ -58,6 +64,12 @@ typedef enum : unsigned int {
   CAMERA_PIXEL_FORMAT_UBWC_FLEX_4_BATCH = 0x129,  // YUV format with fliexible alignment defined by
                                                   // individual APIs
   CAMERA_PIXEL_FORMAT_UBWC_FLEX_8_BATCH = 0x130,  // YUV format with fliexible alignment defined by
+                                                  // individual APIs
+  CAMERA_PIXEL_FORMAT_YUV_FLEX_2_BATCH = 0x140,   // YUV format with fliexible alignment defined by
+                                                  // individual APIs
+  CAMERA_PIXEL_FORMAT_YUV_FLEX_4_BATCH = 0x141,   // YUV format with fliexible alignment defined by
+                                                  // individual APIs
+  CAMERA_PIXEL_FORMAT_YUV_FLEX_8_BATCH = 0x142,   // YUV format with fliexible alignment defined by
                                                   // individual APIs
   CAMERA_PIXEL_FORMAT_NV12_VENUS = 0x7FA30C04,           // NV12 video format
   CAMERA_PIXEL_FORMAT_NV12_HEIF = 0x00000116,            // HEIF video YUV420 format
