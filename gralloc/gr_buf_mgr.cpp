@@ -602,8 +602,15 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
     return Error::BAD_BUFFER;
   std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
 
+  uint64_t reserved_size = descriptor.GetReservedSize();
   uint64_t usage = descriptor.GetUsage();
   int format = GetImplDefinedFormat(usage, descriptor.GetFormat());
+  uint64_t custom_content_md_reserved_size = GetCustomContentMetadataSize(format, usage);
+  if (reserved_size + sizeof(MetaData_t) + getpagesize() + custom_content_md_reserved_size >=
+      UINT32_MAX) {
+    return Error::UNSUPPORTED;
+  }
+
   uint32_t layer_count = descriptor.GetLayerCount();
 
   unsigned int size;
@@ -652,7 +659,6 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   // Allocate memory for MetaData
   AllocData e_data;
-  uint64_t custom_content_md_reserved_size = GetCustomContentMetadataSize(format, usage);
   e_data.size = static_cast<unsigned int>(GetMetaDataSize(descriptor.GetReservedSize(),
                                                           custom_content_md_reserved_size));
   e_data.handle = data.handle;
