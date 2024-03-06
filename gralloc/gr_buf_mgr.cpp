@@ -631,6 +631,11 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
     return Error::BAD_BUFFER;
   std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
 
+  uint64_t reserved_size = descriptor.GetReservedSize();
+  if (reserved_size + sizeof(MetaData_t) + getpagesize() >= UINT32_MAX) {
+    return Error::UNSUPPORTED;
+  }
+
   uint64_t usage = descriptor.GetUsage();
   int format = GetImplDefinedFormat(usage, descriptor.GetFormat());
   uint32_t layer_count = descriptor.GetLayerCount();
