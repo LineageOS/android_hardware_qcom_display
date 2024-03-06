@@ -469,6 +469,11 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   if (!handle)
     return -EINVAL;
 
+  uint64_t reserved_size = descriptor.GetReservedSize();
+  if (reserved_size + sizeof(MetaData_t) + getpagesize() >= UINT32_MAX) {
+    return -EINVAL;
+  }
+
   int format = descriptor.GetFormat();
   gralloc1_producer_usage_t prod_usage = descriptor.GetProducerUsage();
   gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
