@@ -469,8 +469,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   if (!handle)
     return -EINVAL;
 
-  uint64_t reserved_size = descriptor.GetReservedSize();
-  if (reserved_size + sizeof(MetaData_t) + getpagesize() >= UINT32_MAX) {
+  if (sizeof(MetaData_t) + getpagesize() >= UINT32_MAX) {
     return -EINVAL;
   }
 
