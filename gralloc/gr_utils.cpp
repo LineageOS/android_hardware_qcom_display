@@ -430,8 +430,10 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV21, width, height);
         break;
       case HAL_PIXEL_FORMAT_BLOB:
+      case HAL_PIXEL_FORMAT_RAW_OPAQUE:
         if (height != 1) {
-          ALOGE("%s: Buffers with HAL_PIXEL_FORMAT_BLOB must have height 1 ", __FUNCTION__);
+          ALOGE("%s: Buffers with HAL_PIXEL_FORMAT_BLOB and"
+                "HAL_PIXEL_FORMAT_RAW_OPAQUE must have height 1 ", __FUNCTION__);
           return 0;
         }
         size = (unsigned int) width;
