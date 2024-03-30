@@ -19,9 +19,8 @@ cc_library_shared {
     ],
 }
 
-cc_library_shared {
-    name: "libqdMetaData",
-    vendor: true,
+cc_defaults {
+    name: "libqdMetaData_defaults",
     defaults: ["display_defaults"],
     cflags: [
         "-Wno-sign-conversion",
@@ -30,13 +29,22 @@ cc_library_shared {
     srcs: ["qdMetaData.cpp","qd_utils.cpp"],
 }
 
+cc_library_shared {
+    name: "libqdMetaData",
+    vendor: true,
+
+    defaults: ["libqdMetaData_defaults"],
+}
+
 // Remove after WFD moves to use libqdMetaData directly
 cc_library_shared {
     name: "libqdMetaData.system",
-    defaults: ["display_defaults"],
-    cflags: [
-        "-Wno-sign-conversion",
-        "-DLOG_TAG=\"qdmetadata\"",
-    ],
-    srcs: ["qdMetaData.cpp","qd_utils.cpp"],
+    defaults: ["libqdMetaData_defaults"],
+}
+
+cc_library_shared {
+    name: "libqdMetaData.system_ext",
+    stem: "libqdMetaData",
+    system_ext_specific: true,
+    defaults: ["libqdMetaData_defaults"],
 }
