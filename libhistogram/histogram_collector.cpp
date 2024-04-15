@@ -232,7 +232,7 @@ bool histogram::HistogramCollector::hist_data_validate(struct drm_msm_hist const
   for (int i = 0; i < HIST_V_SIZE; i++) {
     // To handle the sum of abnormal histogram exceeding the maximum value of uint32_t
     if (std::numeric_limits<uint32_t>::max() - hist.data[i] < hist_checksum) {
-      ALOGI("Overflow issue, hist.data[i] %u, current hist_checksum %u", i, hist.data[i],
+      ALOGI("Overflow issue, hist.data[i] %u, current hist_checksum %u, hist_checksum %u", i, hist.data[i],
             hist_checksum);
       return false;
     }
