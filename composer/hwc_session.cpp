@@ -3103,8 +3103,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   int status = 0;
   Display client_id = 0;
 
-  Display active_builtin = GetActiveBuiltinDisplay();
-
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;
 
