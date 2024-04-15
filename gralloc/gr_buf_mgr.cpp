@@ -303,9 +303,6 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
 
   auto meta_size = GetMetaDataSize(hnd->reserved_size, buf->custom_content_md_size);
 
-  if (hnd->ubwcp_format)
-    size = hnd->linear_size;
-
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), size, hnd->offset, hnd->fd,
                              buf->ion_handle_main) != 0) {
     return Error::BAD_BUFFER;
@@ -425,9 +422,6 @@ Error BufferManager::MapBuffer(private_handle_t const *handle) {
 
   hnd->base = 0;
   UbwcpUtils::GetInstance()->ConfigUBWCPAttributes(handle);
-
-  if (hnd->ubwcp_format)
-    size = hnd->linear_size;
 
   if (allocator_->MapBuffer(reinterpret_cast<void **>(&hnd->base), size, hnd->offset, hnd->fd) !=
       0) {
