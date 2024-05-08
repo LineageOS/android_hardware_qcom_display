@@ -28,40 +28,11 @@
 */
 
 /*
-* Changes from Qualcomm Innovation Center are provided under the following license:
-*
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <cutils/properties.h>
 #include <utils/constants.h>
@@ -317,68 +288,6 @@ void HWCDisplayPluggable::GetDownscaleResolution(uint32_t primary_width, uint32_
   }
 }
 
-int HWCDisplayPluggable::SetState(bool connected) {
-  DisplayError error = kErrorNone;
-  DisplayState state = kStateOff;
-  DisplayConfigVariableInfo fb_config = {};
-
-  if (connected) {
-    if (display_null_.IsActive()) {
-      error = core_intf_->CreateDisplay(type_, this, &display_intf_);
-      if (error != kErrorNone) {
-        DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
-              error, type_, this, &display_intf_);
-        return -EINVAL;
-      }
-
-      // Restore HDMI attributes when display is reconnected.
-      // This is to ensure that surfaceflinger & sdm are in sync.
-      display_null_.GetFrameBufferConfig(&fb_config);
-      int status = SetFrameBufferResolution(fb_config.x_pixels, fb_config.y_pixels);
-      if (status) {
-        DLOGW("Set frame buffer config failed. Error = %d", error);
-        return -1;
-      }
-      shared_ptr<Fence> release_fence = nullptr;
-      display_null_.GetDisplayState(&state);
-      display_intf_->SetDisplayState(state, false /* teardown */, &release_fence);
-
-      SetVsyncEnabled(HWC2::Vsync::Enable);
-
-      display_null_.SetActive(false);
-      DLOGI("Display is connected successfully.");
-    } else {
-      DLOGI("Display is already connected.");
-    }
-  } else {
-    if (!display_null_.IsActive()) {
-      shared_ptr<Fence> release_fence = nullptr;
-      // Preserve required attributes of HDMI display that surfaceflinger sees.
-      // Restore HDMI attributes when display is reconnected.
-      display_intf_->GetDisplayState(&state);
-      display_null_.SetDisplayState(state, false /* teardown */, &release_fence);
-
-      error = display_intf_->GetFrameBufferConfig(&fb_config);
-      if (error != kErrorNone) {
-        DLOGW("Get frame buffer config failed. Error = %d", error);
-        return -1;
-      }
-      display_null_.SetFrameBufferConfig(fb_config);
-
-      SetVsyncEnabled(HWC2::Vsync::Disable);
-      core_intf_->DestroyDisplay(display_intf_);
-      display_intf_ = &display_null_;
-
-      display_null_.SetActive(true);
-      DLOGI("Display is disconnected successfully.");
-    } else {
-      DLOGI("Display is already disconnected.");
-    }
-  }
-
-  return 0;
-}
-
 void HWCDisplayPluggable::GetUnderScanConfig() {
   if (!display_intf_->IsUnderscanSupported()) {
     // Read user defined underscan width and height
@@ -424,11 +333,6 @@ HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, Re
   callbacks_->Refresh(id_);
 
   return status;
-}
-
-HWC2::Error HWCDisplayPluggable::UpdatePowerMode(HWC2::PowerMode mode) {
-  current_power_mode_ = mode;
-  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplayPluggable::SetColorTransform(const float *matrix,

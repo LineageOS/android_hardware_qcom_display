@@ -26,6 +26,14 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #pragma once
 
 #include <aidl/vendor/qti/hardware/display/config/BnDisplayConfig.h>
@@ -60,7 +68,6 @@ class DisplayConfigAIDL : public BnDisplayConfig {
   public:
     DisplayConfigAIDL();
     DisplayConfigAIDL(sdm::HWCSession *hwc_session);
-    int IsPowerModeOverrideSupported(uint32_t disp_id, bool *supported);
     int GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DisplayType *disp_type);
     ScopedAStatus isDisplayConnected(DisplayType dpy, bool* connected) override;
     ScopedAStatus setDisplayStatus(DisplayType dpy, ExternalStatus status) override;

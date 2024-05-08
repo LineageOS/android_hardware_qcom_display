@@ -7,6 +7,7 @@ c_sources = core_interface.cpp \
             noise_plugin_intf_impl.cpp \
             display_pluggable.cpp \
             display_virtual.cpp \
+            display_null.cpp \
             comp_manager.cpp \
             strategy.cpp \
             resource_default.cpp \
@@ -14,6 +15,7 @@ c_sources = core_interface.cpp \
             hw_interface.cpp \
             hw_info_interface.cpp \
             hw_events_interface.cpp \
+            hw_info_default.cpp \
             drm/hw_color_manager_drm.cpp \
             drm/hw_device_drm.cpp \
             drm/hw_events_drm.cpp \

@@ -27,6 +27,13 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <stdlib.h>
 #include <utils/debug.h>
 #include <utils/constants.h>
@@ -268,6 +275,22 @@ bool Debug::GetPropertyDisableOfflineMode() {
   char value[64] = "0";
   Debug::GetProperty(DISABLE_OFFLINE_ROTATOR_PROP, value);
   return (atoi(value) == 1);
+}
+
+int Debug::GetNullDisplayResolution(uint32_t *width, uint32_t *height) {
+  char value[64] = {};
+
+  int error = DebugHandler::Get()->GetProperty(NULL_DISPLAY_RESOLUTION_PROP, value);
+  if (error != 0) {
+    return -ENOTSUP;
+  }
+
+  std::string str(value);
+
+  *width = UINT32(stoi(str));
+  *height = UINT32(stoi(str.substr(str.find('x') + 1)));
+
+  return 0;
 }
 
 }  // namespace sdm

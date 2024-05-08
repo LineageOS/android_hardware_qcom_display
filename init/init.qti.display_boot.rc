@@ -26,6 +26,12 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Changes from Qualcomm Innovation Center are provided under the following license:
+#
+# Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
 service qti_display_boot /vendor/bin/init.qti.display_boot.sh
    class main
    user system
@@ -36,3 +42,5 @@ service qti_display_boot /vendor/bin/init.qti.display_boot.sh
 on post-fs-data
    start qti_display_boot
 
+on property:vendor.display.supports_background_blur=*
+   setprop ro.surface_flinger.supports_background_blur ${vendor.display.supports_background_blur}

@@ -22,6 +22,12 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __STRATEGY_INTERFACE_H__
 #define __STRATEGY_INTERFACE_H__
 
@@ -43,6 +49,7 @@ struct StrategyConstraints {
   LayerFeedback feedback = LayerFeedback(0);  //!< Feedback from Layer Precheck
 
   bool idle_timeout = false;
+  bool force_gpu_comp = false;
 };
 
 class StrategyInterface {

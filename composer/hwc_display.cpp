@@ -18,43 +18,9 @@
  */
 
 /*
-* Changes from Qualcomm Innovation Center are provided under the following license:
-*
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -522,26 +488,15 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
-  HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
-  HWCDebugHandler::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &async_power_mode_);
-
-  if (null_display_mode_) {
-    DisplayNull *disp_null = new DisplayNull();
-    disp_null->Init();
-    layer_stack_.flags.use_metadata_refresh_rate = false;
-    display_intf_ = disp_null;
-    DLOGI("Enabling null display mode for display type %d", type_);
-  } else {
-    error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
-    if (error != kErrorNone) {
-      if (kErrorDeviceRemoved == error) {
-        DLOGW("Display creation cancelled. Display %d-%d removed.", sdm_id_, type_);
-        return -ENODEV;
-      } else {
-        DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
-              error, sdm_id_, this, &display_intf_);
-        return -EINVAL;
-      }
+  error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
+  if (error != kErrorNone) {
+    if (kErrorDeviceRemoved == error) {
+      DLOGW("Display creation cancelled. Display %d-%d removed.", sdm_id_, type_);
+      return -ENODEV;
+    } else {
+      DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+            error, sdm_id_, this, display_intf_);
+      return -EINVAL;
     }
   }
 
@@ -628,24 +583,20 @@ void HWCDisplay::UpdateConfigs() {
 }
 
 int HWCDisplay::Deinit() {
-  if (null_display_mode_) {
-    delete static_cast<DisplayNull *>(display_intf_);
-    display_intf_ = nullptr;
-  } else {
-    {
-      std::lock_guard<std::mutex> lock(cwb_state_lock_);
-      if (cwb_state_.cwb_disp_id == id_) {
-        // If CWB is requested or configured or tearing-down on disp id_,
-        // then flush cwb setup before the display is deleted.
-        ResetCwbState();
-        display_intf_->FlushConcurrentWriteback();
-      }
-    }  // releasing the cwb state lock
-    DisplayError error = core_intf_->DestroyDisplay(display_intf_);
-    if (error != kErrorNone) {
-      DLOGE("Display destroy failed. Error = %d", error);
-      return -EINVAL;
+
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (cwb_state_.cwb_disp_id == id_) {
+      // If CWB is requested or configured or tearing-down on disp id_,
+      // then flush cwb setup before the display is deleted.
+      ResetCwbState();
+      display_intf_->FlushConcurrentWriteback();
     }
+  }  // releasing the cwb state lock
+  DisplayError error = core_intf_->DestroyDisplay(display_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Display destroy failed. Error = %d", error);
+    return -EINVAL;
   }
 
   delete client_target_;
@@ -1090,10 +1041,9 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
     }
   }
-  // Close the release fences in synchronous power updates
-  if (!async_power_mode_) {
-    PostPowerMode();
-  }
+
+  PostPowerMode();
+
   return HWC2::Error::None;
 }
 
