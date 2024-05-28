@@ -463,7 +463,10 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
         if (err != kErrorNone) {
           return err;
         }
+      } else {
+        secure_inactive_pending_commit_ = true;
       }
+
       secure_display_active_ = false;
       synchronous_commit_ = true;
     }
@@ -705,7 +708,8 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   SetVMReqState();
   DisplayError err = kErrorNone;
-  if (secure_display_active_) {
+  if (secure_display_active_ || secure_inactive_pending_commit_) {
+    DLOGI("Either secure active or no normal commit followed secure end ! Need flush");
     err = Flush(NULL);
     if (err != kErrorNone) {
       return err;

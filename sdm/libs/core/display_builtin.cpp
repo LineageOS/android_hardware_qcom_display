@@ -22,6 +22,42 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/rect.h>
@@ -125,9 +161,13 @@ DisplayError DisplayBuiltIn::Init() {
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
-  initColorSamplingState();
-
   int value = 0;
+  Debug::Get()->GetProperty(ENABLE_HISTOGRAM_INTR, &value);
+  if (value == 1) {
+    initColorSamplingState();
+  }
+
+  value = 0;
   Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
   deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
 
@@ -1641,8 +1681,9 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   const bool display_unchanged = (display_attributes == display_attributes_);
   const bool mixer_unchanged = (mixer_attributes == mixer_attributes_);
   const bool panel_unchanged = (hw_panel_info == hw_panel_info_);
-  if (!dirty && display_unchanged && mixer_unchanged && panel_unchanged) {
-    return kErrorNone;
+  const bool fps_switch = display_unchanged && (display_attributes.fps != current_refresh_rate_);
+  if (!dirty && display_unchanged && mixer_unchanged && panel_unchanged && !fps_switch) {
+     return kErrorNone;
   }
 
   if (CanDeferFpsConfig(display_attributes.fps)) {
@@ -1653,6 +1694,17 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
     GetFpsConfig(&display_attributes, &hw_panel_info);
   }
 
+  if (fps_switch) {
+    uint32_t config;
+    error = hw_intf_->GetConfigIndexForFps(current_refresh_rate_, &config);
+    if (error == kErrorNone) {
+      hw_intf_->GetDisplayAttributes(config, &display_attributes);
+    }
+  } else {
+    current_refresh_rate_ = display_attributes.fps;
+  }
+
+  fb_config_.fps = display_attributes.fps;
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                             mixer_attributes, fb_config_,
                                             &cached_qos_data_);
