@@ -29,6 +29,9 @@ cc_library_shared {
     }) + select(soong_config_variable("qtidisplay", "target_uses_unaligned_ycrcb"), {
         "true": ["-DUSE_UNALIGNED_YCRCB"],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_camera_encode"), {
+        "true": ["-DUSE_YCRCB_CAMERA_ENCODE"],
+        default: [],
     }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_camera_preview"), {
         "true": ["-DUSE_YCRCB_CAMERA_PREVIEW"],
         default: [],
