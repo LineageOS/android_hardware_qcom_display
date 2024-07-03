@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e31e93e5_4c29205d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30475
+      },
+      "writtenOn": "2024-07-03T10:28:24Z",
+      "side": 1,
+      "message": "Verified on pyxis...\nDeviceAsWebcam with both UYVY \u0026 M-JPEG formats works with correct colors.",
+      "revId": "2ff1fbac7ce80cb88d84cc5f8169b506e489daa0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
