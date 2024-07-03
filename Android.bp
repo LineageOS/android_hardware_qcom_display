@@ -10,6 +10,7 @@ soong_config_module_type {
         "default",
         "var3",
         "llvmcov",
+        "use_ycrcb_camera_encode",
     ],
     properties: [
         "cflags",
@@ -107,6 +108,9 @@ qtidisplay_cc_defaults {
             conditions_default: {
                 enabled: true,
             },
+        },
+        use_ycrcb_camera_encode: {
+            cflags: ["-DUSE_YCRCB_CAMERA_ENCODE"],
         },
     },
 }
