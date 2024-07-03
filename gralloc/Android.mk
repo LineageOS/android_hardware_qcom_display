@@ -44,6 +44,9 @@ LOCAL_SRC_FILES               := gr_ion_alloc.cpp \
 ifeq ($(call is-board-platform-in-list, msm8909), true)
     LOCAL_CFLAGS += -DUSE_SECURE_HEAP
 endif
+ifeq ($(TARGET_USES_YCRCB_CAMERA_ENCODE),true)
+    LOCAL_CFLAGS              += -DUSE_YCRCB_CAMERA_ENCODE
+endif
 
 include $(BUILD_SHARED_LIBRARY)
 

@@ -209,7 +209,15 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
       if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+#ifdef USE_YCRCB_CAMERA_ENCODE
+        if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+          gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS;
+        } else {
+          gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+        }
+#else
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+#endif
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
       }
