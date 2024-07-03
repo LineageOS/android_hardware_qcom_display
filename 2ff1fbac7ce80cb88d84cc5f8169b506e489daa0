@@ -16,6 +16,23 @@
       "message": "Verified on pyxis...\nDeviceAsWebcam with both UYVY \u0026 M-JPEG formats works with correct colors.",
       "revId": "2ff1fbac7ce80cb88d84cc5f8169b506e489daa0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "701ec76f_e936556b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2024-07-03T15:04:17Z",
+      "side": 1,
+      "message": "Tested on vela",
+      "revId": "2ff1fbac7ce80cb88d84cc5f8169b506e489daa0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
