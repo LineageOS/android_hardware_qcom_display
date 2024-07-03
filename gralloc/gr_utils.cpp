@@ -1425,7 +1425,15 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       } else if (usage & GRALLOC_USAGE_PRIVATE_HEIF) {
         gr_format = HAL_PIXEL_FORMAT_NV12_HEIF;
       } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+#ifdef USE_YCRCB_CAMERA_ENCODE
+        if (usage & BufferUsage::CAMERA_OUTPUT) {
+          gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS;
+        } else {
+          gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+        }
+#else
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+#endif
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
       }
