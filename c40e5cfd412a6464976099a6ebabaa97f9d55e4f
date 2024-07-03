@@ -51,6 +51,24 @@
       "parentUuid": "aeec36cf_2ee5155d",
       "revId": "c40e5cfd412a6464976099a6ebabaa97f9d55e4f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "85088fb8_9d67c4eb",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2024-07-03T10:56:20Z",
+      "side": 1,
+      "message": "Yeah sure, I\u0027m talking about the commit message... perhaps it affects most/all QCOM devices.",
+      "parentUuid": "0e64f8f8_d72b9847",
+      "revId": "c40e5cfd412a6464976099a6ebabaa97f9d55e4f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
