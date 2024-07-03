@@ -16,6 +16,23 @@
       "message": "Verified on pyxis...\nDeviceAsWebcam with both UYVY \u0026 M-JPEG formats works with correct colors.",
       "revId": "c40e5cfd412a6464976099a6ebabaa97f9d55e4f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "aeec36cf_2ee5155d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2024-07-03T10:52:51Z",
+      "side": 1,
+      "message": "sm8250 \u0026 sm8350 have the same issue too, afaik",
+      "revId": "c40e5cfd412a6464976099a6ebabaa97f9d55e4f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
