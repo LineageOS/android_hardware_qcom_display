@@ -27,6 +27,39 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the
+      names of its contributors may be used to endorse or promote
+      products derived from this software without specific prior
+      written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
 #include <fcntl.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
@@ -463,7 +496,10 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
         if (err != kErrorNone) {
           return err;
         }
+      } else {
+        secure_inactive_pending_commit_ = true;
       }
+
       secure_display_active_ = false;
       synchronous_commit_ = true;
     }
@@ -481,6 +517,11 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
                                                int64_t *release_fence_fd) {
   bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.stack->output_buffer;
   if (!(enable || cwb_config_.enabled)) {
+    if (cwb_cached_conn_id_ > 0 && !validate) {
+      DLOGI("Actual Tear down CWB");
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_cached_conn_id_, 0);
+      cwb_cached_conn_id_ = 0;
+    }
     return false;
   }
 
@@ -512,6 +553,9 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
 
 DisplayError HWPeripheralDRM::TeardownConcurrentWriteback(void) {
   if (cwb_config_.enabled) {
+    // Tear down the Concurrent Writeback topology.
+    DLOGI("Cache CWB conn id to Tear down the Concurrent Writeback topology");
+    cwb_cached_conn_id_ = cwb_config_.token.conn_id;
     drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
     cwb_config_.enabled = false;
     registry_.Clear();
@@ -640,7 +684,9 @@ void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) 
   bool enabled = hw_resource_.has_concurrent_writeback && output_buffer;
 
   if (!enabled) {
-    TeardownConcurrentWriteback();
+    drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
+    cwb_config_.enabled = false;
+    registry_.Clear();
   }
 }
 
@@ -705,7 +751,8 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   SetVMReqState();
   DisplayError err = kErrorNone;
-  if (secure_display_active_) {
+  if (secure_display_active_ || secure_inactive_pending_commit_) {
+    DLOGI("Either secure active or no normal commit followed secure end ! Need flush");
     err = Flush(NULL);
     if (err != kErrorNone) {
       return err;
