@@ -822,9 +822,8 @@ void BufferManager::RegisterHandleLocked(const private_handle_t *hnd, int ion_ha
   auto buffer = std::make_shared<Buffer>(hnd, ion_handle, ion_handle_meta);
 
   if (hnd->base_metadata) {
-    auto metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
 #ifdef METADATA_V2
-    buffer->reserved_size = metadata->reservedSize;
+    buffer->reserved_size = hnd->reserved_size;
     if (buffer->reserved_size > 0) {
       buffer->reserved_region_ptr =
           reinterpret_cast<void *>(hnd->base_metadata + sizeof(MetaData_t));
@@ -1097,8 +1096,16 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   GraphicsMetadata graphics_metadata = {};
   err = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
-  if (err < 0) {
+  if (err == -ENOTSUP) {
+    return Error::UNSUPPORTED;
+  } else if (err < 0) {
     return Error::BAD_DESCRIPTOR;
+  }
+
+  if (size == 0) {
+    ALOGW("gralloc failed to allocate buffer for size %d format %d AWxAH %dx%d usage %" PRIu64,
+          size, format, alignedw, alignedh, usage);
+    return Error::UNSUPPORTED;
   }
 
   if (testAlloc) {

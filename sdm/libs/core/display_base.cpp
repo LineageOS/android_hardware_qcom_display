@@ -22,6 +22,42 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <stdio.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
@@ -317,6 +353,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.app_layer_count = 0;
 
   hw_layers_info.stack = layer_stack;
+  hw_layers_info.wide_color_primaries.clear();
 
   for (auto &layer : layers) {
     if (layer->buffer_map == nullptr) {
@@ -481,6 +518,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
 
+  pending_commit_ = true;
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
   return error;
 }
@@ -578,30 +616,45 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
      DLOGW("Failed to set the data on driver for display: %d-%d, Error: %d, status: %d",
            display_id_, display_type_, ret, (*mask_status).rc_mask_state);
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackHandled) {
-        needs_validate_ = true;
-        DLOGW("Need to call Corresponding prepare to handle the mask layers %d %d.",
-              display_id_, display_type_);
-        for (auto &layer : layer_stack->layers) {
-          if (layer->input_buffer.flags.mask_layer) {
-            layer->request.flags.rc = false;
+        if (!pending_commit_) {
+          needs_validate_ = true;
+          DLOGW("Need to call Corresponding prepare to handle the mask layers %d %d.",
+                display_id_, display_type_);
+          for (auto &layer : layer_stack->layers) {
+            if (layer->input_buffer.flags.mask_layer) {
+              layer->request.flags.rc = false;
+            }
           }
+          return kErrorNotValidated;
+        } else {
+          needs_refresh_ = true;
+          DLOGI_IF(kTagDisplay, "Triggering refresh to handle RC state machine");
         }
-        return kErrorNotValidated;
       }
     } else {
       DLOGI_IF(kTagDisplay, "Status of RC mask data: %d., pu_rc_status_: 0x%" PRIx64,
                (*mask_status).rc_mask_state, rc_pu_flag_status_);
       if ((*mask_status).rc_pu_full_roi) {
         if (rc_pu_flag_status_ && rc_pu_flag_status_ != SDE_HW_PU_USECASE) {
-          needs_validate_ = true;
-          return kErrorNotValidated;
+          if (!pending_commit_) {
+            needs_validate_ = true;
+            return kErrorNotValidated;
+          } else {
+            needs_refresh_ = true;
+            DLOGI_IF(kTagDisplay, "Triggering refresh to handle RC state machine");
+          }
         }
       }
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
-        needs_validate_ = true;
-        DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
-                 display_id_, display_type_);
-        return kErrorNotValidated;
+        if (!pending_commit_) {
+          needs_validate_ = true;
+          DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
+                   display_id_, display_type_);
+          return kErrorNotValidated;
+        } else {
+          needs_refresh_ = true;
+          DLOGI_IF(kTagDisplay, "Triggering refresh to handle RC state machine");
+        }
       }
     }
   }
@@ -682,6 +735,11 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   comp_manager_->SetSafeMode(false);
 
+  if (needs_refresh_) {
+    event_handler_->Refresh();
+    needs_refresh_ = false;
+  }
+  pending_commit_ = false;
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
   return error;
@@ -806,7 +864,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
         display_type_, teardown);
 
-  if (state == state_ && (pending_power_state_ == kPowerStateNone)) {
+  if (state == state_) {
+    if (pending_power_state_ != kPowerStateNone) {
+      hw_intf_->CancelDeferredPowerMode();
+    }
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
@@ -850,6 +911,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
       pending_power_state_ = kPowerStateNone;
     }
 
+    fb_config_.fps = display_attributes_.fps;
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
                                               hw_panel_info_, mixer_attributes_, fb_config_,
                                               &cached_qos_data_);
@@ -1660,6 +1722,7 @@ DisplayError DisplayBase::ReconfigureDisplay() {
     return kErrorNone;
   }
 
+  fb_config_.fps = display_attributes_.fps;
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                             mixer_attributes, fb_config_, &cached_qos_data_);
   if (error != kErrorNone) {
