@@ -36,6 +36,14 @@
 
 namespace sdm {
 
+constexpr size_t get_page_size() {
+#if defined(PAGE_SIZE)
+  return PAGE_SIZE;
+#else
+  return 4096; //16K
+#endif
+}
+
 float gcd(float a, float b);
 float lcm(float a, float b);
 void CloseFd(int *fd);
