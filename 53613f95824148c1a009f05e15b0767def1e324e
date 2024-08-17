@@ -16,6 +16,23 @@
       "message": "into lineage-21.0-caf-sm8350",
       "revId": "53613f95824148c1a009f05e15b0767def1e324e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1ca313c9_99aa8199",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2024-08-17T16:29:56Z",
+      "side": 1,
+      "message": "need new sdm blobs? If so, what\u0027s the go to device?",
+      "revId": "53613f95824148c1a009f05e15b0767def1e324e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
