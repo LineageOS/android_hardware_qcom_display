@@ -33,6 +33,24 @@
       "message": "need new sdm blobs? If so, what\u0027s the go to device?",
       "revId": "53613f95824148c1a009f05e15b0767def1e324e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4ac1edc8_756088ef",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2024-08-19T20:57:13Z",
+      "side": 1,
+      "message": "This matches the FP5 U tag, however we\u0027re using prebuilt sdm due to iris so idk if this merge is strictly needed.",
+      "parentUuid": "1ca313c9_99aa8199",
+      "revId": "53613f95824148c1a009f05e15b0767def1e324e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
