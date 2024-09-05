@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c45b9858_c50f6df2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2024-09-05T17:49:28Z",
+      "side": 1,
+      "message": "https://git.codelinaro.org/clo/la/platform/hardware/qcom/display/-/commit/23c4ad6badf9313e49f0b36f88d540f75001d09b\nApply this instead",
+      "revId": "12f0ee25cd8f2834b28b06fc6e2c0e25dacb1e44",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
