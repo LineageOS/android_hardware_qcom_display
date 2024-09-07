@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "88a3e414_0877c3de",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2024-09-07T07:50:06Z",
+      "side": 1,
+      "message": "error: hardware/qcom-caf/sdm845/display/sdm/libs/utils/Android.bp:2:1: module \"libsdmutils\" variant \"android_vendor_arm64_armv8-2a_cortex-a55_shared\": module source path \"hardware/qcom-caf/sdm845/display/sdm/libs/\nutils/fence.cpp\" does not exist",
+      "revId": "b7015eec7af14e56068b2d0af303f87855546b87",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
