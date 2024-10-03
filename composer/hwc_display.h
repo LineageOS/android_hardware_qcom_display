@@ -56,6 +56,7 @@ using composer_V3::RenderIntent;
 using HwcAttribute = composer_V3::DisplayAttribute;
 using VsyncPeriodChangeConstraints = composer_V3::VsyncPeriodChangeConstraints;
 using ClientTargetProperty = composer_V3::ClientTargetProperty;
+using DisplayConfiguration = composer_V3::DisplayConfiguration;
 using PixelFormat_V3 = aidl::android::hardware::graphics::common::PixelFormat;
 
 typedef uint32_t VsyncPeriodNanos;
@@ -346,6 +347,7 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC3::Error::Unsupported;
   }
   virtual HWC3::Error GetDisplayConfigs(uint32_t *out_num_configs, Config *out_configs);
+  virtual HWC3::Error GetDisplayConfigurations(std::vector<DisplayConfiguration> *outConfigs);
   virtual HWC3::Error GetDisplayAttribute(Config config, HwcAttribute attribute,
                                           int32_t *out_value);
   virtual HWC3::Error GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,

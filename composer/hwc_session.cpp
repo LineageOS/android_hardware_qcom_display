@@ -755,6 +755,11 @@ HWC3::Error HWCSession::GetDisplayConfigs(Display display, uint32_t *out_num_con
   return CallDisplayFunction(display, &HWCDisplay::GetDisplayConfigs, out_num_configs, out_configs);
 }
 
+HWC3::Error HWCSession::GetDisplayConfigurations(Display display,
+                                                 std::vector<DisplayConfiguration> *out_configs) {
+  return CallDisplayFunction(display, &HWCDisplay::GetDisplayConfigurations, out_configs);
+}
+
 HWC3::Error HWCSession::GetDisplayName(Display display, uint32_t *out_size, char *out_name) {
   return CallDisplayFunction(display, &HWCDisplay::GetDisplayName, out_size, out_name);
 }

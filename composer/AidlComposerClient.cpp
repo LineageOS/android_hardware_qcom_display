@@ -279,6 +279,20 @@ ScopedAStatus AidlComposerClient::getDisplayAttribute(int64_t in_display, int32_
   return TO_BINDER_STATUS(INT32(error));
 }
 
+ScopedAStatus AidlComposerClient::getDisplayConfigurations(
+    int64_t in_display, int32_t maxFrameIntervalNs,
+    std::vector<DisplayConfiguration> *out_configs) {
+  auto error = hwc_session_->GetDisplayConfigurations(in_display, out_configs);
+  return TO_BINDER_STATUS(INT32(error));
+}
+
+ScopedAStatus AidlComposerClient::notifyExpectedPresent(
+    int64_t displayId, const ClockMonotonicTimestamp &expectedPresentTime,
+    int32_t frameIntervalNs) {
+  Error error = Error::Unsupported;
+  return TO_BINDER_STATUS(INT32(error));
+}
+
 ScopedAStatus AidlComposerClient::getDisplayCapabilities(
     int64_t in_display, std::vector<DisplayCapability> *aidl_return) {
   // Client queries per display capabilities which gets populated here

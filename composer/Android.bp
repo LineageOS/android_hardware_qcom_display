@@ -45,7 +45,7 @@ cc_binary {
         "libGLESv3",
         "android.hardware.graphics.mapper@4.0",
         "vendor.qti.hardware.display.mapper@4.0",
-        "android.hardware.graphics.composer3-V2-ndk",
+        "android.hardware.graphics.composer3-V3-ndk",
         "android.hardware.graphics.allocator-V2-ndk",
         "libgralloc.qti",
         "libgralloctypes",
