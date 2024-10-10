@@ -108,6 +108,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.high_fps_early_gl_phase_offset_ns=-5000000
 endif
 
+ifeq ($(TARGET_1G_DDR_RAM), true)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_layer_stitch=1 \
+    vendor.display.disable_cache_manager=1
+endif
+
 ifeq ($(TARGET_BOARD_PLATFORM),monaco)
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_layer_stitch=1
@@ -149,6 +155,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspa
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
