@@ -1,6 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(LOCAL_PATH)/../common.mk
+ifneq ($(TARGET_PROVIDES_QTI_COMPOSER),true)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := vendor.qti.hardware.display.composer-service
@@ -69,15 +70,32 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  gl_layer_stitch.cpp \
                                  gl_layer_stitch_impl.cpp
 
-LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
-ifneq ($(TARGET_HAS_LOW_RAM),true)
-  ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),bengal_32)
-    LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service-32bit.xml
-  else
-    LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
-  endif
-else
-LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service-low-ram.xml
-endif
+LOCAL_REQUIRED_MODULES        := vendor.qti.hardware.display.composer-service.rc \
+                                 vendor.qti.hardware.display.composer-service.xml
 
 include $(BUILD_EXECUTABLE)
+endif
+
+include $(CLEAR_VARS)
+LOCAL_MODULE                  := vendor.qti.hardware.display.composer-service.rc
+LOCAL_SRC_FILES               := vendor.qti.hardware.display.composer-service.rc
+LOCAL_MODULE_CLASS            := ETC
+LOCAL_MODULE_RELATIVE_PATH    := init
+LOCAL_VENDOR_MODULE           := true
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE                  := vendor.qti.hardware.display.composer-service.xml
+ifneq ($(TARGET_HAS_LOW_RAM),true)
+  ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),bengal_32)
+    LOCAL_SRC_FILES               := vendor.qti.hardware.display.composer-service-32bit.xml
+  else
+    LOCAL_SRC_FILES               := vendor.qti.hardware.display.composer-service.xml
+  endif
+else
+LOCAL_SRC_FILES               := vendor.qti.hardware.display.composer-service-low-ram.xml
+endif
+LOCAL_MODULE_CLASS            := ETC
+LOCAL_MODULE_RELATIVE_PATH    := init
+LOCAL_VENDOR_MODULE           := true
+include $(BUILD_PREBUILT)
