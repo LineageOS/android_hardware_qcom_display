@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9acd8270_7224f747",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32197
+      },
+      "writtenOn": "2024-10-12T17:00:18Z",
+      "side": 1,
+      "message": "I made the change here just in case anyone decides to inherit this makefile",
+      "revId": "d9b16a4c8b8cc8047d8bb054818edc0b40fd4562",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
