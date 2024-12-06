@@ -185,6 +185,9 @@ enum struct DRMProperty {
   DIMMING_BL_LUT,
   DIMMING_DYN_CTRL,
   DIMMING_MIN_BL,
+#ifdef CONNECTOR_PROP_UDFPS
+  FINGERPRINT_MASK,
+#endif
 
   // Insert above
   MAX
