@@ -231,6 +231,9 @@ enum struct DRMProperty {
   SDE_SSPP_FP16_GC_V1,
   SDE_SSPP_FP16_CSC_V1,
   SDE_SSPP_FP16_UNMULT_V1,
+#ifdef CONNECTOR_PROP_UDFPS
+  FINGERPRINT_MASK,
+#endif
 
   // Insert above
   MAX
