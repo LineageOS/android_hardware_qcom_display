@@ -165,6 +165,9 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "sspp_layout") { return DRMProperty::SDE_SSPP_LAYOUT; }
   if (name == "dspp_caps") { return DRMProperty::DSPP_CAPABILITIES; }
   if (name == "SDE_DSPP_RC_MASK_V1") { return DRMProperty::DSPP_RC_MASK_V1; }
+#ifdef CONNECTOR_PROP_UDFPS
+  if (name == "fingerprint_mask") { return DRMProperty::FINGERPRINT_MASK; }
+#endif
 
   return DRMProperty::INVALID;
 }
