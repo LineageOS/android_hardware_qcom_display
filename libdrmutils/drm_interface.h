@@ -549,6 +549,14 @@ enum struct DRMOps {
    *      uint32_t - Cache state
    */
   CONNECTOR_SET_CACHE_STATE,
+#ifdef CONNECTOR_PROP_UDFPS
+  /*
+   * Op: Sets fingerprint mask on this connector
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - fingerprint mask
+   */
+  CONNECTOR_SET_FINGERPRINT_MASK,
+#endif
 };
 
 enum struct DRMRotation {
