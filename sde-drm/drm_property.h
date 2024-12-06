@@ -242,6 +242,9 @@ enum struct DRMProperty {
   SPR_UDC_CFG_V2,
   EPT,
   BRIGHTNESS,
+#ifdef CONNECTOR_PROP_UDFPS
+  FINGERPRINT_MASK,
+#endif
 
   // Insert above
   MAX
