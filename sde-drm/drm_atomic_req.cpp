@@ -186,6 +186,9 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::CONNECTOR_WB_USAGE_TYPE:
     case DRMOps::CONNECTOR_SET_CACHE_STATE:
     case DRMOps::CONNECTOR_SET_EPT:
+#ifdef CONNECTOR_PROP_UDFPS
+    case DRMOps::CONNECTOR_SET_FINGERPRINT_MASK:
+#endif
     case DRMOps::CONNECTOR_SET_BPP_MODE: {
       drm_mgr_->GetConnectorMgr()->Perform(opcode, obj_id, drm_atomic_req_, args);
     } break;
