@@ -1345,6 +1345,24 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
         DRM_LOGD("Connector %d: Setting compression mode %d", obj_id, drm_compression_mode);
       }
     } break;
+#ifdef CONNECTOR_PROP_UDFPS
+    case DRMOps::CONNECTOR_SET_FINGERPRINT_MASK: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::FINGERPRINT_MASK)) {
+        DRM_LOGE("DRMConnector::%s: Connector %d: Fingerprint property is not available",
+                 __FUNCTION__, obj_id);
+        return;
+      }
+      uint32_t fingerprint_mask = va_arg(args, uint32_t);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::FINGERPRINT_MASK);
+      int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, fingerprint_mask);
+      if (ret < 0) {
+        DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d mode %d ret %d",
+                 obj_id, prop_id, fingerprint_mask, ret);
+      } else {
+        DRM_LOGD("Connector %d: Setting Fingerprint mode %d", obj_id, fingerprint_mask);
+      }
+    } break;
+#endif
 
     case DRMOps::CONNECTOR_SET_TRANSFER_TIME: {
       if (!prop_mgr_.IsPropertyAvailable(DRMProperty::DYN_TRANSFER_TIME)) {
