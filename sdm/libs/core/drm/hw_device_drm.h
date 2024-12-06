@@ -361,6 +361,9 @@ class HWDeviceDRM : public HWInterface {
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
   bool seamless_mode_switch_ = false;
+#ifdef CONNECTOR_PROP_UDFPS
+  uint32_t current_mask_state_ = 0;
+#endif
 };
 
 }  // namespace sdm
