@@ -8,6 +8,7 @@ soong_config_module_type {
         "llvmsa",
         "gralloc4",
         "udfps",
+        "samsung_udfps",
         "default",
         "var3",
         "llvmcov",
@@ -105,6 +106,13 @@ qtidisplay_cc_defaults {
         },
         udfps: {
             cflags: ["-DUDFPS_ZPOS"],
+        },
+        samsung_udfps: {
+            cflags: [
+                "-DCONNECTOR_PROP_UDFPS",
+                "-DSEC_FINGERPRINT_MASK",
+                "-DUDFPS_ZPOS",
+            ],
         },
         var3 : {
             enabled: false,
