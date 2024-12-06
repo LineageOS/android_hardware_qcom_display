@@ -173,6 +173,9 @@ enum struct DRMProperty {
   DSPP_CAPABILITIES,
   SPR_INIT_CFG_V1,
   DSPP_RC_MASK_V1,
+#ifdef CONNECTOR_PROP_UDFPS
+  FINGERPRINT_MASK,
+#endif
 
   // Insert above
   MAX

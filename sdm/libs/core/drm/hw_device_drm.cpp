@@ -1078,6 +1078,17 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;
   }
+#ifdef SEC_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    if (current_mask_state_) {
+      current_mask_state_ = false;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK,
+          token_.conn_id, current_mask_state_);
+      DLOGI("Display:%d Setting Fingerprint inDisplay Layer property = %d",
+            display_id_, current_mask_state_);
+    }
+  }
+#endif
 
   ResetROI();
   int64_t retire_fence_fd = -1;
@@ -1239,6 +1250,30 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
   bool buffer_update = hw_layers->updates_mask.test(kSwapBuffers);
   bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
                        hw_layer_info.stack->flags.geometry_changed;
+
+#ifdef SEC_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    bool mask_state_ = false;
+
+    for (uint32_t i = 0; i < hw_layer_count; i++) {
+      Layer &layer = hw_layer_info.hw_layers.at(i);
+      if (layer.flags.fod_pressed ||
+          (hw_layer_info.stack->flags.fod_pressed_present && i == hw_layer_count - 1)) {
+        mask_state_ = true;
+        goto out;
+      }
+    }
+
+  out:
+    if (current_mask_state_ != mask_state_) {
+      current_mask_state_ = mask_state_;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK,
+          token_.conn_id, current_mask_state_);
+      DLOGI("Display:%d Setting Fingerprint inDisplay Layer property = %d",
+            display_id_, current_mask_state_);
+    }
+  }
+#endif
 
   if (hw_panel_info_.partial_update && update_config) {
     if (IsFullFrameUpdate(hw_layer_info)) {
