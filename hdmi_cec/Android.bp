@@ -1,0 +1,22 @@
+
+cc_library_shared {
+
+    name: "hdmi_cec.qcom",
+    vendor: true,
+    relative_install_path: "hw",
+
+    header_libs: ["display_headers"],
+    shared_libs: [
+        "liblog",
+        "libutils",
+        "libcutils",
+    ],
+
+    cflags: [
+        "-DLOG_TAG=\"qdhdmi_cec\"",
+        "-Wno-sign-conversion",
+    ],
+    srcs: [
+        "qhdmi_cec.cpp",
+    ],
+}

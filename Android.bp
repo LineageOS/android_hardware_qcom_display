@@ -5,7 +5,11 @@ cc_defaults {
         "-Wconversion",
         "-Wall",
         "-Werror",
-    ],
+        "-DUSE_COLOR_METADATA",
+    ] + select(soong_config_variable("qtidisplay", "headless"), {
+        "true": ["-DTARGET_HEADLESS"],
+        default: [],
+    }),
     shared_libs: [
         "liblog",
         "libcutils",
@@ -30,9 +34,3 @@ cc_library_headers {
     header_libs: ["libhardware_headers", "display_intf_headers"],
     export_header_lib_headers: ["libhardware_headers", "display_intf_headers"],
 }
-
-subdirs = [
-    "gpu_tonemapper",
-    "libqservice",
-    "libqdutils",
-]

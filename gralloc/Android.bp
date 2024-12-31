@@ -1,10 +1,12 @@
+//libgrallocutils
 cc_library_shared {
     name: "libgrallocutils",
     defaults: ["display_defaults"],
     vendor: true,
-    srcs: [
-        "gr_utils.cpp",
-        "gr_adreno_info.cpp",
+
+    header_libs: [
+        "display_headers",
+        "qti_kernel_headers",
     ],
     shared_libs: [
         "libqdMetaData",
@@ -16,8 +18,65 @@ cc_library_shared {
         "-Wno-sign-conversion",
         "-Wno-enum-enum-conversion",
     ],
+    srcs: [
+        "gr_utils.cpp",
+        "gr_adreno_info.cpp",
+    ],
+}
+
+soong_config_module_type {
+    name: "target_board_platform_cc_library_shared",
+    module_type: "cc_library_shared",
+    config_namespace: "ANDROID",
+    value_variables: ["target_board_platform"],
+    properties: [
+        "name",
+    ],
+}
+
+libion_include_dirs = ["system/memory/libion/include", "system/memory/libion/kernel-headers"]
+
+//gralloc.qcom
+target_board_platform_cc_library_shared {
+    name: "gralloc.qcom",
+    soong_config_variables: {
+        target_board_platform: {
+            name: "gralloc.%s",
+            conditions_default: {
+                name: "gralloc.qcom",
+            },
+        },
+    },
+    defaults: ["display_defaults"],
+    vendor: true,
+    relative_install_path: "hw",
     header_libs: [
         "display_headers",
         "qti_kernel_headers",
+    ],
+    include_dirs: select(soong_config_variable("qtidisplay", "target_kernel_version"), {
+        "4.14": libion_include_dirs,
+        "4.19": libion_include_dirs,
+        default: [],
+    }),
+    shared_libs: [
+        "libgrallocutils",
+        "libqdMetaData",
+        "libsync",
+        "android.hardware.graphics.common@1.1",
+    ] + select(soong_config_variable("qtidisplay", "target_kernel_version"), {
+        "4.14": ["libion"],
+        "4.19": ["libion"],
+        default: [],
+    }),
+    cflags: [
+        "-DLOG_TAG=\"qdgralloc\"",
+        "-Wno-enum-enum-conversion",
+    ],
+    srcs: [
+        "gr_ion_alloc.cpp",
+        "gr_allocator.cpp",
+        "gr_buf_mgr.cpp",
+        "gr_device_impl.cpp",
     ],
 }
