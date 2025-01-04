@@ -52,6 +52,14 @@
 #include "layer_buffer.h"
 #include "sdm_types.h"
 
+#ifdef UDFPS_ZPOS
+#if __has_include(<display/drm/sde_drm.h>)
+#include <display/drm/sde_drm.h>
+#elif __has_include(<drm/sde_drm.h>)
+#include <drm/sde_drm.h>
+#endif
+#endif
+
 namespace sdm {
 
 /*! @brief This enum represents display layer blending types.
@@ -244,6 +252,10 @@ struct LayerFlags {
       uint32_t skip_iwe : 1;
                               //!< This flag shall be set to indicate that this layer
                               //!< is handled by IWE for two phase composition.
+#ifdef UDFPS_ZPOS
+      uint32_t fod_pressed : 1;    //!< This flag shall be set internally to mark the fod pressed
+                                   //!< layer
+#endif
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
