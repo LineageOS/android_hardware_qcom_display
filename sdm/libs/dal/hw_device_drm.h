@@ -345,6 +345,7 @@ class HWDeviceDRM : public HWInterface {
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
   bool seamless_mode_switch_ = false;
   float aspect_ratio_threshold_ = 1.0;
+  bool current_mask_state_ = false;
 };
 
 }  // namespace sdm
