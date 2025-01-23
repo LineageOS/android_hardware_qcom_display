@@ -1193,6 +1193,17 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     return kErrorNone;
   }
 
+# ifdef SAMSUNG_HBM
+  if (IsPrimaryDisplay()) {
+    if (current_mask_state_) {
+      current_mask_state_ = false;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK, token_.conn_id, current_mask_state_);
+      DLOGI("Display:%d Setting Fingerprint Indisplay Layer property  = %u",
+             display_id_, current_mask_state_);
+    }
+  }
+# endif
+
   if ((tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) || pending_cwb_teardown_) {
     DLOGI("Request deferred TUI state %d pending cwb teardown %d", tui_state_,
           pending_cwb_teardown_);
@@ -1718,6 +1729,28 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   if (hw_panel_info_.mode == kModeCommand) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_AUTOREFRESH, token_.conn_id, autorefresh_);
   }
+
+# ifdef SAMSUNG_HBM
+  if (IsPrimaryDisplay()) {
+    bool mask_state_ = false;
+    for (uint32_t i = 0; i < hw_layer_count; i++) {
+        Layer &layer = hw_layers_info->hw_layers.at(i);
+        if (layer.flags.fod_pressed ||
+            (hw_layers_info->flags.fod_pressed_present && i == hw_layer_count - 1)) {
+            mask_state_ = true;
+            goto out;
+        }
+    }
+
+out:
+    if (current_mask_state_ != mask_state_) {
+        current_mask_state_ = mask_state_;
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK, token_.conn_id, current_mask_state_);
+        DLOGI("Display:%d Setting Fingerprint Indisplay Layer property = %u", display_id_, current_mask_state_);
+    }
+  }
+# endif
+
 }
 
 void HWDeviceDRM::SetNoiseLayerConfig(const NoiseLayerConfig &noise_config) {
