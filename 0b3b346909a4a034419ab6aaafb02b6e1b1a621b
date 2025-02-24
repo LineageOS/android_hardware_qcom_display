@@ -1,6 +1,23 @@
 {
   "comments": [
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "7165fd10_daa4bb0f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19979
+      },
+      "writtenOn": "2025-02-24T22:16:25Z",
+      "side": 1,
+      "message": "Could this be used in place of this change\n\nhttps://github.com/LineageOS/android_hardware_qcom_sm8150_display/commit/1dce406c303de7f8578d6f79d15a671d02238b33",
+      "revId": "0b3b346909a4a034419ab6aaafb02b6e1b1a621b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "a0aab2ab_2711d75b",
