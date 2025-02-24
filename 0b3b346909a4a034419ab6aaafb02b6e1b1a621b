@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a0aab2ab_2711d75b",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1060,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2025-02-24T20:57:59Z",
+      "side": 1,
+      "message": "RAW10_BUFFER_FIX under RAW12 case?",
+      "range": {
+        "startLine": 1060,
+        "startChar": 7,
+        "endLine": 1060,
+        "endChar": 23
+      },
+      "revId": "0b3b346909a4a034419ab6aaafb02b6e1b1a621b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
