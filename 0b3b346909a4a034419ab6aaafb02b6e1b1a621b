@@ -53,6 +53,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "70050b01_1fe14866",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31655
+      },
+      "writtenOn": "2025-02-24T23:53:24Z",
+      "side": 1,
+      "message": "Just checked, that commit completely kills display, from what I\u0027m understanding for me AdrenoMemInfo::GetInstance() is a nullptr object. Out of curiosity I tried copying what HAL_PIXEL_FORMAT_YV12 did and now display worked (cause it checks for nullptr and just returns if thats the case) but gcam completely didnt work (as expected).",
+      "parentUuid": "0f82217e_c0e9a1c9",
+      "revId": "0b3b346909a4a034419ab6aaafb02b6e1b1a621b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "a0aab2ab_2711d75b",
@@ -66,6 +84,30 @@
       "writtenOn": "2025-02-24T20:57:59Z",
       "side": 1,
       "message": "RAW10_BUFFER_FIX under RAW12 case?",
+      "range": {
+        "startLine": 1060,
+        "startChar": 7,
+        "endLine": 1060,
+        "endChar": 23
+      },
+      "revId": "0b3b346909a4a034419ab6aaafb02b6e1b1a621b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "bf74e0c5_472a9482",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1060,
+      "author": {
+        "id": 31655
+      },
+      "writtenOn": "2025-02-24T23:53:24Z",
+      "side": 1,
+      "message": "I reverted that part and gcam versions 7.3 and 7.6 produced broken images. Newer versions seemed unaffected. Should the guard be renamed?",
+      "parentUuid": "a0aab2ab_2711d75b",
       "range": {
         "startLine": 1060,
         "startChar": 7,
