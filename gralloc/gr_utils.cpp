@@ -1020,10 +1020,18 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, 16);
       break;
     case HAL_PIXEL_FORMAT_RAW12:
-      aligned_w = ALIGN(width * 12 / 8, 16);
-      break;
     case HAL_PIXEL_FORMAT_RAW10:
-      aligned_w = ALIGN(width * 10 / 8, 16);
+      {
+          unsigned int raw_alignment = alignment / 2;
+          if ((usage & BufferUsage::CAMERA_INPUT) || (usage & BufferUsage::CAMERA_OUTPUT)) {
+            raw_alignment = alignment / 4;
+          }
+          unsigned int raw_width = width * 10 / 8;
+          if (format == HAL_PIXEL_FORMAT_RAW12) {
+            raw_width = width * 12 / 8;
+          }
+          aligned_w = ALIGN(raw_width, raw_alignment);
+      }
       break;
     case HAL_PIXEL_FORMAT_RAW8:
       aligned_w = ALIGN(width, 16);
