@@ -70,6 +70,30 @@
       },
       "revId": "260a98def433b5210aa80530cbe460b1a428c610",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "103b12d2_1a72df99",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1030,
+      "author": {
+        "id": 31655
+      },
+      "writtenOn": "2025-03-04T21:55:35Z",
+      "side": 1,
+      "message": "It is a case, look at L1022 and L1023 of PS1:\n```case HAL_PIXEL_FORMAT_RAW12:\n case HAL_PIXEL_FORMAT_RAW10:\n```",
+      "parentUuid": "8dc3c3c1_e0853450",
+      "range": {
+        "startLine": 1030,
+        "startChar": 24,
+        "endLine": 1030,
+        "endChar": 46
+      },
+      "revId": "260a98def433b5210aa80530cbe460b1a428c610",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
