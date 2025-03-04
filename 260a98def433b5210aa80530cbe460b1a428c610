@@ -46,6 +46,30 @@
       },
       "revId": "260a98def433b5210aa80530cbe460b1a428c610",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "8dc3c3c1_e0853450",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1030,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-03-04T21:51:40Z",
+      "side": 1,
+      "message": "But how is it going to fall through if it\u0027s not a `case`? you are only entering this code path if `format \u003d\u003d HAL_PIXEL_FORMAT_RAW10`, so this if check will never be true",
+      "parentUuid": "53f25272_63431a99",
+      "range": {
+        "startLine": 1030,
+        "startChar": 24,
+        "endLine": 1030,
+        "endChar": 46
+      },
+      "revId": "260a98def433b5210aa80530cbe460b1a428c610",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
