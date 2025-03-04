@@ -22,6 +22,30 @@
       },
       "revId": "260a98def433b5210aa80530cbe460b1a428c610",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "53f25272_63431a99",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1030,
+      "author": {
+        "id": 31655
+      },
+      "writtenOn": "2025-03-04T17:53:44Z",
+      "side": 1,
+      "message": "RAW12 case falls through to the RAW10 logic. RAW10 and 12 now has the same logic (could be split as before, but that would just be double the code just for one value change, rest would need to be the same)",
+      "parentUuid": "e0f8da4d_ab8a7669",
+      "range": {
+        "startLine": 1030,
+        "startChar": 24,
+        "endLine": 1030,
+        "endChar": 46
+      },
+      "revId": "260a98def433b5210aa80530cbe460b1a428c610",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
