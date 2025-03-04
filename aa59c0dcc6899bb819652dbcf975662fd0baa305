@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "17454e5d_f575ed7a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19979
+      },
+      "writtenOn": "2025-03-04T23:12:04Z",
+      "side": 1,
+      "message": "I reworked the patch, a more straightforward approach.",
+      "revId": "aa59c0dcc6899bb819652dbcf975662fd0baa305",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
