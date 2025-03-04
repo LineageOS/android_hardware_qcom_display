@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "e0f8da4d_ab8a7669",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1030,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-03-04T17:51:16Z",
+      "side": 1,
+      "message": "How is this check supposed to work when you are inside a case for format \u003d\u003d HAL_PIXEL_FORMAT_RAW10?",
+      "range": {
+        "startLine": 1030,
+        "startChar": 24,
+        "endLine": 1030,
+        "endChar": 46
+      },
+      "revId": "260a98def433b5210aa80530cbe460b1a428c610",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
