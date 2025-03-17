@@ -1,0 +1,46 @@
+cc_library_headers {
+    name: "gralloc_headers",
+    vendor: true,
+    export_include_dirs: [
+        ".",
+    ],
+    header_libs: [
+        "libhardware_headers",
+        "liblog_headers",
+    ],
+    export_header_lib_headers: [
+        "libhardware_headers",
+        "liblog_headers",
+    ],
+}
+
+cc_library_shared {
+    name: "gralloc.msm8996",
+    defaults: ["display_defaults"],
+    relative_install_path: "hw",
+    vendor: true,
+    srcs: [
+        "gr_utils.cpp",
+        "gr_ion_alloc.cpp",
+        "gr_adreno_info.cpp",
+        "gr_allocator.cpp",
+        "gr_buf_mgr.cpp",
+        "gr_device_impl.cpp"
+    ],
+    shared_libs: [
+        "libqdMetaData",
+        "libsync",
+        "android.hardware.graphics.common@1.1",
+    ],
+    cflags: [
+        "-DLOG_TAG=\"qdgralloc\"",
+        "-fPIC",
+        "-Wall",
+        "-std=c++11",
+        "-Werror",
+    ],
+    header_libs: [
+        "gralloc_headers",
+        "generated_kernel_headers",
+    ],
+}
