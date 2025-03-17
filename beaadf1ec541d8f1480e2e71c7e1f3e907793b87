@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9fd43e1b_4a8d993d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-03-17T13:34:44Z",
+      "side": 1,
+      "message": "Have you not synced in 2 months? Only msm8996/8 remain in this repo",
+      "revId": "beaadf1ec541d8f1480e2e71c7e1f3e907793b87",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
