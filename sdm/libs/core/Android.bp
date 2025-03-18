@@ -1,5 +1,6 @@
 cc_library_shared {
     name: "libsdmcore",
+    defaults: ["display_defaults"],
     vendor: true,
     header_libs: [
         "display_headers",

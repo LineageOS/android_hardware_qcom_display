@@ -4,6 +4,7 @@ cc_library_shared {
     name: "hdmi_cec.qcom",
     vendor: true,
     relative_install_path: "hw",
+    defaults: ["display_defaults"],
 
     header_libs: ["display_headers"],
     shared_libs: [

@@ -1,6 +1,7 @@
 cc_library_shared {
     name: "libdisplayconfig",
 
+    defaults: ["display_defaults"],
     header_libs: ["display_headers"],
     srcs: ["DisplayConfig.cpp"],
     shared_libs: [
