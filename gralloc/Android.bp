@@ -47,7 +47,6 @@ cc_library_shared {
     name: "libgralloccore",
     defaults: [
         "display_defaults",
-        "gralloc_handle_has_reserved_size_defaults",
     ],
     vendor: true,
     header_libs: [
@@ -76,7 +75,10 @@ cc_library_shared {
         "-Wno-sign-conversion",
         "-Wno-unused-parameter",
         "-Wno-unused-variable",
-    ] + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_camera_encode"), {
+    ] + select(soong_config_variable("qtidisplay", "gralloc_handle_has_reserved_size"), {
+        "true": ["-DGRALLOC_HANDLE_HAS_RESERVED_SIZE"],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_camera_encode"), {
         "true": ["-DUSE_YCRCB_CAMERA_ENCODE"],
         default: [],
     }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_camera_preview"), {
