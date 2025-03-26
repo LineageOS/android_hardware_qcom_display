@@ -114,6 +114,16 @@ qtidisplay_cc_defaults {
 qtidisplay_cc_defaults {
     name: "qtidisplay_defaults",
     defaults: ["qtidisplay_common_defaults"],
+    cflags: select(soong_config_variable("qtidisplay", "gralloc_handle_has_custom_content_md_reserved_size"), {
+        "true": ["-DGRALLOC_HANDLE_HAS_CUSTOM_CONTENT_MD_RESERVED_SIZE"],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "gralloc_handle_has_reserved_size"), {
+        "true": ["-DGRALLOC_HANDLE_HAS_RESERVED_SIZE"],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "gralloc_handle_has_ubwcp_format"), {
+        "true": ["-DGRALLOC_HANDLE_HAS_UBWCP_FORMAT"],
+        default: [],
+    }),
     soong_config_variables: {
         default: {
             header_libs: ["display_headers", "qti_kernel_headers"],
