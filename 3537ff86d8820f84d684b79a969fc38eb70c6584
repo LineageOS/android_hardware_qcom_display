@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7626481b_34c56fea",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33843
+      },
+      "writtenOn": "2025-03-30T23:57:42Z",
+      "side": 1,
+      "message": "I remembered that this was fixed by adding TARGET_GRALLOC_HANDLE_HAS_UBWCP_FORMAT\n\nhttps://github.com/Xiaomi-SM8650/android_hardware_qcom_display/commit/9ac933328bae5b9d563af8a45ea27264aa08fd7c",
+      "revId": "3537ff86d8820f84d684b79a969fc38eb70c6584",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
