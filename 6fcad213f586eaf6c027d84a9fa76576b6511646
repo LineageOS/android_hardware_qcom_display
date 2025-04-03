@@ -16,6 +16,23 @@
       "message": "If we\u0027re gonna use this fix you also need: https://review.lineageos.org/c/LineageOS/android_hardware_qcom-caf_common/+/416727",
       "revId": "6fcad213f586eaf6c027d84a9fa76576b6511646",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "736a4981_1269414d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19979
+      },
+      "writtenOn": "2025-04-03T21:52:14Z",
+      "side": 1,
+      "message": "or we use select and target_board_platform",
+      "revId": "6fcad213f586eaf6c027d84a9fa76576b6511646",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
