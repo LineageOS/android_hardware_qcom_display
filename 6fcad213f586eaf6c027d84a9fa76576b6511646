@@ -33,6 +33,23 @@
       "message": "or we use select and target_board_platform",
       "revId": "6fcad213f586eaf6c027d84a9fa76576b6511646",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "160c1b9c_b793ad19",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19979
+      },
+      "writtenOn": "2025-04-03T21:54:31Z",
+      "side": 1,
+      "message": "select(soong_config_variable(\"ANDROID\", \"target_board_platform\"), {\n        \"trinket\": [\"-DRAW_BUFFER_FIX\"],\n        default: [],\n    })",
+      "revId": "6fcad213f586eaf6c027d84a9fa76576b6511646",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
