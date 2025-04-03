@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1692d5bf_1ff2d0de",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31655
+      },
+      "writtenOn": "2025-04-03T19:58:42Z",
+      "side": 1,
+      "message": "If we\u0027re gonna use this fix you also need: https://review.lineageos.org/c/LineageOS/android_hardware_qcom-caf_common/+/416727",
+      "revId": "6fcad213f586eaf6c027d84a9fa76576b6511646",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
