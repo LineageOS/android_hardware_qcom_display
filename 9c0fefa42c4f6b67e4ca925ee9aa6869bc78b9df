@@ -22,6 +22,30 @@
       },
       "revId": "9c0fefa42c4f6b67e4ca925ee9aa6869bc78b9df",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "d166f242_ca1df13c",
+        "filename": "gralloc/UBWCPLib.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 30975
+      },
+      "writtenOn": "2025-04-05T13:41:32Z",
+      "side": 1,
+      "message": "but the remaining QCOM headers do not use #pragma.",
+      "parentUuid": "4c319b6a_f1d4851b",
+      "range": {
+        "startLine": 1,
+        "startChar": 0,
+        "endLine": 2,
+        "endChar": 18
+      },
+      "revId": "9c0fefa42c4f6b67e4ca925ee9aa6869bc78b9df",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
