@@ -16,6 +16,24 @@
       "message": "Gralloc 4 is impossible on this repo?",
       "revId": "6286270cc671551520734c0ff91f988e3288ae1a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7fe02585_af6abbf2",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 305,
+      "author": {
+        "id": 28232
+      },
+      "writtenOn": "2025-04-27T06:01:35Z",
+      "side": 1,
+      "message": "These are having legacy sources. So yes, it\u0027s causing all HDR cases to fail.",
+      "parentUuid": "62b4c566_dd81df88",
+      "revId": "6286270cc671551520734c0ff91f988e3288ae1a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
