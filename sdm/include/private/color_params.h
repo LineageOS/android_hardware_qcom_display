@@ -235,13 +235,13 @@ struct PPFeatureVersion {
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
 };
 
-struct PPHWAttributes : HWResourceInfo, HWPanelInfo, DisplayConfigVariableInfo {
+struct PPHWAttributes : LegacyHWResourceInfo, HWPanelInfo, DisplayConfigVariableInfo {
   char panel_name[256] = "generic_panel";
   PPFeatureVersion version;
   DppsControlInterface *dpps_intf = NULL;
   uint32_t max_brightness = 0;
 
-  void Set(const HWResourceInfo &hw_res, const HWPanelInfo &panel_info,
+  void Set(const LegacyHWResourceInfo &hw_res, const HWPanelInfo &panel_info,
            const DisplayConfigVariableInfo &attr, const PPFeatureVersion &feature_ver,
            DppsControlInterface *dpps_intf);
 };
