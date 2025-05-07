@@ -19,6 +19,11 @@ cc_library_shared {
     ] + select(soong_config_variable("qtidisplay", "legacy_pphwresourceinfo"), {
         true: ["-DTARGET_EXCLUDE_DDR_INFO"],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "pxlw_vendor_namespace"), {
+        any @ value: [
+            "-DPXLW_IRIS",
+        ],
+        default: [],
     }),
     shared_libs: [
         "libdl",
@@ -28,7 +33,12 @@ cc_library_shared {
         "libdrmutils",
         "libsdedrm",
         "libsdmdal",
-    ],
+    ]+ select(soong_config_variable("qtidisplay", "pxlw_vendor_namespace"), {
+        any @ value: [
+            "//" + value + ":libpwirisfeature",
+        ],
+        default: [],
+    }),
 
     srcs: [
         "core_interface.cpp",
