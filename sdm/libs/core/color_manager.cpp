@@ -75,6 +75,32 @@
 
 #define __CLASS__ "ColorManager"
 
+#ifdef PXLW_IRIS
+#define LOAD_SYMBOL(handle, symbol_ptr, symbol_name) \
+    do { \
+        (symbol_ptr) = (decltype(symbol_ptr))dlsym((handle), (symbol_name)); \
+        if (!(symbol_ptr)) { \
+            DLOGE("Failed to load symbol '%s': %s", (symbol_name), dlerror()); \
+            if (iris_lib_handle_) { \
+                dlclose(iris_lib_handle_); \
+                iris_lib_handle_ = nullptr; \
+            } \
+            return kErrorResources; \
+        } else { \
+            DLOGD("Successfully loaded symbol '%s'", (symbol_name)); \
+        } \
+    } while (0)
+
+typedef void *(*PxlwIrisCreate)(const std::string &);
+typedef void (*PxlwIrisDestroy)(void *);
+typedef void (*PxlwIrisCommit)(void *);
+
+void *iris_lib_handle_ = nullptr;
+PxlwIrisCreate iris_create_ = nullptr;
+PxlwIrisDestroy iris_destroy_ = nullptr;
+PxlwIrisCommit iris_commit_ = nullptr;
+#endif
+
 namespace sdm {
 
 DynLib ColorManagerProxy::color_lib_;
@@ -280,6 +306,14 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
         color_manager_proxy->curr_mode_.gamma = Transfer_Max;
         color_manager_proxy->curr_mode_.intent = snapdragoncolor::kNative;
       }
+
+#ifdef PXLW_IRIS
+      auto iris_feature = pxlw::IrisFeature::getInstance();
+      if (type == kPrimary && iris_feature->hasSoftIris()) {
+        PPHWAttributes &hw_attr = color_manager_proxy->pp_hw_attributes_;
+        color_manager_proxy->SetupSoftIrisLibrary(hw_attr.panel_name);
+      }
+#endif
     }
   }
 
@@ -404,6 +438,12 @@ DisplayError ColorManagerProxy::Commit() {
     // Once all features were consumed, then destroy all feature instance from feature_list,
     pp_features_.Reset();
   }
+
+#ifdef PXLW_IRIS
+  if (iris_commit_) {
+    iris_commit_(&pp_features_);
+  }
+#endif
 
   return ret;
 }
@@ -1250,5 +1290,24 @@ DisplayError FeatureStateSerializedTrigger::GetParams(FeatureOps param_type,
 
   return error;
 }
+
+#ifdef PXLW_IRIS
+DisplayError ColorManagerProxy::SetupSoftIrisLibrary(const std::string &panel_name) {
+  DLOGI("ColorManager::%s: Entering SetupSoftIrisLibrary with panel name %s", __func__,
+        panel_name.c_str());
+  iris_lib_handle_ = dlopen("libpwirissoft.so", RTLD_NOW);
+  if (!iris_lib_handle_) {
+    DLOGE("ColorManager::%s: Failed to dlopen libpwirissoft.so: %s", __func__, dlerror());
+    return kErrorResources;
+  }
+
+  LOAD_SYMBOL(iris_lib_handle_, iris_create_, "pxlwIrisCreate");
+  LOAD_SYMBOL(iris_lib_handle_, iris_destroy_, "pxlwIrisDestroy");
+  LOAD_SYMBOL(iris_lib_handle_, iris_commit_, "pxlwIrisCommit");
+
+  iris_create_(panel_name);
+  return kErrorNone;
+}
+#endif
 
 }  // namespace sdm
