@@ -62,6 +62,11 @@
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_display_virtual_factory.h"
 
+#ifdef PXLW_IRIS
+#include <pxlw_iris_feature.h>
+#include <pxlw_iris_wrapper.h>
+#endif
+
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
 using android::hardware::hidl_handle;
