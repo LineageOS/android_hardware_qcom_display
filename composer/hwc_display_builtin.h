@@ -41,6 +41,7 @@
 #include "hwc_layers.h"
 
 #include "gl_layer_stitch.h"
+#include <pxlw_iris_wrapper.h>
 
 namespace sdm {
 

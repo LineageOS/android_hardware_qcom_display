@@ -18,7 +18,12 @@ cc_binary {
         "-Wno-missing-field-initializers",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDM\"",
-    ],
+    ] + select(soong_config_variable("qtidisplay", "pxlw_vendor_namespace"), {
+        any @ value: [
+            "-DPXLW_IRIS",
+        ],
+        default: [],
+    }),
 
     shared_libs: [
         "libbinder",
@@ -57,7 +62,16 @@ cc_binary {
         "android.hardware.graphics.allocator@3.0",
         "libdisplayconfig.qti",
         "libdrm",
-    ],
+    ] + select(soong_config_variable("qtidisplay", "pxlw_vendor_namespace"), {
+        any @ value: [
+            "//" + value + ":libpwirisfeature",
+            "//" + value + ":libpwirishalwrapper",
+            "vendor.pixelworks.hardware.display@1.0",
+            "vendor.pixelworks.hardware.display@1.1",
+        ],
+        default: [],
+    }),
+
     srcs: composer_srcs,
 
     required: [

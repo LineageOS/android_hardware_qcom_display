@@ -615,6 +615,16 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
     DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;
   }
+
+#ifdef PXLW_IRIS
+  auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+  if (iris_wrapper) {
+    reinterpret_cast<pxlw::PxlwSoftirisWrapper*>(iris_wrapper)->SetColorModeWithRenderIntent(
+      0, 0, static_cast<android::hardware::graphics::common::V1_2::ColorMode>(mode), 
+      static_cast<android::hardware::graphics::common::V1_1::RenderIntent>(intent));
+  }
+#endif
+
   callbacks_->Refresh(id_);
   validated_ = false;
   return status;

@@ -39,6 +39,26 @@
 
 #define __CLASS__ "ColorManager"
 
+#ifdef PXLW_IRIS
+#define LOAD_SYMBOL(handle, sym, type) \
+  ({ \
+    void* tmp = dlsym((handle), (sym)); \
+    if (!tmp) { \
+      DLOGE("IRIS_LOG_HWC Failed to load symbol %s: %s", (sym), dlerror()); \
+    } \
+    reinterpret_cast<type>(tmp); \
+  })
+
+typedef void *(*PxlwIrisCreate)(const std::string &);
+typedef void (*PxlwIrisDestroy)(void *);
+typedef void (*PxlwIrisCommit)(void *);
+
+void *iris_lib_handle_ = nullptr;
+PxlwIrisCreate iris_create_ = nullptr;
+PxlwIrisDestroy iris_destroy_ = nullptr;
+PxlwIrisCommit iris_commit_ = nullptr;
+#endif
+
 namespace sdm {
 
 DynLib ColorManagerProxy::color_lib_;
@@ -233,6 +253,14 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
         color_manager_proxy->curr_mode_.gamma = Transfer_sRGB;
         color_manager_proxy->curr_mode_.intent = snapdragoncolor::kNative;
       }
+
+#ifdef PXLW_IRIS
+      auto iris_feature = pxlw::IrisFeature::getInstance();
+      if (type == kPrimary && iris_feature->hasSoftIris()) {
+      PPHWAttributes &hw_attr = color_manager_proxy->pp_hw_attributes_;
+      color_manager_proxy->SetupSoftIrisLibrary(hw_attr.panel_name);
+      }
+#endif
     }
   }
 
@@ -335,6 +363,12 @@ DisplayError ColorManagerProxy::Commit() {
   if (is_dirty) {
     ret = hw_intf_->SetPPFeatures(&pp_features_);
   }
+
+#ifdef PXLW_IRIS
+  if (iris_commit_) {
+    iris_commit_(&pp_features_);
+  }
+#endif
 
   return ret;
 }
@@ -1060,5 +1094,30 @@ DisplayError FeatureStateSerializedTrigger::GetParams(FeatureOps param_type,
 
   return error;
 }
+
+#ifdef PXLW_IRIS
+DisplayError ColorManagerProxy::SetupSoftIrisLibrary(const std::string &panel_name) {
+  DLOGI("ColorManager::%s: Entering SetupSoftIrisLibrary with panel name %s", __func__,
+        panel_name.c_str());
+
+  iris_lib_handle_ = dlopen("libpwirissoft.so", RTLD_NOW);
+  if (!iris_lib_handle_) {
+    DLOGE("ColorManager::%s: Failed to dlopen libpwirissoft.so", __func__);
+    return kErrorResources;
+  }
+
+  iris_create_ = LOAD_SYMBOL(iris_lib_handle_, "pxlwIrisCreate", PxlwIrisCreate);
+  iris_destroy_ = LOAD_SYMBOL(iris_lib_handle_, "pxlwIrisDestroy", PxlwIrisDestroy);
+  iris_commit_ = LOAD_SYMBOL(iris_lib_handle_, "pxlwIrisCommit", PxlwIrisCommit);
+  if (!iris_create_ || !iris_destroy_ || !iris_commit_) {
+    DLOGE("ColorManager::%s: IRIS_LOG_HWC Get Soft Iris functions failed", __func__);
+    return kErrorResources;
+  }
+
+  iris_create_(panel_name);
+
+  return kErrorNone;
+}
+#endif
 
 }  // namespace sdm

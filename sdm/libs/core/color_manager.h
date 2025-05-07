@@ -45,6 +45,10 @@
 
 #include "hw_interface.h"
 
+#ifdef PXLW_IRIS
+#include <pxlw_iris_feature.h>
+#endif
+
 namespace sdm {
 
 using snapdragoncolor::ColorMode;
@@ -147,6 +151,10 @@ class ColorManagerProxy {
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
   DisplayError PrePrepare(HWLayers *hw_layers);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
+
+#ifdef PXLW_IRIS
+  DisplayError SetupSoftIrisLibrary(const std::string& panel_name);
+#endif
 
  protected:
   ColorManagerProxy() {}

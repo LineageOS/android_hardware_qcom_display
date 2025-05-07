@@ -2658,6 +2658,20 @@ int HWCSession::CreatePrimaryDisplay() {
       break;
     }
 
+#ifdef PXLW_IRIS
+    // This indirectly invokes IrisService constructor which is helpful in devices that uses
+    // soft-iris where some device don't ship with vendor.pixelworks.hardware.display.iris-service
+    // or it's .rc file
+    auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+    auto iris_feature = pxlw::IrisFeature::getInstance();
+    DisplayConfigVariableInfo config = {};
+    hwc_display[0]->GetDisplayAttributesForConfig(0, &config);
+    if (iris_wrapper && iris_feature->hasSoftIris()) {
+      reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
+          ->InitPrimaryDisplay(config.vsync_period_ns, config.x_pixels, config.y_pixels);
+    }
+#endif
+
     auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
     hwc2_display_t client_id = map_info_primary_.client_id;
 
