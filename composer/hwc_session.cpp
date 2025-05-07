@@ -2719,6 +2719,19 @@ int HWCSession::CreatePrimaryDisplay() {
           DLOGW("Failed to load HWCColorManager.");
         }
 
+#ifdef PXLW_IRIS
+        // This invokes IrisService constructor which is required in devices with soft-iris
+        // where they don't ship with vendor.pixelworks.hardware.display.iris-service
+        // or it's rc declaration.
+        auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+        auto iris_feature = pxlw::IrisFeature::getInstance();
+        DisplayConfigVariableInfo config = {};
+        hwc_display[0]->GetDisplayAttributesForConfig(0, &config);
+        if (iris_wrapper && iris_feature->hasSoftIris()) {
+          reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
+              ->InitPrimaryDisplay(config.vsync_period_ns, config.x_pixels, config.y_pixels);
+        }
+#endif
       } else {
         DLOGE("Primary display creation has failed! status = %d", status);
         return status;
