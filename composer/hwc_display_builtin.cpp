@@ -482,6 +482,16 @@ HWC3::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
     DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;
   }
+
+#ifdef PXLW_IRIS
+  auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+  if (iris_wrapper) {
+    reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
+        ->SetColorModeWithRenderIntent(0, 0, static_cast<int32_t>(mode),
+                                       static_cast<int32_t>(intent));
+  }
+#endif
+
   callbacks_->Refresh(id_);
   return status;
 }
