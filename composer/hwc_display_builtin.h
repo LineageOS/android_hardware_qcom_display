@@ -50,6 +50,10 @@
 
 #include "gl_layer_stitch.h"
 
+#ifdef PXLW_IRIS
+#include <pxlw_iris_wrapper.h>
+#endif
+
 namespace sdm {
 
 enum class LayerStitchTaskCode : int32_t {
