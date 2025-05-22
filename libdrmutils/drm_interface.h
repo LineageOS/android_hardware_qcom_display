@@ -509,7 +509,7 @@ enum struct DRMOps {
   /*
    * Op: Sets fingerprint mask on this connector
    * Arg: uint32_t - Connector ID
-   *      uint32_t - fingerprint mask
+   *      uint8_t - fingerprint mask
    */
   CONNECTOR_SET_FINGERPRINT_MASK,
 #endif
