@@ -361,6 +361,12 @@ class HWDeviceDRM : public HWInterface {
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
   bool seamless_mode_switch_ = false;
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+#ifdef CONNECTOR_PROP_UDFPS
+  uint32_t current_mask_state_ = 0;
+#endif
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
 };
 
 }  // namespace sdm

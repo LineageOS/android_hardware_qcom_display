@@ -106,6 +106,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "hw_device_drm.h"
 #include "hw_info_interface.h"
 
+#ifdef OPLUS_FINGERPRINT_MASK
+#define BIT(nr) (1UL << (nr))
+enum oplus_ofp_property_value {
+    OPLUS_OFP_PROPERTY_NONE = 0,
+    OPLUS_OFP_PROPERTY_DIM_LAYER = BIT(0),
+    OPLUS_OFP_PROPERTY_FINGERPRESS_LAYER = BIT(1),
+    OPLUS_OFP_PROPERTY_ICON_LAYER = BIT(2),
+    OPLUS_OFP_PROPERTY_AOD_LAYER = BIT(3),
+};
+
+#include <UdfpsExtension.h>
+#ifdef UDFPS_TOUCHED_LAYER_NAME
+#undef UDFPS_TOUCHED_LAYER_NAME
+#define UDFPS_TOUCHED_LAYER_NAME "SurfaceView[UdfpsControllerOverlay]"
+#endif
+#endif
+
 #define __CLASS__ "HWDeviceDRM"
 
 #ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
@@ -1227,6 +1244,20 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;
   }
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+#ifdef SEC_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    if (current_mask_state_) {
+      current_mask_state_ = 0;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK,
+          token_.conn_id, current_mask_state_);
+      DLOGV("Display:%d Setting Fingerprint inDisplay Layer property = %d",
+            display_id_, current_mask_state_);
+    }
+  }
+#endif
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
 
   ResetROI();
   int64_t retire_fence_fd = -1;
@@ -1392,6 +1423,51 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
                        hw_layers_info->flags.geometry_changed;
   bool update_luts = hw_layers_info->updates_mask.test(kUpdateLuts);
 
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+#ifdef SEC_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    bool mask_state_ = false;
+
+    for (uint32_t i = 0; i < hw_layer_count; i++) {
+      Layer &layer = hw_layer_info.hw_layers.at(i);
+      if (layer.flags.fod_pressed ||
+          (hw_layer_info.stack->flags.fod_pressed_present && i == hw_layer_count - 1)) {
+        mask_state_ = true;
+        goto out;
+      }
+    }
+
+  out:
+    if (current_mask_state_ != mask_state_) {
+      current_mask_state_ = mask_state_;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK,
+          token_.conn_id, current_mask_state_);
+      DLOGV("Display:%d Setting Fingerprint inDisplay Layer property = %d",
+            display_id_, current_mask_state_);
+    }
+  }
+#endif
+
+#ifdef OPLUS_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    uint32_t mask_state = 0;
+    for (uint32_t i = 0; i < hw_layer_count; i++) {
+      const std::string &name = hw_layers_info->hw_layers[i].layer_name;
+      if (name.find(UDFPS_DIM_LAYER_NAME) != std::string::npos) {
+        mask_state |= OPLUS_OFP_PROPERTY_DIM_LAYER;
+      } else if (name.find(UDFPS_TOUCHED_LAYER_NAME) != std::string::npos) {
+        mask_state |= OPLUS_OFP_PROPERTY_FINGERPRESS_LAYER;
+      }
+    }
+    if (current_mask_state_ != mask_state) {
+      current_mask_state_ = mask_state;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK, token_.conn_id, mask_state);
+    }
+  }
+#endif
+
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
   if (hw_panel_info_.partial_update && update_config) {
     if (IsFullFrameUpdate(*hw_layers_info)) {
       ResetROI();
