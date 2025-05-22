@@ -74,6 +74,22 @@
 
 #include "hw_device_drm.h"
 
+#ifdef OPLUS_FINGERPRINT_MASK
+#define BIT(nr) (1UL << (nr))
+enum oplus_ofp_property_value {
+    OPLUS_OFP_PROPERTY_NONE = 0,
+    OPLUS_OFP_PROPERTY_DIM_LAYER = BIT(0),
+    OPLUS_OFP_PROPERTY_FINGERPRESS_LAYER = BIT(1),
+    OPLUS_OFP_PROPERTY_ICON_LAYER = BIT(2),
+    OPLUS_OFP_PROPERTY_AOD_LAYER = BIT(3),
+};
+
+#include <UdfpsExtension.h>
+#ifdef UDFPS_TOUCHED_LAYER_NAME
+#undef UDFPS_TOUCHED_LAYER_NAME
+#define UDFPS_TOUCHED_LAYER_NAME "SurfaceView[UdfpsControllerOverlay]"
+#endif
+#endif
 #ifdef UDFPS_ZPOS
 #include <display/drm/sde_drm.h>
 #endif
@@ -1374,6 +1390,26 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
                        hw_layers_info->flags.geometry_changed;
   bool update_luts = hw_layers_info->updates_mask.test(kUpdateLuts);
+
+#ifdef OPLUS_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    uint32_t mask_state = 0;
+
+    for (uint32_t i = 0; i < hw_layer_count; i++) {
+      const std::string &name = hw_layers_info->hw_layers[i].layer_name;
+      if (name.find(UDFPS_DIM_LAYER_NAME) != std::string::npos) {
+        mask_state |= OPLUS_OFP_PROPERTY_DIM_LAYER;
+      } else if (name.find(UDFPS_TOUCHED_LAYER_NAME) != std::string::npos) {
+        mask_state |= OPLUS_OFP_PROPERTY_FINGERPRESS_LAYER;
+      }
+    }
+
+    if (current_mask_state_ != mask_state) {
+      current_mask_state_ = mask_state;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK, token_.conn_id, mask_state);
+    }
+  }
+#endif
 
 #ifdef SEC_FINGERPRINT_MASK
   if (IsPrimaryDisplay()) {
