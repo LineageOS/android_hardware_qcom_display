@@ -8,7 +8,15 @@ soong_config_module_type {
         "llvmsa",
         "gralloc4",
         "udfps",
+<<<<<<< PATCH SET (2ee86d sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+        "oplus_udfps",
         "samsung_udfps",
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+=======
+        "samsung_udfps",
+>>>>>>> BASE      (3cba7b sdm: Support Samsung FINGERPRINT_MASK DRM property)
         "default",
         "var3",
     ],
@@ -17,6 +25,7 @@ soong_config_module_type {
         "enabled",
         "srcs",
         "header_libs",
+        "include_dirs",
     ],
 }
 
@@ -108,9 +117,24 @@ qtidisplay_cc_defaults {
                 enabled: true,
             },
         },
+<<<<<<< PATCH SET (2ee86d sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+        oplus_udfps: {
+            cflags: ["-DCONNECTOR_PROP_UDFPS", "-DOPLUS_FINGERPRINT_MASK"],
+            include_dirs: [
+                "frameworks/native/services/surfaceflinger/CompositionEngine/include/compositionengine"
+            ],
+        },
         samsung_udfps: {
             cflags: ["-DCONNECTOR_PROP_UDFPS", "-DSEC_FINGERPRINT_MASK"],
         },
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+=======
+        samsung_udfps: {
+            cflags: ["-DCONNECTOR_PROP_UDFPS", "-DSEC_FINGERPRINT_MASK"],
+        },
+>>>>>>> BASE      (3cba7b sdm: Support Samsung FINGERPRINT_MASK DRM property)
     },
 }
 

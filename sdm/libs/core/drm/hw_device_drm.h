@@ -361,9 +361,18 @@ class HWDeviceDRM : public HWInterface {
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
   bool seamless_mode_switch_ = false;
+<<<<<<< PATCH SET (2ee86d sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+#ifdef CONNECTOR_PROP_UDFPS
+  uint32_t current_mask_state_ = 0;
+#endif
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+=======
 #ifdef CONNECTOR_PROP_UDFPS
   bool current_mask_state_ = false;
 #endif
+>>>>>>> BASE      (3cba7b sdm: Support Samsung FINGERPRINT_MASK DRM property)
 };
 
 }  // namespace sdm

@@ -180,9 +180,18 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "dimming_bl_lut") { return DRMProperty::DIMMING_BL_LUT; }
   if (name == "dimming_dyn_ctrl") { return DRMProperty::DIMMING_DYN_CTRL; }
   if (name == "dimming_min_bl") { return DRMProperty::DIMMING_MIN_BL; }
+<<<<<<< PATCH SET (2ee86d sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+<<<<<<< HEAD   (3559c4 sdm: mark FOD pressed layer by setting a bit on ZPOS)
+=======
+#ifdef CONNECTOR_PROP_UDFPS
+  if (name == "fingerprint_mask" || name == "hbm_enable") { return DRMProperty::FINGERPRINT_MASK; }
+#endif
+>>>>>>> CHANGE (e2fc11 sdm: Operate FINGERPRINT_MASK for oplus optical UDFPS)
+=======
 #ifdef CONNECTOR_PROP_UDFPS
   if (name == "fingerprint_mask") { return DRMProperty::FINGERPRINT_MASK; }
 #endif
+>>>>>>> BASE      (3cba7b sdm: Support Samsung FINGERPRINT_MASK DRM property)
 
   return DRMProperty::INVALID;
 }
