@@ -346,7 +346,7 @@ class HWDeviceDRM : public HWInterface {
   bool seamless_mode_switch_ = false;
   float aspect_ratio_threshold_ = 1.0;
 #ifdef CONNECTOR_PROP_UDFPS
-  bool current_mask_state_ = false;
+  uint32_t current_mask_state_ = 0;
 #endif
 };
 
