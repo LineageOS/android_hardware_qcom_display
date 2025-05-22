@@ -245,7 +245,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "EPT") { return DRMProperty::EPT; }
   if (name == "brightness") { return DRMProperty::BRIGHTNESS; }
 #ifdef CONNECTOR_PROP_UDFPS
-  if (name == "fingerprint_mask") { return DRMProperty::FINGERPRINT_MASK; }
+  if (name == "fingerprint_mask" || name == "hbm_enable") { return DRMProperty::FINGERPRINT_MASK; }
 #endif
 
   return DRMProperty::INVALID;
