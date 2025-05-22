@@ -297,7 +297,7 @@ class HWDeviceDRM : public HWInterface {
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
   bool seamless_mode_switch_ = false;
 #ifdef CONNECTOR_PROP_UDFPS
-  bool current_mask_state_ = false;
+  uint8_t current_mask_state_ = 0;
 #endif
 };
 

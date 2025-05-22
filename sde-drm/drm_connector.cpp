@@ -981,7 +981,7 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
                  __FUNCTION__, obj_id);
         return;
       }
-      uint32_t fingerprint_mask = va_arg(args, uint32_t);
+      uint8_t fingerprint_mask = va_arg(args, uint32_t);
       uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::FINGERPRINT_MASK);
       int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, fingerprint_mask);
       if (ret < 0) {

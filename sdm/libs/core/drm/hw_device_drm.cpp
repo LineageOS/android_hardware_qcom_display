@@ -104,6 +104,14 @@
 #include "hw_device_drm.h"
 #include "hw_info_interface.h"
 
+#ifdef OPLUS_FINGERPRINT_MASK
+#include <UdfpsExtension.h>
+#ifdef UDFPS_TOUCHED_LAYER_NAME
+#undef UDFPS_TOUCHED_LAYER_NAME
+#define UDFPS_TOUCHED_LAYER_NAME "SurfaceView[UdfpsControllerOverlay]"
+#endif
+#endif
+
 #define __CLASS__ "HWDeviceDRM"
 
 #ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
@@ -1081,7 +1089,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
 #ifdef SEC_FINGERPRINT_MASK
   if (IsPrimaryDisplay()) {
     if (current_mask_state_) {
-      current_mask_state_ = false;
+      current_mask_state_ = 0;
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK,
           token_.conn_id, current_mask_state_);
       DLOGI("Display:%d Setting Fingerprint inDisplay Layer property = %d",
@@ -1271,6 +1279,24 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
           token_.conn_id, current_mask_state_);
       DLOGI("Display:%d Setting Fingerprint inDisplay Layer property = %d",
             display_id_, current_mask_state_);
+    }
+  }
+#endif
+
+#ifdef OPLUS_FINGERPRINT_MASK
+  if (IsPrimaryDisplay()) {
+    uint8_t mask_state = 0;
+    for (uint32_t i = 0; i < hw_layer_count; i++) {
+      const std::string &name = hw_layers_info->hw_layers[i].layer_name;
+      if (name.find(UDFPS_DIM_LAYER_NAME) != std::string::npos) {
+        mask_state |= 0x1;
+      } else if (name.find(UDFPS_TOUCHED_LAYER_NAME) != std::string::npos) {
+        mask_state |= 0x2;
+      }
+    }
+    if (current_mask_state_ != mask_state) {
+      current_mask_state_ = mask_state;
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FINGERPRINT_MASK, token_.conn_id, mask_state);
     }
   }
 #endif
