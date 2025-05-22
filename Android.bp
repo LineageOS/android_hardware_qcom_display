@@ -8,6 +8,7 @@ soong_config_module_type {
         "llvmsa",
         "gralloc4",
         "udfps",
+        "oplus_udfps",
         "samsung_udfps",
         "default",
         "var3",
@@ -24,6 +25,7 @@ soong_config_module_type {
         "ldflags",
         "native_coverage",
 	"vendor",
+        "include_dirs",
     ],
 }
 
@@ -150,6 +152,13 @@ qtidisplay_cc_defaults {
         },
         udfps: {
             cflags: ["-DUDFPS_ZPOS"],
+        },
+        oplus_udfps: {
+            cflags: [
+                "-DCONNECTOR_PROP_UDFPS",
+                "-DOPLUS_FINGERPRINT_MASK",
+            ],
+            include_dirs: ["frameworks/native/services/surfaceflinger/CompositionEngine/include/compositionengine"],
         },
         samsung_udfps: {
             cflags: [
