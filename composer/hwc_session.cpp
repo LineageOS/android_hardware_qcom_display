@@ -184,13 +184,14 @@ void HWCSession::HpdThreadTop() {
     return;
   }
 
+  auto page_size = static_cast<unsigned int>(getpagesize());
+  std::vector<char> uevent_data(page_size, 0);
+
   while (1) {
-    char uevent_data[PAGE_SIZE] = {};
-
     // keep last 2 zeros to ensure double 0 termination
-    int length = uevent_next_event(uevent_data, INT32(sizeof(uevent_data)) - 2);
+    int length = uevent_next_event(uevent_data.data(), INT32(page_size) - 2);
 
-    ParseUEvent(uevent_data, length);
+    ParseUEvent(uevent_data.data(), length);
   }
   DLOGI("Ending!");
 }
