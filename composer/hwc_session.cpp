@@ -41,6 +41,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <unistd.h>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_session.h"
@@ -113,11 +114,13 @@ void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
     hwc_uevent->caller_cv_.notify_one();
   }
 
+auto page_size = getpagesize();
+std::vector<char> uevent_data(page_size, 0);
+
   while (1) {
-    char uevent_data[PAGE_SIZE] = {};
 
     // keep last 2 zeros to ensure double 0 termination
-    int length = uevent_next_event(uevent_data, INT32(sizeof(uevent_data)) - 2);
+    int length = uevent_next_event(uevent_data.data(), INT32(page_size) - 2);
 
     // scope of lock to this block only, so that caller is free to set event handler to nullptr;
     {
