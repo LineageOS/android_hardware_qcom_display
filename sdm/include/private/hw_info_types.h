@@ -964,8 +964,7 @@ struct HWLayersInfo {
                                        //!< rendered for virtual displays.
                                        //!< NOTE: This field applies to a virtual display only.
   uint32_t output_fb_id = 0;           //!< FB ID of the output buffer of virtual display
-  std::shared_ptr<CwbConfig> hw_cwb_config = nullptr;
-                                       //!< Struct that contains CWB configuration passed to
+  CwbConfig *hw_cwb_config = NULL;     //!< Struct that contains CWB configuration passed to
                                        //!< driver by SDM.
   int32_t cwb_id = -1;                 //!< Populate writeback connector ID allocated for CWB.
   bool stitch_present = false;  // Indicates there is stitch layer or not

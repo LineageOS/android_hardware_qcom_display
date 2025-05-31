@@ -463,8 +463,7 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
   DisplayError PrepareRC(LayerStack *layer_stack);
-  DisplayError ValidateCwbConfigInfo(std::shared_ptr<CwbConfig> cwb_config,
-                                     const LayerBufferFormat &format);
+  DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
   bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
   DisplayError GetNoisePluginParams(LayerStack *layer_stack);
   DisplayError InsertNoiseLayer(LayerStack *layer_stack);

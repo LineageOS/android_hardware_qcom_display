@@ -1,5 +1,7 @@
 /* Copyright (c) 2015-2021 The Linux Foundation. All rights reserved.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -26,12 +28,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-/*
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-* Copyright (c) 2022,2024 Qualcomm Innovation Center, Inc. All rights reserved.
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
 
 #ifndef __COLOR_MANAGER_H__
 #define __COLOR_MANAGER_H__
@@ -159,7 +155,7 @@ class ColorManagerProxy {
    * if free_data is false to get dither setting needs to be applied.
    * if free_data is true to release the dither setting that has been applied.
    */
-  DisplayError ConfigureCWBDither(std::shared_ptr<CwbConfig> cwb_cfg, bool free_data);
+  DisplayError ConfigureCWBDither(CwbConfig *cwb_cfg, bool free_data);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
   DisplayError ColorMgrSetLtmPccConfig(void* pcc_input, size_t size);
   DisplayError ColorMgrSetSprIntf(std::shared_ptr<SPRIntf> spr_intf);
