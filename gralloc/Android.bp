@@ -12,7 +12,6 @@ cc_library_shared {
     header_libs: [
         "display_headers",
         "qti_kernel_headers",
-        "libubwcp_headers",
         "snapalloc_interface_headers",
         "common_interface_headers",
         "libimapper_stablec",
