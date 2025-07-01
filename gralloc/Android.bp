@@ -14,7 +14,6 @@ cc_library_shared {
         "qti_kernel_headers",
         "qti_display_kernel_headers",
         "device_kernel_headers",
-        "libubwcp_headers",
         "snapalloc_interface_headers",
         "common_interface_headers",
         "libimapper_stablec",
