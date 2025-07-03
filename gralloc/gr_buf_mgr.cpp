@@ -1283,6 +1283,7 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       break;
     case (int64_t)StandardMetadataType::STRIDE:
       metadata_name = "android.hardware.graphics.common.StandardMetadataType";
+      [[fallthrough]];
     case QTI_ALIGNED_WIDTH_IN_PIXELS:
       if (metadata_name == "") {
         metadata_name = qtigralloc::MetadataType_AlignedWidthInPixels.name;
