@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fd1980d1_0b6ea968",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2025-07-05T10:37:58Z",
+      "side": 1,
+      "message": "Mike, when rebasing sm8450+ take this one instead of https://review.lineageos.org/q/Ia6849ccf8fa2362c1c7c8d86d25bc79356c09eb2",
+      "revId": "1a9e3d507770f2001727620d03fa4c72f40fb7cc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
