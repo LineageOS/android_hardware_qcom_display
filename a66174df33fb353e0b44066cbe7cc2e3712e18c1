@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "550c6687_b9ba6698",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-07-05T10:29:30Z",
+      "side": 1,
+      "message": "This seems to be missing from sm8650 as well",
+      "revId": "a66174df33fb353e0b44066cbe7cc2e3712e18c1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
