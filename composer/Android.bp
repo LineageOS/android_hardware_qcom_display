@@ -205,9 +205,6 @@ qticomposer3_cc_defaults {
             },
             conditions_default: {
                 cflags: ["-DCOMPOSER3_V2"],
-                shared_libs: [
-                     "android.hardware.graphics.composer3-V2-ndk",
-                ],
             },
         },
     },
