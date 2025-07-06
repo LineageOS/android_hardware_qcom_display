@@ -54,7 +54,7 @@ cc_binary {
         "libbinder_ndk",
         "android.hardware.common-V2-ndk",
         "vendor.qti.hardware.display.config-V11-ndk",
-        "vendor.qti.hardware.display.composer3-V1-ndk",
+        "vendor.qti.hardware.display.composer3-V3-ndk",
         "vendor.qti.hardware.display.demura-V1-ndk",
         "vendor.qti.hardware.display.mapperextensions@1.1",
         "vendor.qti.hardware.display.mapperextensions@1.2",
