@@ -199,15 +199,11 @@ qticomposer3_cc_defaults {
                 srcs: ["DisplayAiqeAIDL.cpp"],
                 cflags: ["-DCOMPOSER3_V3"],
                 shared_libs: [
-                      "android.hardware.graphics.composer3-V3-ndk",
                       "vendor.qti.hardware.display.aiqe-V2-ndk",
                 ],
             },
             conditions_default: {
                 cflags: ["-DCOMPOSER3_V2"],
-                shared_libs: [
-                     "android.hardware.graphics.composer3-V2-ndk",
-                ],
             },
         },
     },
