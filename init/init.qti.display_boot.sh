@@ -66,7 +66,7 @@ case "$target" in
         setprop vendor.display.enable_hal_self_refresh 1
         setprop vendor.display.cpu_cluster_boost_mask 3
         ;;
-      655|681|659|694|686|720|721)
+      655|681|659|694|686|720|721|731|732)
         #SOC ID for tuna is 655
         #SOC ID for tuna7 is 681
         #SOC ID for tuna APQ is 694
@@ -74,6 +74,8 @@ case "$target" in
         #SOC ID for kera is 686
         #SOC ID for kera is 720
         #SOC ID for kera is 721
+        #SOC ID for kera iot with Modem is 731
+        #SOC ID for kera iot without Modem is 732
         setprop vendor.display.enable_fb_scaling 0
         setprop vendor.gralloc.use_dma_buf_heaps 1
         setprop vendor.display.target.version 6
