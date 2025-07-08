@@ -1,0 +1,107 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ed82049e_476d0fd8",
+        "filename": "Android.bp",
+        "patchSetId": 2
+      },
+      "lineNbr": 115,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-07-08T12:23:25Z",
+      "side": 1,
+      "message": "Put a newline here to fit 100 chars",
+      "range": {
+        "startLine": 115,
+        "startChar": 26,
+        "endLine": 115,
+        "endChar": 27
+      },
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "0309c2a6_f16670cf",
+        "filename": "libdrmutils/drm_interface.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 512,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-07-08T12:23:25Z",
+      "side": 1,
+      "message": "ditto",
+      "range": {
+        "startLine": 512,
+        "startChar": 10,
+        "endLine": 512,
+        "endChar": 17
+      },
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a7954a2a_44c2ce77",
+        "filename": "sde-drm/drm_connector.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1286,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-07-08T12:23:25Z",
+      "side": 1,
+      "message": "Keep it as `uint32_t`, it\u0027s larger so it shouldn\u0027t cause issues?\n\nYou also kept the va_arg as uint32_t so it cannot fit the value",
+      "range": {
+        "startLine": 1286,
+        "startChar": 6,
+        "endLine": 1286,
+        "endChar": 13
+      },
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "0296ab88_3ba36c9d",
+        "filename": "sdm/libs/core/drm/hw_device_drm.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1444,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-07-08T12:23:25Z",
+      "side": 1,
+      "message": "Should these values be enumerated?",
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "06f9da81_675c5574",
+        "filename": "sdm/libs/core/drm/hw_device_drm.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 365,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-07-08T12:23:25Z",
+      "side": 1,
+      "message": "How do you guess what does the value mean?",
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
