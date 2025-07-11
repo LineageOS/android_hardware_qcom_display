@@ -34,6 +34,24 @@
       "parentUuid": "54ff8d89_47d13e32",
       "revId": "1cb5d85b874fc273723de4ceaac613ba65b15189",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "08bc13d8_b35dbda7",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-07-11T08:54:38Z",
+      "side": 1,
+      "message": "sounds like you aren\u0027t setting PRODUCT_SHIPPING_API_LEVEL?",
+      "parentUuid": "8a638f59_c58cc4c4",
+      "revId": "1cb5d85b874fc273723de4ceaac613ba65b15189",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
