@@ -52,6 +52,24 @@
       "parentUuid": "8a638f59_c58cc4c4",
       "revId": "1cb5d85b874fc273723de4ceaac613ba65b15189",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3700ec73_d7ef9922",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33310
+      },
+      "writtenOn": "2025-07-12T18:32:29Z",
+      "side": 1,
+      "message": "It is set, I will take a closer look at the kernel and board flags I may and may not have set. The error keeps persisting (for me), and I noticed Alexander uploaded a similar patch for the sm8650 display hal.",
+      "parentUuid": "08bc13d8_b35dbda7",
+      "revId": "1cb5d85b874fc273723de4ceaac613ba65b15189",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
