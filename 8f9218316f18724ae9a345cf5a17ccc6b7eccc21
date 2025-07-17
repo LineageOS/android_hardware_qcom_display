@@ -24,6 +24,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "937b609f_4245c84e",
+        "filename": "Android.bp",
+        "patchSetId": 2
+      },
+      "lineNbr": 115,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-07-17T16:10:12Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "ed82049e_476d0fd8",
+      "range": {
+        "startLine": 115,
+        "startChar": 26,
+        "endLine": 115,
+        "endChar": 27
+      },
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "0309c2a6_f16670cf",
@@ -37,6 +61,30 @@
       "writtenOn": "2025-07-08T12:23:25Z",
       "side": 1,
       "message": "ditto",
+      "range": {
+        "startLine": 512,
+        "startChar": 10,
+        "endLine": 512,
+        "endChar": 17
+      },
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "393ead55_cab118cf",
+        "filename": "libdrmutils/drm_interface.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 512,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-07-17T16:10:12Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0309c2a6_f16670cf",
       "range": {
         "startLine": 512,
         "startChar": 10,
@@ -70,6 +118,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "6c245942_8a438330",
+        "filename": "sde-drm/drm_connector.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1286,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-07-17T16:10:12Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "a7954a2a_44c2ce77",
+      "range": {
+        "startLine": 1286,
+        "startChar": 6,
+        "endLine": 1286,
+        "endChar": 13
+      },
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "0296ab88_3ba36c9d",
@@ -87,6 +159,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "6847188d_880701c0",
+        "filename": "sdm/libs/core/drm/hw_device_drm.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1444,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-07-17T16:10:12Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0296ab88_3ba36c9d",
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "06f9da81_675c5574",
@@ -100,6 +190,24 @@
       "writtenOn": "2025-07-08T12:23:25Z",
       "side": 1,
       "message": "How do you guess what does the value mean?",
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "bb5f8e68_f35e7ba8",
+        "filename": "sdm/libs/core/drm/hw_device_drm.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 365,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-07-17T16:10:12Z",
+      "side": 1,
+      "message": "My references:\n\nhttps://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8450/blob/oneplus/sm8450_v_15.0.0_oneplus_10_pro/vendor/qcom/opensource/display-drivers/oplus/oplus_onscreenfingerprint.h#L29-L35\n\nhttps://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8450/blob/oneplus/sm8450_v_15.0.0_oneplus_10_pro/vendor/qcom/opensource/display-drivers/oplus/oplus_onscreenfingerprint.c#L523-L527",
+      "parentUuid": "06f9da81_675c5574",
       "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
