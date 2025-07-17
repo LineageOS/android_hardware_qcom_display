@@ -210,6 +210,24 @@
       "parentUuid": "06f9da81_675c5574",
       "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b09131bc_2fb64cdb",
+        "filename": "sdm/libs/core/drm/hw_device_drm.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 365,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-07-17T16:10:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bb5f8e68_f35e7ba8",
+      "revId": "8f9218316f18724ae9a345cf5a17ccc6b7eccc21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
