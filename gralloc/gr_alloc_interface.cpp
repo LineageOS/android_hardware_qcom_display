@@ -39,13 +39,18 @@
 namespace gralloc {
 
 AllocInterface *AllocInterface::GetInstance() {
+  static AllocInterface *instance = NULL;
+  if (instance)
+    return instance;
+
   // Detect DMABUF Heaps usage
   char property[PROPERTY_VALUE_MAX];
   if (property_get(USE_DMA_BUF_HEAPS_PROP, property, NULL) > 0) {
-    return DmaManager::GetInstance();
+    instance = DmaManager::GetInstance();
   } else {
-    return DmaLegacyManager::GetInstance();
+    instance = DmaLegacyManager::GetInstance();
   }
+  return instance;
 }
 
 }  // namespace gralloc
