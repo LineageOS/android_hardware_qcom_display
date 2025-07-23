@@ -185,12 +185,13 @@ void HWCSession::HpdThreadTop() {
   }
 
   while (1) {
-    char uevent_data[PAGE_SIZE] = {};
+    char* uevent_data = new char[getpagesize()];
 
     // keep last 2 zeros to ensure double 0 termination
     int length = uevent_next_event(uevent_data, INT32(sizeof(uevent_data)) - 2);
 
     ParseUEvent(uevent_data, length);
+    delete[] uevent_data;
   }
   DLOGI("Ending!");
 }
