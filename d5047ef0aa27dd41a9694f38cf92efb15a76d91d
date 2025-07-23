@@ -36,6 +36,23 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "96447569_ebf82411",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 21290
+      },
+      "writtenOn": "2025-07-23T13:45:23Z",
+      "side": 1,
+      "message": "modern devices don\u0027t have the macro defined: https://cs.android.com/android/platform/superproject/main/+/main:build/make/core/config.mk;l\u003d464?q\u003dTARGET_NO_BIONIC_PAGE_SIZE_MACRO%20%20\u0026ss\u003dandroid%2Fplatform%2Fsuperproject%2Fmain",
+      "revId": "d5047ef0aa27dd41a9694f38cf92efb15a76d91d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "79ed6af6_1e2c29c6",
