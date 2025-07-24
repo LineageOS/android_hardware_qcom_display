@@ -16,6 +16,23 @@
       "message": "You had to pick this, right?",
       "revId": "41f45b896f2cee8e9b3dd5eae48a80c41e328d77",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ba604510_709f79a2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-07-24T10:09:14Z",
+      "side": 1,
+      "message": "Without this, other non-sm8650 devices broke for me, not sure if it\u0027s \"needed\" for sm8650 itself to build",
+      "revId": "41f45b896f2cee8e9b3dd5eae48a80c41e328d77",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
