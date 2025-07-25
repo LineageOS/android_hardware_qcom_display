@@ -33,6 +33,23 @@
       "message": "Without this, other non-sm8650 devices broke for me, not sure if it\u0027s \"needed\" for sm8650 itself to build",
       "revId": "41f45b896f2cee8e9b3dd5eae48a80c41e328d77",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "64d95995_203a47a0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30975
+      },
+      "writtenOn": "2025-07-25T12:41:34Z",
+      "side": 1,
+      "message": "Without this, the prebuilt composer can break builds.\n\nError:\nhardware/qcom-caf/sm8650/display/composer/Android.bp:3:1: module \"vendor.qti.hardware.display.composer-service\" variant \"android_vendor_arm64_armv8-2a-dotprod\" depends on multiple versions of the same aidl_interface:\nandroid.hardware.graphics.composer3-V3-ndk-source, android.hardware.graphics.composer3-V4-ndk-source.",
+      "revId": "41f45b896f2cee8e9b3dd5eae48a80c41e328d77",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
