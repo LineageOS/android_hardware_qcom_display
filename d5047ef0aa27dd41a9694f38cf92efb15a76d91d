@@ -68,6 +68,24 @@
       "message": "this does not seem to be necessary",
       "revId": "d5047ef0aa27dd41a9694f38cf92efb15a76d91d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5de12128_c0d1e8cf",
+        "filename": "composer/hwc_session.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2025-07-25T10:06:20Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "79ed6af6_1e2c29c6",
+      "revId": "d5047ef0aa27dd41a9694f38cf92efb15a76d91d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
