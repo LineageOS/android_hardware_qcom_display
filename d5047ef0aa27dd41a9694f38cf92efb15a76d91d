@@ -53,6 +53,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "6e62cea0_e45d6725",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33310
+      },
+      "writtenOn": "2025-07-29T10:45:49Z",
+      "side": 1,
+      "message": "While it is a non-issue and limited to two isolated cases, on pineapple and holi, adding the header without the changes will provide the `PAGE_SIZE` macro to other devices that might need it?",
+      "parentUuid": "53c902bc_b3ff6280",
+      "revId": "d5047ef0aa27dd41a9694f38cf92efb15a76d91d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "79ed6af6_1e2c29c6",
