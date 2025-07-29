@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "baf83469_f06263c6",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2025-07-29T18:15:52Z",
+      "side": 1,
+      "message": "Would probably cause crashes for devices that include prebuilts that are equal or newer to the tag that includes this change.",
+      "revId": "cf9e9fba0b646d1ff266ff239a4bb6e09eea6c74",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
