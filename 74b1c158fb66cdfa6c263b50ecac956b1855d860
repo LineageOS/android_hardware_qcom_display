@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "35a5b1a2_0f3ac06a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-07-29T19:26:08Z",
+      "side": 1,
+      "message": "https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/441769 is the upstream fix for this btw",
+      "revId": "74b1c158fb66cdfa6c263b50ecac956b1855d860",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
