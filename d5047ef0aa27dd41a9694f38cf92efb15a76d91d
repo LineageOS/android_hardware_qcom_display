@@ -140,6 +140,24 @@
       "parentUuid": "f4db5013_5258c52a",
       "revId": "d5047ef0aa27dd41a9694f38cf92efb15a76d91d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f2b8a875_440c4f94",
+        "filename": "composer/hwc_session.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 33310
+      },
+      "writtenOn": "2025-07-29T19:32:26Z",
+      "side": 1,
+      "message": "\u003e modern devices don\u0027t have the macro defined: https://cs.android.com/android/platform/superproject/main/+/main:build/make/core/config.mk;l\u003d464?q\u003dTARGET_NO_BIONIC_PAGE_SIZE_MACRO%20%20\u0026ss\u003dandroid%2Fplatform%2Fsuperproject%2Fmain\n\nSorry, didn\u0027t catch that, \n\nIn that case using getpagesize() would be the better approach to handle this",
+      "parentUuid": "3c38acae_7c7cb846",
+      "revId": "d5047ef0aa27dd41a9694f38cf92efb15a76d91d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
