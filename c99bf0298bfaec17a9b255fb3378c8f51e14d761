@@ -87,6 +87,24 @@
       "parentUuid": "7a067639_60d8e157",
       "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c0f59e16_d2a83d52",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-08-02T16:37:58Z",
+      "side": 1,
+      "message": "with that said, please just unset PRODUCT_MAX_PAGE_SIZE_SUPPORTED and ensure PRODUCT_SHIPPING_API_LEVEL is set to value matching stock rom.",
+      "parentUuid": "a31ccdbb_74789454",
+      "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
