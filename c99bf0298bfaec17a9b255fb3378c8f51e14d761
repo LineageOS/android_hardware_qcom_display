@@ -69,6 +69,24 @@
       "parentUuid": "aa00d7a3_56d4b4b4",
       "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a31ccdbb_74789454",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-08-02T16:37:18Z",
+      "side": 1,
+      "message": "here i only get this issue with:\n\n```\nPRODUCT_SHIPPING_API_LEVEL unset\nPRODUCT_MAX_PAGE_SIZE_SUPPORTED set to 4096\n```\n\nwith\n\n```\nPRODUCT_SHIPPING_API_LEVEL set to 33\nPRODUCT_MAX_PAGE_SIZE_SUPPORTED set to 4096\n```\n\nor \n\n```\nPRODUCT_SHIPPING_API_LEVEL set to 33\n```\n\nit builds just fine without this patch.",
+      "parentUuid": "7a067639_60d8e157",
+      "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
