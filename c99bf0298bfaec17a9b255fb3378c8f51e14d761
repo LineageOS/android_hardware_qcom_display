@@ -51,6 +51,24 @@
       "parentUuid": "259c9cdb_de74592d",
       "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7a067639_60d8e157",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-08-02T16:20:21Z",
+      "side": 1,
+      "message": "i\u0027m still pretty sure this is a misconfiguration in your device tree if you hit it on 5.4...",
+      "parentUuid": "aa00d7a3_56d4b4b4",
+      "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
