@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f64ab3da_ff7c4ced",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33310
+      },
+      "writtenOn": "2025-08-02T16:08:21Z",
+      "side": 1,
+      "message": "As mentioned before, to address the following \n\nhardware/qcom-caf/sm8350/display/composer/hwc_session.cpp:117:22: error: use of undeclared identifier \u0027PAGE_SIZE\u0027\n  117 |     char uevent_data[PAGE_SIZE] \u003d {};\n      |                      ^\n1 error generated.\n\nTested on holi platform, samsung device.\nTo resolve\n\n\u003e modern devices don\u0027t have the macro defined: https://cs.android.com/android/platform/superproject/main/+/main:build/make/core/config.mk;l\u003d464?q\u003dTARGET_NO_BIONIC_PAGE_SIZE_MACRO%20%20\u0026ss\u003dandroid%2Fplatform%2Fsuperproject%2Fmain",
+      "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
