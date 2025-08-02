@@ -33,6 +33,24 @@
       "message": "you shouldn\u0027t be using api level 35 on 5.4 tho?",
       "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "aa00d7a3_56d4b4b4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33310
+      },
+      "writtenOn": "2025-08-02T16:16:09Z",
+      "side": 1,
+      "message": "The API level is set in device config, and ships level 33, so the error shouldn\u0027t be happening in theory. But it does. \nIt is an upstream change, so future holi/lahaina devices can benefit.",
+      "parentUuid": "259c9cdb_de74592d",
+      "revId": "c99bf0298bfaec17a9b255fb3378c8f51e14d761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
