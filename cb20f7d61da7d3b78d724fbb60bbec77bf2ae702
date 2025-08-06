@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b884ea1f_75f2a338",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-08-06T15:18:03Z",
+      "side": 1,
+      "message": "The patchset is not the same as https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/432431/5",
+      "revId": "cb20f7d61da7d3b78d724fbb60bbec77bf2ae702",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
