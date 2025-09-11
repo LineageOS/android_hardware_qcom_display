@@ -1,6 +1,7 @@
 /*
-* Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-  SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <math.h>
@@ -8,6 +9,7 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -54,6 +56,12 @@ DisplayError HWCDisplayResolutionExtn::GetExtendedDisplayResolutions(uint32_t pa
 
   if (soc_name[0] == '\0') {
     return error;
+  }
+
+  int value = 0;
+  if (Debug::GetProperty(ASPECT_RATIO_THRESHOLD, &value) == kErrorNone) {
+    aspect_ratio_threshold_ = 1 + (FLOAT(value) / 100);
+    DLOGI("aspect_ratio_threshold_: %f", aspect_ratio_threshold_);
   }
 
   XMLDocument document;
@@ -122,8 +130,15 @@ DisplayError HWCDisplayResolutionExtn::GetExtendedDisplayResolutions(uint32_t pa
           continue;
         }
 
+        float display_aspect_ratio = FLOAT(p_width) / FLOAT(p_height);
+        float mixer_aspect_ratio = FLOAT(res_x) / FLOAT(res_y);
+        float display_to_mixer_aspect_ratio =
+            std::max(display_aspect_ratio, mixer_aspect_ratio) /
+            std::min(display_aspect_ratio, mixer_aspect_ratio);
+
         if ((floor(res_x) == res_x) && (floor(res_y) == res_y) && (UINT32(res_x) % 2 == 0) &&
-            (UINT32(res_y) % 2 == 0) && ((p_width / res_x) == (p_height / res_y))) {
+            (UINT32(res_y) % 2 == 0) &&
+            (display_to_mixer_aspect_ratio <= aspect_ratio_threshold_)) {
           extended_disp_res->push_back(std::make_pair(UINT32(res_x), UINT32(res_y)));
         } else {
           DLOGI("scaling resolution: %f x %f is invalid", res_x, res_y);
