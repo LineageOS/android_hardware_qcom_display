@@ -16,6 +16,23 @@
       "message": "Mich",
       "revId": "cc24d6ad4ad4269156194aff59b7558389373b6f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8190a964_9cbb4b04",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-10-17T14:05:55Z",
+      "side": 1,
+      "message": "The header is already in this repo https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/436971",
+      "revId": "cc24d6ad4ad4269156194aff59b7558389373b6f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
