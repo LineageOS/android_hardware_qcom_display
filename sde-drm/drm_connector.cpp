@@ -1480,6 +1480,24 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
                                expected_present_time);
       DRM_LOGD("Connector %d: Setting ePT = %" PRId64, obj_id, expected_present_time);
     } break;
+#ifdef CONNECTOR_PROP_UDFPS
+    case DRMOps::CONNECTOR_SET_HBM_ENABLE: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::HBM_ENABLE)) {
+        DRM_LOGE("DRMConnector::%s: Connector %d: Fingerprint property is not available",
+                 __FUNCTION__, obj_id);
+        return;
+      }
+      uint32_t hbm_enable = va_arg(args, uint32_t);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::HBM_ENABLE);
+      int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, hbm_enable);
+      if (ret < 0) {
+        DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d mode %d ret %d",
+                 obj_id, prop_id, hbm_enable, ret);
+      } else {
+        DRM_LOGD("Connector %d: Setting Fingerprint mode %d", obj_id, hbm_enable);
+      }
+    } break;
+#endif
 
     default:
       DRM_LOGE("Invalid opcode %d to set on connector %d", code, obj_id);

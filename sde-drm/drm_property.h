@@ -223,6 +223,9 @@ enum struct DRMProperty {
   DIMMING_BL_LUT,
   DIMMING_DYN_CTRL,
   DIMMING_MIN_BL,
+#ifdef CONNECTOR_PROP_UDFPS
+  HBM_ENABLE,
+#endif
   DYN_TRANSFER_TIME,  // Setter
   TRANSFER_TIME,      // Getter
   JITTER_CONFIG,

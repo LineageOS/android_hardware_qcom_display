@@ -563,6 +563,14 @@ enum struct DRMOps {
    * Arg: drmModeAtomicReq - Atomic request
    */
   RESET_PANEL_FEATURES,
+#ifdef CONNECTOR_PROP_UDFPS
+  /*
+   * Op: Sets fingerprint property
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - fingerprint mode
+   */
+  CONNECTOR_SET_HBM_ENABLE,
+#endif
   /*
    * Op: Set new transfer time value for the current mode
    * Arg: uint32_t - New transfer time to be used

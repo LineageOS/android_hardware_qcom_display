@@ -227,6 +227,9 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "dimming_bl_lut") { return DRMProperty::DIMMING_BL_LUT; }
   if (name == "dimming_dyn_ctrl") { return DRMProperty::DIMMING_DYN_CTRL; }
   if (name == "dimming_min_bl") { return DRMProperty::DIMMING_MIN_BL; }
+#ifdef CONNECTOR_PROP_UDFPS
+  if (name == "hbm_enable") { return DRMProperty::HBM_ENABLE; }
+#endif
   if (name == "dyn_transfer_time") { return DRMProperty::DYN_TRANSFER_TIME; }
   if (name == "jitter_config") { return DRMProperty::JITTER_CONFIG; }
   if (name == "transfer_time") { return DRMProperty::TRANSFER_TIME; }

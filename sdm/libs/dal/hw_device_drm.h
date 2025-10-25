@@ -379,6 +379,9 @@ class HWDeviceDRM : public HWInterface {
   int cached_brightness_level_ = -1;
   int current_brightness_ = -1;
   bool seamless_mode_switch_ = false;
+#ifdef CONNECTOR_PROP_UDFPS
+  uint32_t current_hbm_state_ = 0;
+#endif
 
  private:
   void GetCWBCapabilities();
