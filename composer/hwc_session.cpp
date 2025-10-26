@@ -77,7 +77,8 @@
 #include <string>
 #include <thread>
 #include <vector>
-
+#include <unistd.h>
+#include <cstring> // for memset
 #include "hwc_buffer_allocator.h"
 #include "hwc_session.h"
 #include "hwc_debugger.h"
@@ -145,17 +146,21 @@ void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
     hwc_uevent->caller_cv_.notify_one();
   }
 
-  while (1) {
-    char uevent_data[PAGE_SIZE] = {};
+  // allocate once, using the actual system page size
+  const size_t page_size = static_cast<size_t>(getpagesize());
+  std::vector<char> uevent_data(page_size);
+
+  while (true) {
+    // ensure buffer clean per iteration
+    memset(uevent_data.data(), 0, page_size);
 
     // keep last 2 zeros to ensure double 0 termination
-    int length = uevent_next_event(uevent_data, INT32(sizeof(uevent_data)) - 2);
+    int length = uevent_next_event(uevent_data.data(), static_cast<int>(page_size) - 2);
 
-    // scope of lock to this block only, so that caller is free to set event handler to nullptr;
     {
       std::lock_guard<std::mutex> guard(hwc_uevent->mutex_);
       if (hwc_uevent->uevent_listener_) {
-        hwc_uevent->uevent_listener_->UEventHandler(uevent_data, length);
+        hwc_uevent->uevent_listener_->UEventHandler(uevent_data.data(), length);
       } else {
         DLOGW("UEvent dropped. No uevent listener.");
       }
