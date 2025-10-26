@@ -86,6 +86,17 @@
 
 #define HWC_UEVENT_SWITCH_HDMI "change@/devices/virtual/switch/hdmi"
 #define HWC_UEVENT_DRM_EXT_HOTPLUG "mdss_mdp/drm/card"
+// For 16K page size builds
+// Automatically set PAGE_SIZE based on PRODUCT_MAX_PAGE_SIZE_SUPPORTED
+
+#ifndef PAGE_SIZE
+#if defined(PRODUCT_MAX_PAGE_SIZE_SUPPORTED) && (PRODUCT_MAX_PAGE_SIZE_SUPPORTED == 16384)
+#define PAGE_SIZE 16384
+#else
+#define PAGE_SIZE 4096
+#endif
+#endif
+
 
 using HwcAttribute = composer_V2_4::IComposerClient::Attribute;
 
