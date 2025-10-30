@@ -105,6 +105,24 @@
       "parentUuid": "7b305f46_6dbe06b2",
       "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1dece024_1961740f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35551
+      },
+      "writtenOn": "2025-10-30T23:06:52Z",
+      "side": 1,
+      "message": "thanks for suggestion, i will try make code page-size-agnostic",
+      "parentUuid": "6490c34b_a75b20f3",
+      "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
