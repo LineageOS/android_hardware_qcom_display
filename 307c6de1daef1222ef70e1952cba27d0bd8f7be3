@@ -69,6 +69,42 @@
       "parentUuid": "201531b7_4ca5447a",
       "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6490c34b_a75b20f3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-10-30T10:19:44Z",
+      "side": 1,
+      "message": "Correct, but the point is to make code page-size-agnostic, not support both 16k and 4k, the code is wrong",
+      "parentUuid": "44e72bf8_7a2991c7",
+      "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "495612db_4a2b71dc",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-10-30T10:19:44Z",
+      "side": 1,
+      "message": "Absolutely not needed for us",
+      "parentUuid": "7b305f46_6dbe06b2",
+      "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
