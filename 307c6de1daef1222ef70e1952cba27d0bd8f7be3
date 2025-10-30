@@ -33,6 +33,42 @@
       "message": "why would 8250 need this.",
       "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "44e72bf8_7a2991c7",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35551
+      },
+      "writtenOn": "2025-10-30T09:39:49Z",
+      "side": 1,
+      "message": "likely hwc not catch pagesize if 16k pagesize  flag enabled from https://source.android.com/docs/core/architecture/16kb-page-size/16kb\nenabled",
+      "parentUuid": "eac97572_b34762ba",
+      "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7b305f46_6dbe06b2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35551
+      },
+      "writtenOn": "2025-10-30T09:39:49Z",
+      "side": 1,
+      "message": "based on this \nhttps://source.android.com/docs/core/architecture/16kb-page-size/16kb",
+      "parentUuid": "201531b7_4ca5447a",
+      "revId": "307c6de1daef1222ef70e1952cba27d0bd8f7be3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
