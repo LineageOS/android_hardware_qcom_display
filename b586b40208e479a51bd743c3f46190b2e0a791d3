@@ -16,6 +16,24 @@
       "message": "How is this even correct btw?",
       "revId": "b586b40208e479a51bd743c3f46190b2e0a791d3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "58aa9c43_900a75a5",
+        "filename": "sdm/include/utils/utils.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 79,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-10-31T11:58:18Z",
+      "side": 1,
+      "message": "\"use 4096 for 16K since PAGE_SIZE is not defined in that scenario\"",
+      "parentUuid": "6e26ed73_3f61c7bc",
+      "revId": "b586b40208e479a51bd743c3f46190b2e0a791d3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ],
   "submitRequirementResults": []
