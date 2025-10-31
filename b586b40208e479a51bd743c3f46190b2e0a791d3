@@ -34,6 +34,24 @@
       "parentUuid": "6e26ed73_3f61c7bc",
       "revId": "b586b40208e479a51bd743c3f46190b2e0a791d3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "bba2ef20_a1ea71ac",
+        "filename": "sdm/include/utils/utils.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 79,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-10-31T13:58:23Z",
+      "side": 1,
+      "message": "`getpagesize()` exists in libc and it would return 16384 on 16kb page size devices tho",
+      "parentUuid": "58aa9c43_900a75a5",
+      "revId": "b586b40208e479a51bd743c3f46190b2e0a791d3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ],
   "submitRequirementResults": []
