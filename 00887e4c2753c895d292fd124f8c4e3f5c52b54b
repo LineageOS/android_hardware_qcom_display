@@ -86,6 +86,23 @@
       "message": "Anyway these changes will never be merged, because kernel backports are required",
       "revId": "00887e4c2753c895d292fd124f8c4e3f5c52b54b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2f1213d3_3e22500e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-10-31T22:41:26Z",
+      "side": 1,
+      "message": "16k also requires proprietary blobs to work with it, so there is no chance that this is going to work for any existing device",
+      "revId": "00887e4c2753c895d292fd124f8c4e3f5c52b54b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
