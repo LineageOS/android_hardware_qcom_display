@@ -1,4 +1,22 @@
 {
-  "comments": [],
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6e26ed73_3f61c7bc",
+        "filename": "sdm/include/utils/utils.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 79,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2025-10-31T11:39:01Z",
+      "side": 1,
+      "message": "How is this even correct btw?",
+      "revId": "b586b40208e479a51bd743c3f46190b2e0a791d3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ],
   "submitRequirementResults": []
 }
