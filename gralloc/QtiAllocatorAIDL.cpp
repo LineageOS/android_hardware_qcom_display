@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -22,6 +22,8 @@
 
 #include <dlfcn.h>
 #include <vndksupport/linker.h>
+
+#define FIFO_BASED_DISPLAY_PRIORITY 2
 
 using gralloc::Error;
 using mapper::GetStandardMetadata;
@@ -469,6 +471,13 @@ ndk::ScopedAStatus QtiAllocatorAIDL::isSupported(const BufferDescriptorInfo &in_
 
 ndk::SpAIBinder QtiAllocatorAIDL::createBinder() {
   auto binder = BnAllocator::createBinder();
+  const int policy = SCHED_FIFO;
+  int priority = sched_get_priority_min(policy);
+  // Display priority is 2. Allocator binder thread priority should be always less than display
+  // priority to avoid framedrops and janks.
+  if (priority < FIFO_BASED_DISPLAY_PRIORITY) {
+    AIBinder_setMinSchedulerPolicy(binder.get(), policy, priority);
+  }
   AIBinder_setInheritRt(binder.get(), true);
   return binder;
 }

@@ -1237,7 +1237,7 @@ void AidlComposerClient::CommandEngine::executeSetDisplayBrightness(
     return;
   }
 
-  auto err = mClient.settings_->SetDisplayBrightness(display, command.brightness);
+  auto err = mClient.settings_->SetDisplayBrightness(display, command.brightness, false);
   if (err != sdm::kErrorNone) {
     writeError(__FUNCTION__, Error::BadConfig);
   }

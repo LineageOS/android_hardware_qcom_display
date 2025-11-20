@@ -12,6 +12,7 @@ soong_config_module_type {
         "llvmcov",
         "smmu_proxy",
         "ubwcp_headers",
+        "neo"
     ],
     properties: [
         "cflags",
@@ -145,6 +146,9 @@ qtidisplay_cc_defaults {
         },
         ubwcp_headers: {
             cflags: ["-DTARGET_USES_UBWCP"],
+        },
+        neo: {
+            cflags: ["-DTARGET_INCLUDES_NEO"],
         },
         var3 : {
             enabled: false,

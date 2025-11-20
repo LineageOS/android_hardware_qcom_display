@@ -33,6 +33,7 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+
 #include <QtiGralloc.h>
 #include <aidl/vendor/qti/hardware/display/demura/IDemuraFileFinder.h>
 #include <android/binder_manager.h>
@@ -234,9 +235,9 @@ ScopedAStatus DisplayConfigAIDL::setPanelBrightness(int level) {
   }
 
   if (level == 0) {
-    settings_->SetDisplayBrightness(sdm::HWC_DISPLAY_PRIMARY, -1.0f);
+    settings_->SetDisplayBrightness(sdm::HWC_DISPLAY_PRIMARY, -1.0f, false);
   } else {
-    settings_->SetDisplayBrightness(sdm::HWC_DISPLAY_PRIMARY, (level - 1) / 254.0f);
+    settings_->SetDisplayBrightness(sdm::HWC_DISPLAY_PRIMARY, (level - 1) / 254.0f, false);
   }
   return ScopedAStatus::ok();
 }
@@ -681,17 +682,23 @@ ScopedAStatus DisplayConfigAIDL::setCWBOutputBuffer(
     return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
   }
 
+// TODO (user): Need to extend display type enumeration in DisplayConfig AIDL interface
+// for display external-2 (MST) to replace corresponding macro.
+#define DISPLAY_TYPE_EXTERNAL_2 (UINT32(DisplayType::BUILTIN2) + 1)
   std::unordered_map<int32_t, int32_t> disp_type_map = {
       {static_cast<int32_t>(DisplayType::PRIMARY), static_cast<int32_t>(qdutils::DISPLAY_PRIMARY)},
       {static_cast<int32_t>(DisplayType::EXTERNAL),
        static_cast<int32_t>(qdutils::DISPLAY_EXTERNAL)},
       {static_cast<int32_t>(DisplayType::BUILTIN2),
        static_cast<int32_t>(qdutils::DISPLAY_BUILTIN_2)},
+      {static_cast<int32_t>(DISPLAY_TYPE_EXTERNAL_2),
+       static_cast<int32_t>(qdutils::DISPLAY_EXTERNAL_2)},
   };
 
   if (disp_id <= static_cast<int32_t>(DisplayType::INVALID) ||
-      disp_id > static_cast<int32_t>(DisplayType::BUILTIN2)) {
-    ALOGE("%s: CWB is supported on primary or external display only at present.", __FUNCTION__);
+      disp_id > static_cast<int32_t>(DISPLAY_TYPE_EXTERNAL_2)) {
+    ALOGE("%s: CWB is supported on 2 builtin as well as 2 exernal displays only at present.",
+          __FUNCTION__);
     return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
   }
 

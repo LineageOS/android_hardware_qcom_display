@@ -1,11 +1,20 @@
-cc_library_headers {
-	name: "libhwfenceclient_headers",
-	vendor_available: true,
-	export_include_dirs: ["."],
+soong_config_module_type {
+    name: "conditional_cc_library_shared",
+    module_type: "cc_library_shared",
+    config_namespace: "qtidisplay",
+    bool_variables: ["neo"],
+    properties: ["enabled"],
 }
-cc_library_shared {
-    name: "libhwfenceclient",
 
+cc_library_headers {
+    name: "libhwfenceclient_headers",
+    vendor_available: true,
+    export_include_dirs: ["."],
+}
+
+conditional_cc_library_shared {
+    name: "libhwfenceclient",
+    enabled: true,
     sanitize: {
         integer_overflow: true,
     },
@@ -36,5 +45,10 @@ cc_library_shared {
         "-DLOG_TAG=\"libhwfenceclient\"",
         "-Wno-sign-conversion",
     ],
-}
 
+    soong_config_variables: {
+        neo: {
+            enabled: false,
+        },
+    },
+}

@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -685,6 +685,7 @@ void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height, int32_t fo
   height = (height + 1) >> 1;
 
 #ifndef QMAA
+#ifndef TARGET_INCLUDES_NEO
   if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_4R_UBWC) {
     GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV124R_UBWC, &plane_info[0]);
     GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV124R_UBWC, &plane_info[4]);
@@ -692,6 +693,10 @@ void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height, int32_t fo
     GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, &plane_info[0]);
     GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, &plane_info[4]);
   }
+#else
+  GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, &plane_info[0]);
+  GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, &plane_info[4]);
+#endif
 #endif
 }
 
@@ -1049,8 +1054,10 @@ void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *a
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_4R_UBWC:
 #ifndef QMAA
+#ifndef TARGET_INCLUDES_NEO
       *aligned_w = MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV124R_UBWC, width);
       *aligned_h = MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV124R_UBWC, height);
+#endif
 #endif
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
@@ -1143,7 +1150,9 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_4R_UBWC:
 #ifndef QMAA
+#ifndef TARGET_INCLUDES_NEO
       size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV124R_UBWC, width, height);
+#endif
 #endif
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
@@ -1869,11 +1878,15 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       } else {
         *plane_count = 4;
 #ifndef QMAA
+#ifndef TARGET_INCLUDES_NEO
         if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_4R_UBWC) {
           GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV124R_UBWC, plane_info);
         } else {
           GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, plane_info);
         }
+#else
+        GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, plane_info);
+#endif
 #endif
         plane_info[0].h_subsampling = 0;
         plane_info[0].v_subsampling = 0;
