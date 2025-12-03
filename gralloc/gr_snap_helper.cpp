@@ -248,7 +248,7 @@ int GrallocSnapHelper::Import(native_handle_t *gr_hnd) {
         // Maintain map so that native_handle_t doesn't need to be duped during calls after import
         handles_map_.emplace(std::make_pair(gr_hnd, handle));
         ALOGD_IF(enable_logs_,
-                 "gr_snap_helper Import - handles_map_.size() %d after emplace into map",
+                 "gr_snap_helper Import - handles_map_.size() %zu after emplace into map",
                  handles_map_.size());
         return SnapError::NONE;
       } else {
@@ -321,7 +321,7 @@ int GrallocSnapHelper::ImportViewBuffer(native_handle_t *meta_handle, uint32_t v
       native_handle_t *native_handle = CNativeHandleFromSnapHandle(view_handle, false);
       handles_map_.emplace(std::make_pair(native_handle, view_handle));
       ALOGD_IF(enable_logs_,
-               "gr_snap_helper ImportViewBuffer - handles_map_.size() %d"
+               "gr_snap_helper ImportViewBuffer - handles_map_.size() %zu"
                "after emplace into map",
                handles_map_.size());
       *out_buffer_handle = native_handle;
@@ -2760,8 +2760,8 @@ int GrallocSnapHelper::ConvertGrallocPlaneLayoutToAndroidYCbCr(
   }
   ALOGD_IF(
       enable_logs_,
-      "%s: base_addr %" PRIu64 ", outYCbCr->y %p, outYCbCr->cb %p, outYCbCr->cr %p, outYCbCr->ystride %d, "
-      "outYCbCr->cstride %d, outYCbCr->chroma_step %d",
+      "%s: base_addr %" PRIu64 ", outYCbCr->y %p, outYCbCr->cb %p, outYCbCr->cr %p, outYCbCr->ystride %zu, "
+      "outYCbCr->cstride %zu, outYCbCr->chroma_step %zu",
       __FUNCTION__, base_addr, outYCbCr->y, outYCbCr->cb, outYCbCr->cr, outYCbCr->ystride,
       outYCbCr->cstride, outYCbCr->chroma_step);
   return SnapError::NONE;
@@ -3493,7 +3493,7 @@ int GrallocSnapHelperLegacy::Import(native_handle_t *gr_hnd) {
       if (status == SnapError::NONE) {
         // Maintain map so that native_handle_t doesn't need to be duped during calls after import
         handles_map_.emplace(std::make_pair(gr_hnd, handle));
-        ALOGD_IF(enable_logs_, "%s - handles_map_.size() %d after emplace into map", __FUNCTION__,
+        ALOGD_IF(enable_logs_, "%s - handles_map_.size() %zu after emplace into map", __FUNCTION__,
                  handles_map_.size());
         return SnapError::NONE;
       } else {
@@ -6960,8 +6960,8 @@ int GrallocSnapHelperLegacy::ConvertGrallocPlaneLayoutToAndroidYCbCr(
 
   ALOGD_IF(
       enable_logs_,
-      "%s: base_addr %" PRIu64 ", outYCbCr->y %p, outYCbCr->cb %p, outYCbCr->cr %p, outYCbCr->ystride %d, "
-      "outYCbCr->cstride %d, outYCbCr->chroma_step %d",
+      "%s: base_addr %" PRIu64 ", outYCbCr->y %p, outYCbCr->cb %p, outYCbCr->cr %p, outYCbCr->ystride %zu, "
+      "outYCbCr->cstride %zu, outYCbCr->chroma_step %zu",
       __FUNCTION__, base_addr, outYCbCr->y, outYCbCr->cb, outYCbCr->cr, outYCbCr->ystride,
       outYCbCr->cstride, outYCbCr->chroma_step);
   return SnapError::NONE;
