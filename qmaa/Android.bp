@@ -1,7 +1,4 @@
 soong_namespace {
-    imports: [
-        "hardware/qcom-caf/sm8750/display",
-    ],
 }
 
 composer_srcs = ["*.cpp"]
