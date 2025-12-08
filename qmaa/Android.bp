@@ -1,8 +1,4 @@
 soong_namespace {
-    imports: [
-        "hardware/qcom-caf/sm8450/display",
-        "hardware/qcom-caf/sm8450/display/libdebug",
-    ],
 }
 
 composer_srcs = ["*.cpp"]
