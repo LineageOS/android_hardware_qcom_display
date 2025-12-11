@@ -245,7 +245,7 @@ int GrallocSnapHelper::Import(native_handle_t *gr_hnd) {
         // Maintain map so that native_handle_t doesn't need to be duped during calls after import
         handles_map_.emplace(std::make_pair(gr_hnd, handle));
         ALOGD_IF(enable_logs_,
-                 "gr_snap_helper Import - handles_map_.size() %d after emplace into map",
+                 "gr_snap_helper Import - handles_map_.size() %zu after emplace into map",
                  handles_map_.size());
         return SnapError::NONE;
       } else {
@@ -287,7 +287,7 @@ int GrallocSnapHelper::ImportViewBuffer(native_handle_t *meta_handle, uint32_t v
       native_handle_t *native_handle = CNativeHandleFromSnapHandle(view_handle, false);
       handles_map_.emplace(std::make_pair(native_handle, view_handle));
       ALOGD_IF(enable_logs_,
-               "gr_snap_helper ImportViewBuffer - handles_map_.size() %d"
+               "gr_snap_helper ImportViewBuffer - handles_map_.size() %zu"
                "after emplace into map",
                handles_map_.size());
       *out_buffer_handle = native_handle;
@@ -572,7 +572,7 @@ int32_t Mapper5Encode(const typename StandardMetadata<T>::value_type &value, voi
   auto size_required = Value::encode(value, nullptr, 0);
   if (size_required < 0) {
     ALOGW_IF(-AIMAPPER_ERROR_UNSUPPORTED != size_required,
-             "%s: Unexpected error %d during size calculation for encode (%d) call", __FUNCTION__,
+             "%s: Unexpected error %d during size calculation for encode (%ld) call", __FUNCTION__,
              -size_required, static_cast<int64_t>(T));
     return -AIMAPPER_ERROR_UNSUPPORTED;
   }
@@ -580,7 +580,7 @@ int32_t Mapper5Encode(const typename StandardMetadata<T>::value_type &value, voi
   if (out_buffer != nullptr && size_required <= out_size) {
     size_required = Value::encode(value, out_buffer, out_size);
     if (size_required < 0 || (size_t)size_required > out_size) {
-      ALOGW("Mapper5Encode (%d) failed, calculated size %d with buffer size %zd",
+      ALOGW("Mapper5Encode (%ld) failed, calculated size %d with buffer size %zd",
             static_cast<int64_t>(T), size_required, out_size);
     }
   }
@@ -1978,7 +1978,7 @@ int GrallocSnapHelper::GetMetadata(native_handle_t *gr_hnd, uint64_t gr_metadata
       auto error = ((this->*metadata_helper_func)(hnd, aidl_size, nullptr, out, nullptr,
                                                   check_metadata_set, mapper_return));
       if (error == SnapError::METADATA_NOT_SET && !check_metadata_set) {
-        ALOGI("Metadata type %d is not set.Returning default values as check_metadata_set is %d",
+        ALOGI("Metadata type %lu is not set.Returning default values as check_metadata_set is %d",
               gr_metadata_type, check_metadata_set);
         return SnapError::NONE;
       }
@@ -2543,9 +2543,9 @@ int GrallocSnapHelper::ConvertSnapBufferlayoutToGrallocPlaneLayout(
 
     ALOGD_IF(
         enable_logs_,
-        "Plane No: %d, sampleIncrementInBits %d, strideInBytes %d, totalSizeInBytes %d, "
-        "horizontalSubsampling %d, verticalSubsampling %d, widthInSamples %d,  heightInSamples %d, "
-        "offsetInBytes %d",
+        "Plane No: %d, sampleIncrementInBits %ld, strideInBytes %ld, totalSizeInBytes %ld, "
+        "horizontalSubsampling %ld, verticalSubsampling %ld, widthInSamples %ld,  heightInSamples %ld, "
+        "offsetInBytes %ld",
         i, (*gr_plane_layouts)[i].sampleIncrementInBits, (*gr_plane_layouts)[i].strideInBytes,
         (*gr_plane_layouts)[i].totalSizeInBytes, (*gr_plane_layouts)[i].horizontalSubsampling,
         (*gr_plane_layouts)[i].verticalSubsampling, (*gr_plane_layouts)[i].widthInSamples,
@@ -2624,8 +2624,8 @@ int GrallocSnapHelper::ConvertGrallocPlaneLayoutToAndroidYCbCr(
   }
   ALOGD_IF(
       enable_logs_,
-      "%s: base_addr %d, outYCbCr->y %d, outYCbCr->cb %d, outYCbCr->cr %d, outYCbCr->ystride %d, "
-      "outYCbCr->cstride %d, outYCbCr->chroma_step %d",
+      "%s: base_addr %lu, outYCbCr->y %p, outYCbCr->cb %p, outYCbCr->cr %p, outYCbCr->ystride %zu, "
+      "outYCbCr->cstride %zu, outYCbCr->chroma_step %zu",
       __FUNCTION__, base_addr, outYCbCr->y, outYCbCr->cb, outYCbCr->cr, outYCbCr->ystride,
       outYCbCr->cstride, outYCbCr->chroma_step);
   return SnapError::NONE;
@@ -3356,7 +3356,7 @@ int GrallocSnapHelperLegacy::Import(native_handle_t *gr_hnd) {
       if (status == SnapError::NONE) {
         // Maintain map so that native_handle_t doesn't need to be duped during calls after import
         handles_map_.emplace(std::make_pair(gr_hnd, handle));
-        ALOGD_IF(enable_logs_, "%s - handles_map_.size() %d after emplace into map", __FUNCTION__,
+        ALOGD_IF(enable_logs_, "%s - handles_map_.size() %zu after emplace into map", __FUNCTION__,
                  handles_map_.size());
         return SnapError::NONE;
       } else {
@@ -5997,7 +5997,7 @@ int GrallocSnapHelperLegacy::GetMetadata(native_handle_t *gr_hnd, uint64_t gr_me
                                                   nullptr, check_metadata_set, mapper_return));
       if (error == SnapError::METADATA_NOT_SET && !check_metadata_set) {
         ALOGI(
-            "%s: Metadata type %d is not set.Returning default values as check_metadata_set is %d",
+            "%s: Metadata type %lu is not set.Returning default values as check_metadata_set is %d",
             __FUNCTION__, gr_metadata_type, check_metadata_set);
         return SnapError::NONE;
       }
@@ -6700,9 +6700,9 @@ int GrallocSnapHelperLegacy::ConvertSnapBufferlayoutToGrallocPlaneLayout(
 
     ALOGD_IF(
         enable_logs_,
-        "%s: Plane No: %d, sampleIncrementInBits %d, strideInBytes %d, totalSizeInBytes %d, "
-        "horizontalSubsampling %d, verticalSubsampling %d, widthInSamples %d,  heightInSamples %d, "
-        "offsetInBytes %d",
+        "%s: Plane No: %d, sampleIncrementInBits %ld, strideInBytes %ld, totalSizeInBytes %ld, "
+        "horizontalSubsampling %ld, verticalSubsampling %ld, widthInSamples %ld,  heightInSamples %ld, "
+        "offsetInBytes %ld",
         __FUNCTION__, i, (*gr_plane_layouts)[i].sampleIncrementInBits,
         (*gr_plane_layouts)[i].strideInBytes, (*gr_plane_layouts)[i].totalSizeInBytes,
         (*gr_plane_layouts)[i].horizontalSubsampling, (*gr_plane_layouts)[i].verticalSubsampling,
@@ -6783,8 +6783,8 @@ int GrallocSnapHelperLegacy::ConvertGrallocPlaneLayoutToAndroidYCbCr(
 
   ALOGD_IF(
       enable_logs_,
-      "%s: base_addr %d, outYCbCr->y %d, outYCbCr->cb %d, outYCbCr->cr %d, outYCbCr->ystride %d, "
-      "outYCbCr->cstride %d, outYCbCr->chroma_step %d",
+      "%s: base_addr %lu, outYCbCr->y %p, outYCbCr->cb %p, outYCbCr->cr %p, outYCbCr->ystride %zu, "
+      "outYCbCr->cstride %zu, outYCbCr->chroma_step %zu",
       __FUNCTION__, base_addr, outYCbCr->y, outYCbCr->cb, outYCbCr->cr, outYCbCr->ystride,
       outYCbCr->cstride, outYCbCr->chroma_step);
   return SnapError::NONE;

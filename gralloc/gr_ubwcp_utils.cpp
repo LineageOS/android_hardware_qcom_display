@@ -87,7 +87,7 @@ bool UbwcpUtils::IsStrideAligned(int hal_format, int width) {
   if (ALIGN(width, stride_req))
     ret = true;
   else {
-    ALOGW("Stride is not aligned for format: %d width:%d stride_requirement: %d", hal_format, width,
+    ALOGW("Stride is not aligned for format: %d width:%d stride_requirement: %zu", hal_format, width,
           stride_req);
     ret = false;
   }

@@ -429,7 +429,7 @@ ScopedAStatus DisplayConfigAIDL::getActiveBuiltinDisplayAttributes(Attributes *a
   error = settings_->GetDisplayAttributes(disp_id, config, &var_info);
 
   if (error != sdm::kErrorNone) {
-    ALOGW("%s: Invalid display = %d", __FUNCTION__, disp_id);
+    ALOGW("%s: Invalid display = %lu", __FUNCTION__, disp_id);
     return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
   }
 
@@ -734,7 +734,8 @@ ScopedAStatus DisplayConfigAIDL::setCWBOutputBuffer(
       cwb_callbacks_.insert({hdl, {display_type, callback}});
     }
   } else if (hdl_exists) {
-    ALOGE("%s: buffer(0x%x) already being handled by display-%d", __FUNCTION__, hdl, display_type);
+    ALOGE("%s: buffer(0x%" PRIxPTR ") already being handled by display-%d",
+        __FUNCTION__, (uintptr_t)hdl, display_type);
   }
 
   if (ret_status != EX_NONE) {
@@ -763,12 +764,12 @@ void DisplayConfigAIDL::NotifyCWBStatus(int32_t status, void *hdl) {
   }
 
   if (!callback) {
-    ALOGE("%s: buffer handle(0x%x) not found", __FUNCTION__, hdl);
+    ALOGE("%s: buffer handle(0x%" PRIxPTR ") not found", __FUNCTION__, (uintptr_t)hdl);
   } else {
     NativeHandle buffer =
         sdm::AIDLNativeHandleFromSnapHandle(reinterpret_cast<SnapHandle *>(hdl), false);
-    ALOGI("%s: Notify the client about buffer (0x%x) status %d for display-%d.", __FUNCTION__, hdl,
-          status, display_type);
+    ALOGI("%s: Notify the client about buffer (0x%" PRIxPTR ") status %d for display-%d.",
+          __FUNCTION__, (uintptr_t)hdl, status, display_type);
 
     callback->notifyCWBBufferDone(status, buffer);
   }

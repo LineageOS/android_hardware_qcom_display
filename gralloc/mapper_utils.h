@@ -177,7 +177,7 @@ auto GetStandardMetadata(AIMapper *_Nonnull mapper_, buffer_handle_t _Nonnull bu
       buf_hnd, static_cast<int64_t>(T), bytestream.data(), bytestream.size());
   if (size_required < 0) {
     ALOGW_IF(-AIMAPPER_ERROR_UNSUPPORTED != size_required,
-             "%s: Unexpected error %d from valid getMetadata (%d) call", __FUNCTION__,
+             "%s: Unexpected error %d from valid getMetadata (%ld) call", __FUNCTION__,
              -size_required, static_cast<int64_t>(T));
     return std::nullopt;
   }
@@ -187,7 +187,7 @@ auto GetStandardMetadata(AIMapper *_Nonnull mapper_, buffer_handle_t _Nonnull bu
                                                               bytestream.data(), bytestream.size());
   }
   if (size_required < 0 || (size_t)size_required > bytestream.size()) {
-    ALOGW("getMetadata (%d) failed, received %d with buffer size %zd", static_cast<int64_t>(T),
+    ALOGW("getMetadata (%ld) failed, received %d with buffer size %zd", static_cast<int64_t>(T),
           size_required, bytestream.size());
     return std::nullopt;
   }
