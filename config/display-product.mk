@@ -269,15 +269,3 @@ QMAA_ENABLED_HAL_MODULES += display
 
 # Properties using default value:
 #    vendor.display.disable_hw_recovery=0
-#
-
-SOONG_CONFIG_NAMESPACES += qtidisplaycomposer
-SOONG_CONFIG_qtidisplaycomposer += qtidisplaycomposertargets
-
-ifeq ($(PLATFORM_VERSION), $(filter $(PLATFORM_VERSION),S 12))
-  SOONG_CONFIG_qtidisplaycomposer_qtidisplaycomposertargets := qtidisplaycomposertarget_PLATFORM_VERSION_12
-endif
-
-ifeq ($(PLATFORM_VERSION), $(filter $(PLATFORM_VERSION),T 13))
-  SOONG_CONFIG_qtidisplaycomposer_qtidisplaycomposertargets := qtidisplaycomposertarget_PLATFORM_VERSION_13
-endif
