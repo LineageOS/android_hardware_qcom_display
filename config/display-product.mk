@@ -141,15 +141,17 @@ ifneq ($(PLATFORM_VERSION), 10)
     PRODUCT_PROPERTY_OVERRIDES +=  vendor.display.enable_async_powermode=0
 endif
 
-ifeq ($(TARGET_BOARD_PLATFORM),parrot)
+ifeq ($(filter $(TARGET_BOARD_PLATFORM), parrot taro),$(TARGET_BOARD_PLATFORM))
 PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_hwc_vds=false \
-    vendor.display.vds_allow_hwc=true \
+    vendor.display.vds_allow_hwc=true
+endif
+
+ifeq ($(TARGET_BOARD_PLATFORM),parrot)
+PRODUCT_PROPERTY_OVERRIDES += \
     persist.sys.sf.color_mode=7
 else
 PRODUCT_PROPERTY_OVERRIDES += \
-    debug.sf.enable_hwc_vds=1 \
-    vendor.display.vds_allow_hwc=0 \
     persist.sys.sf.color_mode=9
 endif
 
@@ -161,6 +163,7 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.game_default_frame_rate_override=60
 
 ifeq ($(TARGET_BOARD_PLATFORM),neo)
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=false
@@ -266,3 +269,15 @@ QMAA_ENABLED_HAL_MODULES += display
 
 # Properties using default value:
 #    vendor.display.disable_hw_recovery=0
+#
+
+SOONG_CONFIG_NAMESPACES += qtidisplaycomposer
+SOONG_CONFIG_qtidisplaycomposer += qtidisplaycomposertargets
+
+ifeq ($(PLATFORM_VERSION), $(filter $(PLATFORM_VERSION),S 12))
+  SOONG_CONFIG_qtidisplaycomposer_qtidisplaycomposertargets := qtidisplaycomposertarget_PLATFORM_VERSION_12
+endif
+
+ifeq ($(PLATFORM_VERSION), $(filter $(PLATFORM_VERSION),T 13))
+  SOONG_CONFIG_qtidisplaycomposer_qtidisplaycomposertargets := qtidisplaycomposertarget_PLATFORM_VERSION_13
+endif

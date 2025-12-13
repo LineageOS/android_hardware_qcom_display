@@ -2923,6 +2923,11 @@ bool HWDeviceDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bo
   std::lock_guard<std::mutex> lock(cwb_state_lock_);
   bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.output_buffer;
   if (!(enable || cwb_config_.enabled)) {  // the frame is neither cwb setup nor cwb teardown frame
+    if (cwb_cached_conn_id_ > 0 && !validate) {
+      DLOGI("Actual Tear down CWB");
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_cached_conn_id_, 0);
+      cwb_cached_conn_id_ = 0;
+    }
     cwb_config_.cwb_disp_id = -1;
     return false;
   }
@@ -3085,6 +3090,8 @@ void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info
 
 DisplayError HWDeviceDRM::TeardownConcurrentWriteback(void) {
   if (cwb_config_.enabled) {
+    DLOGV_IF(kTagDriverConfig, "Cache CWB conn id to Tear down the Concurrent Writeback topology con = %d", cwb_config_.token.conn_id);
+    cwb_cached_conn_id_ = cwb_config_.token.conn_id;
     drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
     cwb_config_.enabled = false;
     registry_.Clear();

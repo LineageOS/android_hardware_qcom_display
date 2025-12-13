@@ -30,7 +30,7 @@
 /*
  * Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -1574,8 +1574,10 @@ void HWCDisplayBuiltIn::HandleLargeCompositionHint(bool release) {
 
   if (hwc_tid_ != tid) {
     DLOGV_IF(kTagResources, "HWC's tid:%d is updated to :%d", hwc_tid_, tid);
-    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, tid);
-    hwc_tid_ = tid;
+    int ret = cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, tid);
+    if (!ret) {
+      hwc_tid_ = tid;
+    }
   } else {
     // Sending tid as 0 indicates to Perf HAL that HWC's tid is unchanged for the current frame
     cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, 0);

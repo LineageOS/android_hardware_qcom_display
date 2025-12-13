@@ -533,7 +533,7 @@ DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_points
                                 &hdr_metadata_);
     }
   }
-
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_RETIRE_FENCE_OFFSET, token_.conn_id, 0);
   return HWDeviceDRM::PowerOn(qos_data, sync_points);
 }
 

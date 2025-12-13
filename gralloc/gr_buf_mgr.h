@@ -91,6 +91,9 @@ class BufferManager {
     int ion_handle_main = -1;
     int ion_handle_meta = -1;
 
+    // Lock count to ensure nested lock/unlock situation are handled correctly
+    int lock_count = 0;
+
     Buffer() = delete;
     explicit Buffer(const private_handle_t *h, int ih_main = -1, int ih_meta = -1)
         : handle(h), ion_handle_main(ih_main), ion_handle_meta(ih_meta) {}
