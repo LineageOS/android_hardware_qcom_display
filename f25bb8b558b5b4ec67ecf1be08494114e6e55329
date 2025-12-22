@@ -16,6 +16,24 @@
       "message": "Do you have matching sdm blobs for this merge? We don\u0027t touch display HAL on purpose unless it matches a devices\u0027 blobs.",
       "revId": "f25bb8b558b5b4ec67ecf1be08494114e6e55329",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "830e8bb9_908ac6dc",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 19979
+      },
+      "writtenOn": "2025-12-22T07:49:09Z",
+      "side": 1,
+      "message": "No I don\u0027t, Ive been using the same blobs as before.",
+      "parentUuid": "1d91a6c5_b3e8a6cd",
+      "revId": "f25bb8b558b5b4ec67ecf1be08494114e6e55329",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
