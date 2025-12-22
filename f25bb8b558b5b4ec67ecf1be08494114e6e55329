@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1d91a6c5_b3e8a6cd",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-12-22T07:44:27Z",
+      "side": 1,
+      "message": "Do you have matching sdm blobs for this merge? We don\u0027t touch display HAL on purpose unless it matches a devices\u0027 blobs.",
+      "revId": "f25bb8b558b5b4ec67ecf1be08494114e6e55329",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
