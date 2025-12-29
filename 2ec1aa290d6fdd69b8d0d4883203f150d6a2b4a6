@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3509b1c7_baf8e694",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 12
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2025-12-29T16:08:35Z",
+      "side": 1,
+      "message": "I removed UDFPS_ZPOS cflag for oplus since that\u0027s not required by \u003esm8450 that uses userspace dim layer. It also appears that I was too optimistic about removing Z-Order overrides with OSS composer since that brings in issues. The existing UdfpsExtension setup works just fine for both OSS as well as prebuilt HWC.",
+      "revId": "2ec1aa290d6fdd69b8d0d4883203f150d6a2b4a6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
