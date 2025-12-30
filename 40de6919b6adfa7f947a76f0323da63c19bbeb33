@@ -34,6 +34,40 @@
       "parentUuid": "9ea02fa9_262a568e",
       "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "93a6749a_528705de",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35494
+      },
+      "writtenOn": "2025-12-30T12:09:51Z",
+      "side": 1,
+      "message": "This change is required to fix HDR on lavender as well. Without it the camera is broken.",
+      "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f87d9c97_f0105617",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35494
+      },
+      "writtenOn": "2025-12-30T12:09:51Z",
+      "side": 1,
+      "message": "we also needed it for lavender to fix HDR, without this camera is broken.",
+      "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
