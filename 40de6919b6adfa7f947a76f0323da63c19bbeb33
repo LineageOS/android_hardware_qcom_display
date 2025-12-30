@@ -85,6 +85,24 @@
       "message": "can the issue be reproduced with something other than gcam?",
       "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f6a548d7_8d12dfa0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35494
+      },
+      "writtenOn": "2025-12-30T12:52:30Z",
+      "side": 1,
+      "message": "It\u0027s happening in gcam HDR only",
+      "parentUuid": "3570fc7d_15b6cb9a",
+      "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
