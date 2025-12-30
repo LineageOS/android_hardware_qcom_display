@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9ea02fa9_262a568e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-12-30T11:57:39Z",
+      "side": 1,
+      "message": "https://github.com/LineageOS/android_hardware_qcom_display/commit/70c19dbbfdb946a4bf55ccbbafcdd6edb2d95747",
+      "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
