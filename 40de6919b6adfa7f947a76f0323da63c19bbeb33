@@ -103,6 +103,24 @@
       "parentUuid": "3570fc7d_15b6cb9a",
       "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "660a9fb6_8b1f21c6",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35494
+      },
+      "writtenOn": "2025-12-30T13:03:41Z",
+      "side": 1,
+      "message": "\u003e tho kinda doesn\u0027t apply here, not sure if it\u0027s actually safe to do for every sdm660.\n This change is fine on other xiaomi-sdm660 including platina/clover. Shouldn\u0027t be an issue on other devices",
+      "parentUuid": "b6f3cc0c_289c64c2",
+      "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
