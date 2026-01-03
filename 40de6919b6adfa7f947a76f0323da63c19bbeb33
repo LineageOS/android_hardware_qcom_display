@@ -139,6 +139,24 @@
       "parentUuid": "f6a548d7_8d12dfa0",
       "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b846bb71_30d02abf",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35494
+      },
+      "writtenOn": "2026-01-03T10:24:09Z",
+      "side": 1,
+      "message": "\u003e tho kinda doesn\u0027t apply here\n\nThen how about guarding this with a TARGET_NEEDS_BUFFER_ALIGNMENT_FIX flag and adding a soong config similar to Idea303d58860152541d1d2a2b98f46e716cc67a6?",
+      "parentUuid": "660a9fb6_8b1f21c6",
+      "revId": "40de6919b6adfa7f947a76f0323da63c19bbeb33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
