@@ -52,6 +52,9 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_vtdr6130_amol
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_ft8726_lcd_video_mode_dsi_focaltech_panel_with_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_ft8726_lcd_video_mode_dsi_focaltech_panel_with_DSC.json
 endif
 
+#QDCM calibration JSON file for sy103 amoled video mode panel without DSC
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sy103_amoled_video_mode_panel_without_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_sy103_amoled_video_mode_panel_without_DSC.json
+
 #Backlight calibration xml file for vtdr6130 amoled panels
 PRODUCT_COPY_FILES += hardware/qcom/display/config/backlight_calib_vtdr6130_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/display/backlight_calib_vtdr6130_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/backlight_calib_vtdr6130_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/display/backlight_calib_vtdr6130_amoled_video_mode_dsi_visionox_panel_with_DSC.xml

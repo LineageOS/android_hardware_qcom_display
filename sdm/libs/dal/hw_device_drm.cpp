@@ -28,9 +28,8 @@
 */
 
 /*
- * Changes from Qualcomm Innovation Center are provided under the following license:
- *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -1223,13 +1222,33 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_po
     cached_brightness_level_ = -1;
   }
 
+  bool is_synchronous = first_cycle_;
+  // Set panel mode if panel is in active state
+  if (last_power_mode_ != DRMPowerMode::OFF &&
+      (panel_mode_changed_ & DRM_MODE_FLAG_VID_MODE_PANEL)) {
+    // Switch to video mode, corresponding change the fence_offset
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_PANEL_MODE, token_.conn_id,
+                              panel_mode_changed_);
+    is_synchronous = true;
+    ResetROI();
+  }
+
   // On the first boot up of the display, make the power call synchronous. This is only applicable
   // to pluggable displays. Check HWPeripheralDRM::PowerOn. For builtin first power call defered
   // and handled in commit(synchronous for first cycle).
-  int ret = NullCommit(first_cycle_ /* synchronous */, true /* retain_planes */);
+  int ret = NullCommit(is_synchronous, true /* retain_planes */);
+
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
+  }
+
+  if (last_power_mode_ != DRMPowerMode::OFF &&
+      (panel_mode_changed_ & DRM_MODE_FLAG_VID_MODE_PANEL)) {
+    panel_mode_changed_ = 0;
+    synchronous_commit_ = false;
+    reset_output_fence_offset_ = true;
   }
 
   sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_on");

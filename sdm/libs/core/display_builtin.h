@@ -23,11 +23,11 @@
 */
 
 /*
-* Changes from Qualcomm Innovation Center are provided under the following license:
-*
-* Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef __DISPLAY_BUILTIN_H__
 #define __DISPLAY_BUILTIN_H__
@@ -105,6 +105,7 @@ class DppsInfo {
   DynLib dpps_impl_lib_;
   static DppsInterface *dpps_intf_;
   static std::vector<int32_t> display_id_;
+  static std::mutex display_id_lock_;
   std::mutex lock_;
   DppsInterface *(*GetDppsInterface)() = NULL;
 

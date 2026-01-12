@@ -18,9 +18,9 @@
  */
 
 /*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -1378,14 +1378,17 @@ HWC3::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
   }
 
   int32_t display_id = -1;
+  int wb_count = 0;
+  core_intf_->GetMaxDisplaysSupported(kVirtual, &wb_count);
 
-  if (!virtual_display_factory_.IsGPUColorConvertSupported()) {
+  if (wb_count) {
     // Request to get virtual display id corresponds writeback block, which could be used for WFD.
     auto err = core_intf_->RequestVirtualDisplayId(&display_id);
     if (err != kErrorNone || display_id == -1) {
       return HWC3::Error::NoResources;
     }
-  } else {
+  } else if (virtual_display_factory_.IsGPUColorConvertSupported()) {
+    //checking property here, whether gpu color convert is supported.
     for (auto &vdl : virtual_display_list_) {
       display_id = GetVirtualDisplayId(vdl);
       if (display_id == -1) {
@@ -1393,6 +1396,8 @@ HWC3::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
       }
       break;
     }
+  } else {
+    return HWC3::Error::Unsupported;
   }
 
   // Lock confined to this scope

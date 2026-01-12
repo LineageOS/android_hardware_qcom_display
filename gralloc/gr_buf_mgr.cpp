@@ -518,6 +518,7 @@ Error BufferManager::LockBuffer(const private_handle_t *hnd, uint64_t usage) {
     handle->flags |= qtigralloc::PRIV_FLAGS_NEEDS_FLUSH;
   }
 
+  buf->lock_count++;
   return err;
 }
 
@@ -527,7 +528,8 @@ Error BufferManager::FlushBuffer(const private_handle_t *handle) {
 
   private_handle_t *hnd = const_cast<private_handle_t *>(handle);
   auto buf = GetBufferFromHandleLocked(hnd);
-  if (buf == nullptr) {
+  if (buf == nullptr || buf->lock_count <= 0) {
+    ALOGW("%s: A bad or an unlocked buffer.", __FUNCTION__);
     return Error::BAD_BUFFER;
   }
 
@@ -545,7 +547,7 @@ Error BufferManager::RereadBuffer(const private_handle_t *handle) {
 
   private_handle_t *hnd = const_cast<private_handle_t *>(handle);
   auto buf = GetBufferFromHandleLocked(hnd);
-  if (buf == nullptr) {
+  if (buf == nullptr || buf->lock_count <= 0) {
     return Error::BAD_BUFFER;
   }
 
@@ -563,22 +565,28 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
 
   private_handle_t *hnd = const_cast<private_handle_t *>(handle);
   auto buf = GetBufferFromHandleLocked(hnd);
-  if (buf == nullptr) {
+  if (buf == nullptr || buf->lock_count <= 0) {
+    ALOGW("%s: A bad or an already unlocked buffer.", __FUNCTION__);
     return Error::BAD_BUFFER;
   }
 
-  if (hnd->flags & qtigralloc::PRIV_FLAGS_NEEDS_FLUSH) {
-    if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
-                                buf->ion_handle_main, CACHE_CLEAN, hnd->fd) != 0) {
-      status = Error::BAD_BUFFER;
-    }
-    hnd->flags &= ~qtigralloc::PRIV_FLAGS_NEEDS_FLUSH;
-  } else {
-    if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
-                                buf->ion_handle_main, CACHE_READ_DONE, hnd->fd) != 0) {
-      status = Error::BAD_BUFFER;
+  // Avoid unlocking early for nested lock case
+  if (buf->lock_count == 1) {
+    if (hnd->flags & qtigralloc::PRIV_FLAGS_NEEDS_FLUSH) {
+      if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
+                                  buf->ion_handle_main, CACHE_CLEAN, hnd->fd) != 0) {
+        status = Error::BAD_BUFFER;
+      }
+      hnd->flags &= ~qtigralloc::PRIV_FLAGS_NEEDS_FLUSH;
+    } else {
+      if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
+                                  buf->ion_handle_main, CACHE_READ_DONE, hnd->fd) != 0) {
+        status = Error::BAD_BUFFER;
+      }
     }
   }
+
+  buf->lock_count = (status == Error::NONE) ? buf->lock_count - 1 : buf->lock_count;
 
   return status;
 }
