@@ -478,9 +478,14 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
 #ifdef PXLW_IRIS
   auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
   if (iris_wrapper) {
+#ifdef SUPPORTS_PXLW_IRIS7
+    reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(iris_wrapper)->SetColorModeWithRenderIntent(
+        0, 0, static_cast<int32_t>(mode), static_cast<int32_t>(intent));
+#else
     reinterpret_cast<pxlw::PxlwSoftirisWrapper*>(iris_wrapper)->SetColorModeWithRenderIntent(
       0, 0, static_cast<android::hardware::graphics::common::V1_2::ColorMode>(mode),
       static_cast<android::hardware::graphics::common::V1_1::RenderIntent>(intent));
+#endif
   }
 #endif
 
