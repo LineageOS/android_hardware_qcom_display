@@ -2905,6 +2905,17 @@ int HWCSession::CreatePrimaryDisplay() {
         }
 
 #ifdef PXLW_IRIS
+#ifdef SUPPORTS_PXLW_IRIS7
+        // HW iris7 devices ship the iris service and rc declaration,
+        // so just initialize the wrapper for the primary panel during bring-up.
+        auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+        if (iris_wrapper) {
+          DisplayConfigVariableInfo config = {};
+          hwc_display[0]->GetDisplayAttributesForConfig(0, &config);
+          reinterpret_cast<pxlw::PxlwIris7Wrapper *>(iris_wrapper)
+              ->InitPrimaryDisplay(config.vsync_period_ns, config.x_pixels, config.y_pixels);
+        }
+#else
         // This indirectly invokes IrisService constructor as required in devices
         // with soft-iris that don't ship with iris-service binary.
         auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
@@ -2916,6 +2927,7 @@ int HWCSession::CreatePrimaryDisplay() {
           reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
               ->InitPrimaryDisplay(config.vsync_period_ns, config.x_pixels, config.y_pixels);
         }
+#endif
 #endif
 
         map_active_displays_.insert(std::make_pair(client_id, info.display_type));
