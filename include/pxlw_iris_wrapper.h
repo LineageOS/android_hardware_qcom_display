@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace android {
 namespace hardware {
 namespace graphics {
@@ -28,6 +30,18 @@ class PxlwIrisWrapper {
 
  private:
   PxlwIrisWrapper() = default;
+};
+
+// HW Iris 7 (AIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
+// Only used when SUPPORTS_PXLW_IRIS7 is defined.
+class PxlwIris7AidlWrapper {
+ public:
+  int InitPrimaryDisplay(int param_1, unsigned int param_2, unsigned int param_3);
+  void SetColorModeWithRenderIntent(int param_1, int param_2, int32_t param_3, int32_t param_4);
+
+ private:
+  PxlwIris7AidlWrapper() = default;
+  friend class PxlwIrisWrapper;
 };
 
 class PxlwSoftirisWrapper {
