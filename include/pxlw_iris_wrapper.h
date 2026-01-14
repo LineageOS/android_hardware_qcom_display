@@ -17,6 +17,23 @@ class PxlwIrisWrapper {
   PxlwIrisWrapper() = default;
 };
 
+// HW iris 7 (AIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
+// Only used when SUPPORTS_PXLW_IRIS7 is defined.
+class PxlwIris7AidlWrapper {
+ public:
+  PxlwIris7AidlWrapper();
+  virtual ~PxlwIris7AidlWrapper();
+
+  bool HasSoftIris();
+
+  int InitPrimaryDisplay(int32_t vsync_period_ns, uint32_t width, uint32_t height);
+  void SetColorModeWithRenderIntent(int32_t display_id, int32_t, int32_t colorMode,
+                                    int32_t renderIntent);
+
+ private:
+  friend class PxlwIrisWrapper;
+};
+
 class PxlwSoftirisWrapper {
  public:
   PxlwSoftirisWrapper();

@@ -26,6 +26,11 @@ cc_binary {
             "-DPXLW_IRIS",
         ],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "pxlw_hw_iris7"), {
+        true: [
+            "-DSUPPORTS_PXLW_IRIS7",
+        ],
+        default: [],
     }),
 
     shared_libs: [
