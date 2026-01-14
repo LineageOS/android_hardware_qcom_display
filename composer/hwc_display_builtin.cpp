@@ -478,7 +478,11 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
 #ifdef PXLW_IRIS
   auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
   if (iris_wrapper) {
+#ifdef SUPPORTS_PXLW_IRIS7
+    reinterpret_cast<pxlw::PxlwIris7Wrapper *>(iris_wrapper)
+#else
     reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
+#endif
         ->SetColorModeWithRenderIntent(0, 0, static_cast<int32_t>(mode),
                                        static_cast<int32_t>(intent));
   }
