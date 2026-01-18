@@ -16,6 +16,23 @@
       "message": "Can we merge this?",
       "revId": "a4b85acf4c91fdcf5aea38754b43917b43772739",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c0a3f25d_b91d13ef",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-01-18T18:02:52Z",
+      "side": 1,
+      "message": "Only after kernel.",
+      "revId": "a4b85acf4c91fdcf5aea38754b43917b43772739",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
