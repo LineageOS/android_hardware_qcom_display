@@ -16,7 +16,10 @@ cc_library_shared {
         "-Wno-format",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDM\"",
-    ],
+    ] + select(soong_config_variable("qtidisplay", "legacy_pphwresourceinfo"), {
+        true: ["-DTARGET_EXCLUDE_DDR_INFO"],
+        default: [],
+    }),
     shared_libs: [
         "libdl",
         "libdisplaydebug",

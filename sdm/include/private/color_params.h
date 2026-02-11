@@ -81,6 +81,12 @@
 
 namespace sdm {
 
+#ifdef TARGET_EXCLUDE_DDR_INFO
+using PPHWResourceInfo = LegacyHWResourceInfo;
+#else
+using PPHWResourceInfo = HWResourceInfo;
+#endif
+
 /* max customer extended render intent */
 #define MAX_EXTENDED_RENDER_INTENT    0x1ff
 
@@ -235,13 +241,13 @@ struct PPFeatureVersion {
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
 };
 
-struct PPHWAttributes : HWResourceInfo, HWPanelInfo, DisplayConfigVariableInfo {
+struct PPHWAttributes : PPHWResourceInfo, HWPanelInfo, DisplayConfigVariableInfo {
   char panel_name[256] = "generic_panel";
   PPFeatureVersion version;
   DppsControlInterface *dpps_intf = NULL;
   uint32_t max_brightness = 0;
 
-  void Set(const HWResourceInfo &hw_res, const HWPanelInfo &panel_info,
+  void Set(const PPHWResourceInfo &hw_res, const HWPanelInfo &panel_info,
            const DisplayConfigVariableInfo &attr, const PPFeatureVersion &feature_ver,
            DppsControlInterface *dpps_intf);
 };

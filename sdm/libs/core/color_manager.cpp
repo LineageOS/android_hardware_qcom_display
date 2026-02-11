@@ -386,12 +386,12 @@ DisplayError ColorManagerProxy::Commit() {
   return ret;
 }
 
-void PPHWAttributes::Set(const HWResourceInfo &hw_res,
+void PPHWAttributes::Set(const PPHWResourceInfo &hw_res,
                          const HWPanelInfo &panel_info,
                          const DisplayConfigVariableInfo &attr,
                          const PPFeatureVersion &feature_ver,
                          DppsControlInterface *intf) {
-  HWResourceInfo &res = *this;
+  PPHWResourceInfo &res = *this;
   res = hw_res;
   HWPanelInfo &panel = *this;
   panel = panel_info;
