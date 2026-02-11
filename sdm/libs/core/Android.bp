@@ -1,6 +1,6 @@
 cc_library_shared {
     name: "libsdmcore",
-    defaults: ["qtidisplay_defaults"],
+    defaults: ["qti_libsdmcore_defaults"],
     sanitize: {
         integer_overflow: true,
     },

@@ -13,6 +13,7 @@ soong_config_module_type {
         "llvmcov",
         "smmu_proxy",
         "ubwcp_headers",
+        "legacy_pphwresourceinfo",
     ],
     properties: [
         "cflags",
@@ -227,6 +228,16 @@ qtidisplay_cc_defaults {
     name: "qti_qmaa_display_defaults",
     defaults: ["qtidisplay_common_defaults"],
     header_libs: ["qmaa_display_headers"],
+}
+
+qtidisplay_cc_defaults {
+    name: "qti_libsdmcore_defaults",
+    defaults: ["qtidisplay_common_defaults"],
+       soong_config_variables: {
+        legacy_pphwresourceinfo: {
+             cflags: ["-DTARGET_EXCLUDE_DDR_INFO"],
+        },
+    },
 }
 
 qtidisplay_cc_defaults {
