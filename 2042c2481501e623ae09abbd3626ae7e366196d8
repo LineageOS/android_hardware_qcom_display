@@ -16,6 +16,24 @@
       "message": "Changes here aren\u0027t needed.",
       "revId": "2042c2481501e623ae09abbd3626ae7e366196d8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "59e7bdb3_c0deaaa3",
+        "filename": "config/display-product.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 36517
+      },
+      "writtenOn": "2026-02-11T22:14:52Z",
+      "side": 0,
+      "message": "Marked as resolved.",
+      "parentUuid": "a0213529_aab251c3",
+      "revId": "2042c2481501e623ae09abbd3626ae7e366196d8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
