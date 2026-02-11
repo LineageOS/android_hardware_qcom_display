@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "0227ff66_b0be3ed1",
+        "filename": "Android.bp",
+        "patchSetId": 1
+      },
+      "lineNbr": 241,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-02-11T19:57:49Z",
+      "side": 1,
+      "message": "No need to add this. Use select().",
+      "range": {
+        "startLine": 233,
+        "startChar": 0,
+        "endLine": 241,
+        "endChar": 1
+      },
+      "revId": "78f65942c6ac2bbf8a1d593d4caa31dbb253b7d2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
