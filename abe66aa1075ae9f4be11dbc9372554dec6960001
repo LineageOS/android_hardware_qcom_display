@@ -16,6 +16,23 @@
       "message": "we dont use this repo",
       "revId": "abe66aa1075ae9f4be11dbc9372554dec6960001",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d949b441_3ca2c26c",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33569
+      },
+      "writtenOn": "2026-02-15T12:54:53Z",
+      "side": 1,
+      "message": "It is useful for Tab S9 series.",
+      "revId": "abe66aa1075ae9f4be11dbc9372554dec6960001",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
