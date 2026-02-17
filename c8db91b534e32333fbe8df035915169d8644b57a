@@ -33,6 +33,24 @@
       "message": "Yes it does work for my tab s9",
       "revId": "c8db91b534e32333fbe8df035915169d8644b57a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5fe3214f_aa544694",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 6
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-02-17T10:48:48Z",
+      "side": 1,
+      "message": "Just to be sure, with exactly this patchset in lineage-23.2?",
+      "parentUuid": "a0ae5504_a649570e",
+      "revId": "c8db91b534e32333fbe8df035915169d8644b57a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
