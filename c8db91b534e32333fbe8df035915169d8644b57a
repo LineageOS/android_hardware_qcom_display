@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8becc78d_13aeea2a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 6
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-02-17T00:00:37Z",
+      "side": 1,
+      "message": "@kvjones0243@gmail.com since you seem to have used this in older branches, can you please confirm that this still works? This is somehow a dependency for the follow-up change for OnePlus that I want to merge. Just wanted to be sure that it\u0027s fine on Samsung devices.",
+      "revId": "c8db91b534e32333fbe8df035915169d8644b57a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
