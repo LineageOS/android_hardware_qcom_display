@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "88d3ad12_5c397e6e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29914
+      },
+      "writtenOn": "2026-02-18T16:49:52Z",
+      "side": 1,
+      "message": "Tested on Samsung sm8650, fixes selecting color modes and grayscale.",
+      "revId": "02970c0bc35b4055100f3724396b73b2c83c110b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
