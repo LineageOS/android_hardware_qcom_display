@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "11e8d7b1_fe0b5f5f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2026-02-22T13:58:14Z",
+      "side": 1,
+      "message": "Changes from https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/432430 got lost",
+      "revId": "940af99ae1dd46a7a293a1a2913eb4ae1133eca7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
