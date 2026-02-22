@@ -16,6 +16,23 @@
       "message": "Changes from https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/432431 got lost",
       "revId": "35026dc46ef5cf646377df5c5a91a297b8e3bc56",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e746c71c_63d0054a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30416
+      },
+      "writtenOn": "2026-02-22T16:22:49Z",
+      "side": 1,
+      "message": "As far as i know, none of the sm8350 oplus devices use userspace dim layer. So this might not be necessary",
+      "revId": "35026dc46ef5cf646377df5c5a91a297b8e3bc56",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
