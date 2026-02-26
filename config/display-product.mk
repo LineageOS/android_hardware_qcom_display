@@ -169,6 +169,7 @@ SOONG_CONFIG_qtidisplay := drmpp headless llvmsa \
                            composer_version smmu_proxy \
                            ubwcp_headers hwasan mapper_ext \
                            neo
+SOONG_CONFIG_qtidisplay += udfps
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_neo := false
@@ -187,6 +188,7 @@ SOONG_CONFIG_qtidisplay_smmu_proxy := false
 SOONG_CONFIG_qtidisplay_ubwcp_headers := true
 SOONG_CONFIG_qtidisplay_composer_version := v3
 SOONG_CONFIG_qtidisplay_mapper_ext := true
+SOONG_CONFIG_qtidisplay_udfps := false
 
 ifeq ($(PLATFORM_VERSION), 14)
     SOONG_CONFIG_qtidisplay_mapper_ext := false
