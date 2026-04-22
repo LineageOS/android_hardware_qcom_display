@@ -31,7 +31,11 @@
 #define __GR_ADRENO_INFO_H__
 
 #ifndef QMAA
+#ifdef USE_LEGACY_BUFFER_ALIGNMENT
+#include <media/msm_media_info_legacy.h>
+#else
 #include <media/msm_media_info.h>
+#endif
 #endif
 
 #include "gr_utils.h"
