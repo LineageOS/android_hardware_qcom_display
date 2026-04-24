@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -48,9 +48,8 @@ Error QtiMapperExtensions2::getMultiViewInfo(buffer_handle_t _Nonnull buffer,
 }
 
 Error QtiMapperExtensions2::getBaseView(buffer_handle_t _Nonnull buffer, uint32_t *_Nonnull view) {
-  auto snap_error =
-      snap_helper_->GetMetadata(const_cast<native_handle_t *>(buffer), SnapMetadataType::BASE_VIEW,
-                                view, false, false, false, nullptr);
+  native_handle_t *gr_handle = const_cast<native_handle_t *>(buffer);
+  auto snap_error = snap_helper_->GetBaseView(gr_handle, view);
   return static_cast<Error>(snap_error);
 }
 

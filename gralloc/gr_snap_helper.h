@@ -230,6 +230,7 @@ class GrallocSnapHelper : public GrallocSnapHelperIntf {
                         uint64_t *reserved_region_size);
   int ImportViewBuffer(native_handle_t *meta_handle, uint32_t view,
                        buffer_handle_t *out_buffer_handle);
+  int GetBaseView(native_handle_t *gr_hnd, uint32_t *view);
 
  private:
   GrallocSnapHelper();
@@ -1168,6 +1169,9 @@ class GrallocSnapHelper : public GrallocSnapHelperIntf {
   SnapError ThreeDimensionalRefInfoHelper(SnapHandle *, uint32_t aidl_size, void *gralloc_in_set = nullptr,
                                 void *gralloc_out_get = nullptr, SnapDescriptor *buf_des = nullptr,
                                 bool check_metadata_set = true, int32_t *mapper_return = nullptr);
+  SnapError ViewIdHelper(SnapHandle *, uint32_t aidl_size, void *gralloc_in_set = nullptr,
+                         void *gralloc_out_get = nullptr, SnapDescriptor *buf_des = nullptr,
+                         bool check_metadata_set = true, int32_t *mapper_return = nullptr);
 
   std::unordered_map<vendor_qti_hardware_display_common_MetadataType, MetadataHelper>
       metadata_conversion_helper_function_map = {
@@ -1245,6 +1249,7 @@ class GrallocSnapHelper : public GrallocSnapHelperIntf {
           {BASE_VIEW, &GrallocSnapHelper::BaseViewHelper},
           {MULTI_VIEW_INFO, &GrallocSnapHelper::MultiViewHelper},
           {THREE_DIMENSIONAL_REF_INFO, &GrallocSnapHelper::ThreeDimensionalRefInfoHelper},
+          {VIEW_ID, &GrallocSnapHelper::ViewIdHelper},
       };
 
   std::unordered_map<vendor_qti_hardware_display_common_MetadataType, MetadataHelper>
