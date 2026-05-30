@@ -188,6 +188,7 @@ soong_config_module_type {
          "srcs",
          "cflags",
          "shared_libs",
+         "vintf_fragments",
     ],
 }
 
