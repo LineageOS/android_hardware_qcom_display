@@ -790,6 +790,7 @@ void HWCDisplay::BuildLayerStack() {
         layer->flags.cursor = true;
         layer_stack_.flags.cursor_present = true;
       }
+      layer->flags.skip = true;
     }
 
     // VTS case failure with solid layer dimming due to no support on pipe
