@@ -772,6 +772,7 @@ void HWCDisplay::BuildLayerStack() {
         layer->flags.cursor = true;
         layer_stack_.flags.cursor_present = true;
       }
+      layer->flags.skip = true;
     }
 
     if (layer->flags.skip) {
