@@ -11,6 +11,7 @@ cc_library_shared {
         "display_headers",
     ],
     shared_libs: [
+        "libbase",
         "libqdMetaData",
         "libdl",
         "android.hardware.graphics.common@1.2",
