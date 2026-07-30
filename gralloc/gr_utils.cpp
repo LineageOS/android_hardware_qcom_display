@@ -67,6 +67,7 @@
 
 #include <drm/drm_fourcc.h>
 
+#include <android-base/properties.h>
 #include <cutils/properties.h>
 #include <algorithm>
 
@@ -1979,11 +1980,13 @@ bool CanAllocateZSLForSecureCamera() {
   if (inited) {
     return can_allocate;
   }
-  char property[PROPERTY_VALUE_MAX];
-  property_get("vendor.gralloc.secure_preview_buffer_format", property, "0");
-  if (!(strncmp(property, "420_sp", PROPERTY_VALUE_MAX))) {
+
+  std::string property = 
+    android::base::GetProperty("vendor.gralloc.secure_preview_buffer_format", "0");
+  if (property == "420_sp") {
     can_allocate = false;
   }
+
   inited = true;
   ALOGI("CanAllocateZSLForSecureCamera: %d", can_allocate);
 
