@@ -2541,9 +2541,9 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   // Checking library support for HDR10+
   comp_manager_->GetHDRCapability(&hdr_plus_supported, &dolby_vision_supported);
 
-  fixed_info->hdr_supported = hw_resource_info.has_hdr;
-  // Built-in displays always support HDR10+ when the target supports HDR
-  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr && hdr_plus_supported;
+  fixed_info->hdr_supported = hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled;
+  // Built-in displays always support HDR10+ when the display and target supports HDR
+  fixed_info->hdr_plus_supported = fixed_info->hdr_supported && hdr_plus_supported;
   fixed_info->dolby_vision_supported = hw_resource_info.has_hdr && dolby_vision_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
