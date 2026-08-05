@@ -16,6 +16,24 @@
       "message": "i see no issue with property_get() here.",
       "revId": "89c28e938aa66a169a972e51130bcbf44532391a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b879101b_5220d653",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 37188
+      },
+      "writtenOn": "2026-08-05T16:56:25Z",
+      "side": 1,
+      "message": "\u0027vendor.gralloc.secure_preview_buffer_format\u0027 is longer than 31 symbol, it causes an error \"E libc: The property name length for \"vendor.gralloc.secure_preview_buffer_format\" is \u003e\u003d 31; please use __system_property_read_callback to read this property. (the name is truncated to \"vendor.gralloc.secure_preview_b\")\n\"",
+      "parentUuid": "1d346a21_0341297c",
+      "revId": "89c28e938aa66a169a972e51130bcbf44532391a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
