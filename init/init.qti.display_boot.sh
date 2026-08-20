@@ -118,6 +118,8 @@ case "$target" in
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_qsync_idle 1
         setprop vendor.display.disable_cwb_idle_fallback 1
+        setprop vendor.gralloc.hw_supports_ubwcp 0
+        setprop vendor.gralloc.enable_snapalloc 1
         ;;
         506|547)
         # Set property for Diwali
