@@ -34,6 +34,23 @@
       "parentUuid": "1d346a21_0341297c",
       "revId": "89c28e938aa66a169a972e51130bcbf44532391a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0f520338_04d6a11f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 37188
+      },
+      "writtenOn": "2026-08-27T18:38:50Z",
+      "side": 1,
+      "message": "The issue is strictly caused by the property name length exceeding Bionic\u0027s PROP_NAME_MAX (32, i.e., 31 chars + null terminator).\n\nIn AOSP Bionic (bionic/libc/system_properties/system_properties.cpp in SystemProperties::Read):\n```cpp\nsize_t namelen \u003d strlcpy(name, pi-\u003ename, PROP_NAME_MAX);\nif (namelen \u003e\u003d PROP_NAME_MAX) {\n  async_safe_format_log(ANDROID_LOG_ERROR, \"libc\",\n                        \"The property name length for \\\"%s\\\" is \u003e\u003d %d; please use __system_property_read_callback...\",\n                        pi-\u003ename, PROP_NAME_MAX - 1, name);\n}\n\n\"vendor.gralloc.secure_preview_buffer_format\" is 42 characters long. On target devices running Bionic libc, legacy property_get() truncates the property name to \"vendor.gralloc.secure_preview_b\", which fails to read the configured \"420_sp\" value.\n\nAs a result, CanAllocateZSLForSecureCamera() incorrectly evaluates to true instead of false, causing buffer allocation failures and video encoding pipeline breakdown on affected platforms.\n\nMigrating to android::base::GetProperty() uses __system_property_read_callback under the hood, completely resolving the truncation and runtime warning.",
+      "revId": "89c28e938aa66a169a972e51130bcbf44532391a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
