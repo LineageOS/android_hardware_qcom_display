@@ -292,6 +292,13 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   if (app_layer_count == 1) {
      constraints->safe_mode = false;
   }
+
+#ifdef FOD_ZPOS
+  if (hw_layers->info.stack->flags.fod_pressed_present) {
+    constraints->safe_mode = false;
+    display_comp_ctx->idle_fallback = false;
+  }
+#endif
 }
 
 void CompManager::GenerateROI(Handle display_ctx, HWLayers *hw_layers) {
