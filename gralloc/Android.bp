@@ -34,6 +34,9 @@ cc_library_shared {
     }) + select(soong_config_variable("qtidisplay", "target_uses_ycrcb_venus_camera_preview"), {
         "true": ["-DUSE_YCRCB_CAMERA_PREVIEW_VENUS"],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_uses_tp10_ubwc_for_10bit"), {
+        "true": ["-DUSE_TP10_UBWC_FOR_10BIT"],
+        default: [],
     }),
     srcs: [
         "gr_utils.cpp",

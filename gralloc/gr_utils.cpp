@@ -1419,6 +1419,11 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
     if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)
         && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+#ifdef USE_TP10_UBWC_FOR_10BIT
+      if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
+      }
+#endif
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
