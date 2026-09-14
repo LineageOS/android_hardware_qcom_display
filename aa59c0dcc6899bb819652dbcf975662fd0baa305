@@ -68,6 +68,24 @@
       "message": "https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/426153",
       "revId": "aa59c0dcc6899bb819652dbcf975662fd0baa305",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "72ee7f2c_dcd8e8d8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31655
+      },
+      "writtenOn": "2026-09-14T07:50:42Z",
+      "side": 1,
+      "message": "Fixed in",
+      "parentUuid": "4a70dfaf_5bd7db97",
+      "revId": "aa59c0dcc6899bb819652dbcf975662fd0baa305",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
