@@ -9,6 +9,7 @@ soong_config_module_type {
         "gralloc4",
         "udfps",
         "oplus_udfps",
+        "oplus_udfps_input_press",
         "samsung_udfps",
         "default",
         "var3",
@@ -163,6 +164,10 @@ qtidisplay_cc_defaults {
                 "-DOPLUS_FINGERPRINT_MASK",
             ],
             include_dirs: ["frameworks/native/services/surfaceflinger/CompositionEngine/include/compositionengine"],
+        },
+        // Default off: this is separate from general OPlus UDFPS support.
+        oplus_udfps_input_press: {
+            cflags: ["-DOPLUS_UDFPS_INPUT_PRESS=1"],
         },
         samsung_udfps: {
             cflags: [
