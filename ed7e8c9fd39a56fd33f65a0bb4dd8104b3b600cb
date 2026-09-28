@@ -39,6 +39,30 @@
       },
       "revId": "ed7e8c9fd39a56fd33f65a0bb4dd8104b3b600cb",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "bda3f7d5_3d18cbd9",
+        "filename": "composer/hwc_display.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1181,
+      "author": {
+        "id": 36517
+      },
+      "writtenOn": "2026-09-28T21:24:35Z",
+      "side": 1,
+      "message": "Acknowledged",
+      "parentUuid": "1057eecd_63a3fd82",
+      "range": {
+        "startLine": 1178,
+        "startChar": 0,
+        "endLine": 1181,
+        "endChar": 63
+      },
+      "revId": "ed7e8c9fd39a56fd33f65a0bb4dd8104b3b600cb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
