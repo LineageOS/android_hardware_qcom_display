@@ -1172,6 +1172,7 @@ HWC3::Error HWCDisplay::GetDisplayConfigurations(std::vector<DisplayConfiguratio
                                  static_cast<float>(variable_config.y_dpi)};
     display_configuration.vsyncPeriod = variable_config.vsync_period_ns;
     display_configuration.configGroup = GetDisplayConfigGroup(variable_config);
+#ifdef TARGET_SUPPORTS_VRR
     display_configuration.vrrConfig = {
         static_cast<int32_t>((1000.f / static_cast<float>(variable_config.fps)) * 1000000)};
     DLOGI(
@@ -1179,6 +1180,10 @@ HWC3::Error HWCDisplay::GetDisplayConfigurations(std::vector<DisplayConfiguratio
         "%d",
         config_id, variable_config.vsync_period_ns, display_configuration.configGroup,
         display_configuration.vrrConfig->minFrameIntervalNs);
+#else
+    DLOGI("GetDisplayConfigurations ConfigId[%d] vsyncPeriod= %d, configGroup= %d",
+          config_id, variable_config.vsync_period_ns, display_configuration.configGroup);
+#endif
     out_configs->emplace_back(display_configuration);
   }
   return HWC3::Error::None;
