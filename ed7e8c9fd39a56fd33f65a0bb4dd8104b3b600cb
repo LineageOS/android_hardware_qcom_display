@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8f3a23a9_61d67151",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 36517
+      },
+      "writtenOn": "2026-09-28T17:18:19Z",
+      "side": 1,
+      "message": "test: `adb shell dumpsys display | grep mVrrSupported`\nresult: `mVrrSupported\u003d false`\n\nVerified on Nothing Phone (3a)",
+      "revId": "ed7e8c9fd39a56fd33f65a0bb4dd8104b3b600cb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
