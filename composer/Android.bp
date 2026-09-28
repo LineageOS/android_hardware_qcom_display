@@ -21,7 +21,10 @@ cc_binary {
         "-Wno-missing-field-initializers",
         "-Wno-unused-parameter",
         "-DLOG_TAG=\"SDM\"",
-    ],
+    ] + select(soong_config_variable("qtidisplay", "enable_vrr"), {
+        true: ["-DTARGET_SUPPORTS_VRR"],
+        default: [],
+    }),
 
     shared_libs: [
         "libbinder",
