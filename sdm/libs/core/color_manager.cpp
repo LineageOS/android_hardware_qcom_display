@@ -55,20 +55,15 @@
                 dlclose(iris_lib_handle_); \
                 iris_lib_handle_ = nullptr; \
             } \
+            iris_commit_ = nullptr; \
             return kErrorResources; \
         } else { \
             DLOGD("Successfully loaded symbol '%s'", (symbol_name)); \
         } \
     } while (0)
 
-typedef void *(*PxlwIrisCreate)(const std::string &);
-typedef void (*PxlwIrisDestroy)(void *);
-typedef void (*PxlwIrisCommit)(void *);
-
-void *iris_lib_handle_ = nullptr;
-PxlwIrisCreate iris_create_ = nullptr;
-PxlwIrisDestroy iris_destroy_ = nullptr;
-PxlwIrisCommit iris_commit_ = nullptr;
+typedef void (*PxlwIrisCreate)(const std::string &, snapdragoncolor::ScPostBlendInterface *);
+typedef int (*PxlwIrisDestroy)();
 #endif
 
 namespace sdm {
@@ -287,7 +282,8 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
 
 #ifdef PXLW_IRIS
       auto iris_feature = pxlw::IrisFeature::getInstance();
-      if (type == kPrimary && iris_feature->hasSoftIris()) {
+      if (type == kBuiltIn && iris_feature->hasSoftIris() &&
+          (panel_info.is_primary_panel || !iris_feature->hasIrisDual())) {
         PPHWAttributes &hw_attr = color_manager_proxy->pp_hw_attributes_;
         color_manager_proxy->SetupSoftIrisLibrary(hw_attr.panel_name);
       }
@@ -312,6 +308,11 @@ ColorManagerProxy::~ColorManagerProxy() {
     delete stc_intf_;
     stc_intf_ = NULL;
   }
+#ifdef PXLW_IRIS
+  if (iris_lib_handle_) {
+    dlclose(iris_lib_handle_);
+  }
+#endif
 }
 
 DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
@@ -394,6 +395,12 @@ bool ColorManagerProxy::NeedsPartialUpdateDisable() {
 }
 
 DisplayError ColorManagerProxy::Commit() {
+#ifdef PXLW_IRIS
+  if (iris_commit_) {
+    iris_commit_(&pp_features_, display_id_);
+  }
+#endif
+
   Locker &locker(pp_features_.GetLocker());
   SCOPE_LOCK(locker);
 
@@ -416,12 +423,6 @@ DisplayError ColorManagerProxy::Commit() {
     // Once all features were consumed, then destroy all feature instance from feature_list,
     pp_features_.Reset();
   }
-
-#ifdef PXLW_IRIS
-  if (iris_commit_) {
-    iris_commit_(&pp_features_);
-  }
-#endif
 
   return ret;
 }
@@ -1274,17 +1275,24 @@ DisplayError FeatureStateSerializedTrigger::GetParams(FeatureOps param_type,
 DisplayError ColorManagerProxy::SetupSoftIrisLibrary(const std::string &panel_name) {
   DLOGI("ColorManager::%s: Entering SetupSoftIrisLibrary with panel name %s", __func__,
         panel_name.c_str());
+  if (iris_lib_handle_) {
+    dlclose(iris_lib_handle_);
+    iris_lib_handle_ = nullptr;
+    iris_commit_ = nullptr;
+  }
   iris_lib_handle_ = dlopen("libpwirissoft.so", RTLD_NOW);
   if (!iris_lib_handle_) {
     DLOGE("ColorManager::%s: Failed to dlopen libpwirissoft.so: %s", __func__, dlerror());
     return kErrorResources;
   }
 
-  LOAD_SYMBOL(iris_lib_handle_, iris_create_, "pxlwIrisCreate");
-  LOAD_SYMBOL(iris_lib_handle_, iris_destroy_, "pxlwIrisDestroy");
+  PxlwIrisCreate iris_create = nullptr;
+  PxlwIrisDestroy iris_destroy = nullptr;
+  LOAD_SYMBOL(iris_lib_handle_, iris_create, "pxlwIrisCreate");
+  LOAD_SYMBOL(iris_lib_handle_, iris_destroy, "pxlwIrisDestroy");
   LOAD_SYMBOL(iris_lib_handle_, iris_commit_, "pxlwIrisCommit");
 
-  iris_create_(panel_name);
+  iris_create(panel_name, stc_intf_);
   return kErrorNone;
 }
 #endif

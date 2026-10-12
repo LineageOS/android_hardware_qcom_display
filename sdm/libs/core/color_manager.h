@@ -211,6 +211,10 @@ class ColorManagerProxy {
   snapdragoncolor::ScPostBlendInterface *stc_intf_ = NULL;
   snapdragoncolor::ColorMode curr_mode_;
   bool needs_update_ = false;
+#ifdef PXLW_IRIS
+  void *iris_lib_handle_ = nullptr;
+  int (*iris_commit_)(PPFeaturesConfig *, int32_t) = nullptr;
+#endif
 };
 
 class ColorFeatureCheckingImpl : public FeatureInterface {
