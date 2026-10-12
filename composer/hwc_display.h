@@ -474,7 +474,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetUnderScanConfig() {}
   int32_t SetClientTargetDataSpace(int32_t dataspace);
   int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
-  int32_t GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config);
+  int32_t GetDisplayConfigGroup(Config config);
   HWC3::Error GetVsyncPeriodByActiveConfig(VsyncPeriodNanos *vsync_period);
   bool GetTransientVsyncPeriod(VsyncPeriodNanos *vsync_period);
   std::tuple<int64_t, int64_t> RequestActiveConfigChange(Config config,
@@ -485,7 +485,7 @@ class HWCDisplay : public DisplayEventHandler {
   void SubmitActiveConfigChange(VsyncPeriodNanos current_vsync_period);
   bool IsActiveConfigReadyToSubmit(int64_t time);
   bool IsActiveConfigApplied(int64_t time, int64_t vsync_applied_time);
-  bool IsSameGroup(Config config_id1, Config config_id2);
+  virtual bool IsSameGroup(Config config_id1, Config config_id2);
   bool AllowSeamless(Config request_config);
   void SetVsyncsApplyRateChange(uint32_t vsyncs) { vsyncs_to_apply_rate_change_ = vsyncs; }
   HWC3::Error SubmitDisplayConfig(Config config);

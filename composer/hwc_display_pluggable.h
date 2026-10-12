@@ -66,6 +66,9 @@ class HWCDisplayPluggable : public HWCDisplay {
   virtual HWC3::Error PreValidateDisplay(bool *exit_validate);
   virtual HWC3::Error PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence);
 
+ protected:
+  virtual bool IsSameGroup(Config config_id1, Config config_id2);
+
  private:
   HWCDisplayPluggable(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                       HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,

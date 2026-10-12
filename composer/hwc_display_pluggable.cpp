@@ -335,6 +335,10 @@ void HWCDisplayPluggable::GetUnderScanConfig() {
   }
 }
 
+bool HWCDisplayPluggable::IsSameGroup(Config config_id1, Config config_id2) {
+  return config_id1 == config_id2;
+}
+
 DisplayError HWCDisplayPluggable::Flush() {
   return display_intf_->Flush(&layer_stack_);
 }

@@ -1159,7 +1159,7 @@ HWC3::Error HWCDisplay::GetDisplayAttribute(Config config, HwcAttribute attribut
       *out_value = INT32(variable_config.y_dpi * 1000.0f);
       break;
     case HwcAttribute::CONFIG_GROUP:
-      *out_value = GetDisplayConfigGroup(variable_config);
+      *out_value = GetDisplayConfigGroup(config);
       break;
     default:
       DLOGW("Spurious attribute type = %s", composer3::toString(attribute).c_str());
@@ -1181,7 +1181,7 @@ HWC3::Error HWCDisplay::GetDisplayConfigurations(std::vector<DisplayConfiguratio
     display_configuration.dpi = {static_cast<float>(variable_config.x_dpi),
                                  static_cast<float>(variable_config.y_dpi)};
     display_configuration.vsyncPeriod = variable_config.vsync_period_ns;
-    display_configuration.configGroup = GetDisplayConfigGroup(variable_config);
+    display_configuration.configGroup = GetDisplayConfigGroup(config_id);
     DLOGI(
         "GetDisplayConfigurations ConfigId[%d] vsyncPeriod= %d, configGroup= %d",
         config_id, variable_config.vsync_period_ns, display_configuration.configGroup);
@@ -2801,11 +2801,10 @@ void HWCDisplay::UpdateActiveConfig() {
   pending_config_ = false;
 }
 
-int32_t HWCDisplay::GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config) {
-  for (auto &config : variable_config_map_) {
-    DisplayConfigGroupInfo const &group_info = config.second;
-    if (group_info == variable_config) {
-      return INT32(config.first);
+int32_t HWCDisplay::GetDisplayConfigGroup(Config config) {
+  for (auto &group_config : variable_config_map_) {
+    if (IsSameGroup(group_config.first, config)) {
+      return INT32(group_config.first);
     }
   }
 
