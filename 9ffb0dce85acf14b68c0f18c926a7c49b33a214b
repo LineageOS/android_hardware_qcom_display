@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7bdf8520_b7e021d7",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2026-10-12T21:49:22Z",
+      "side": 1,
+      "message": "Verified on a 4K 60Hz external display that no refresh switch is attempted after training with explicit modeset (e.g. changing resolution in settings).",
+      "revId": "9ffb0dce85acf14b68c0f18c926a7c49b33a214b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
