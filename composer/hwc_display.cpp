@@ -1159,7 +1159,7 @@ HWC3::Error HWCDisplay::GetDisplayAttribute(Config config, HwcAttribute attribut
       *out_value = INT32(variable_config.y_dpi * 1000.0f);
       break;
     case HwcAttribute::CONFIG_GROUP:
-      *out_value = GetDisplayConfigGroup(variable_config);
+      *out_value = (type_ == kPluggable) ? INT32(config) : GetDisplayConfigGroup(variable_config);
       break;
     default:
       DLOGW("Spurious attribute type = %s", composer3::toString(attribute).c_str());
@@ -1181,7 +1181,8 @@ HWC3::Error HWCDisplay::GetDisplayConfigurations(std::vector<DisplayConfiguratio
     display_configuration.dpi = {static_cast<float>(variable_config.x_dpi),
                                  static_cast<float>(variable_config.y_dpi)};
     display_configuration.vsyncPeriod = variable_config.vsync_period_ns;
-    display_configuration.configGroup = GetDisplayConfigGroup(variable_config);
+    display_configuration.configGroup =
+        (type_ == kPluggable) ? INT32(config_id) : GetDisplayConfigGroup(variable_config);
     DLOGI(
         "GetDisplayConfigurations ConfigId[%d] vsyncPeriod= %d, configGroup= %d",
         config_id, variable_config.vsync_period_ns, display_configuration.configGroup);
@@ -3018,6 +3019,10 @@ bool HWCDisplay::IsSameGroup(Config config_id1, Config config_id2) {
       (variable_config2 == variable_config_map_.end())) {
     DLOGE("Invalid config: %u, %u", config_id1, config_id2);
     return false;
+  }
+
+  if (type_ == kPluggable) {
+    return (config_id1 == config_id2);
   }
 
   const DisplayConfigGroupInfo &config_group1 = variable_config1->second;
