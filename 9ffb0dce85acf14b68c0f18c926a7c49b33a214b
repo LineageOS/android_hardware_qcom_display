@@ -50,6 +50,23 @@
       "message": "Also verified with a 2560x1600 external display with 60, 75, 85, 120, and 144Hz modes. SurfaceFlinger no longer keeps trying to set the external display to 60Hz on idle, or worse, flicker back and forth once between 60Hz and 144Hz every 1-2 seconds.",
       "revId": "9ffb0dce85acf14b68c0f18c926a7c49b33a214b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "eb34e624_f87a15a4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2026-10-13T10:49:11Z",
+      "side": 1,
+      "message": "maybe apply https://review.lineageos.org/c/LineageOS/android_device_oneplus_sm8750-common/+/507677 instead? this solved similar sounding problem on my tablet",
+      "revId": "9ffb0dce85acf14b68c0f18c926a7c49b33a214b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
