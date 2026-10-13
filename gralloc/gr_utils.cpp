@@ -1435,6 +1435,13 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
         gr_format = HAL_PIXEL_FORMAT_NV12_HEIF;
       } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+      } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
+        // 10-bit (e.g. HDR10) encoder input
+        if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
+          gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
+        } else {
+          gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010;
+        }
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
       }
