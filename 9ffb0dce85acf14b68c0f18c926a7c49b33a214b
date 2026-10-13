@@ -67,6 +67,24 @@
       "message": "maybe apply https://review.lineageos.org/c/LineageOS/android_device_oneplus_sm8750-common/+/507677 instead? this solved similar sounding problem on my tablet",
       "revId": "9ffb0dce85acf14b68c0f18c926a7c49b33a214b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "13276d57_15bbd38b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2026-10-13T12:41:20Z",
+      "side": 1,
+      "message": "I was looking at that before this, but the issue with it is that it forces both the internal and external panel to 60Hz",
+      "parentUuid": "eb34e624_f87a15a4",
+      "revId": "9ffb0dce85acf14b68c0f18c926a7c49b33a214b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
