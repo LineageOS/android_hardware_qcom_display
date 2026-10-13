@@ -1452,6 +1452,13 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
         } else {
           gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
         }
+      } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
+        // Camera requested a 10-bit (e.g. HDR10) output
+        if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
+          gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
+        } else {
+          gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010;
+        }
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
       }
