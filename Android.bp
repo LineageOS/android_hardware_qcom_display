@@ -9,6 +9,7 @@ soong_config_module_type {
         "gralloc4",
         "udfps",
         "oplus_udfps",
+        "oplus_video_aod_30hz",
         "samsung_udfps",
         "default",
         "var3",
@@ -163,6 +164,9 @@ qtidisplay_cc_defaults {
                 "-DOPLUS_FINGERPRINT_MASK",
             ],
             include_dirs: ["frameworks/native/services/surfaceflinger/CompositionEngine/include/compositionengine"],
+        },
+        oplus_video_aod_30hz: {
+            cflags: ["-DOPLUS_VIDEO_AOD_FPS=30"],
         },
         samsung_udfps: {
             cflags: [
