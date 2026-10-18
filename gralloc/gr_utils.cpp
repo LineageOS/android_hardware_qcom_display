@@ -1423,7 +1423,11 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
     if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)
-        && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        && format != HAL_PIXEL_FORMAT_YCbCr_420_888
+#ifdef NO_CAMERA_CUSTOM_FORMAT
+        && !((usage & BufferUsage::CAMERA_OUTPUT) && !(usage & GRALLOC_USAGE_PRIVATE_10BIT))
+#endif
+        ) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
 #ifdef USE_TP10_UBWC_FOR_10BIT
       if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
