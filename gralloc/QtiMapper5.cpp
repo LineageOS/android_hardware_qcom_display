@@ -691,7 +691,43 @@ int32_t QtiMapper5Legacy::getMetadata(buffer_handle_t _Nonnull buffer,
             : outDataSize;
     ALOGD_IF(enable_logs, "%s: Buffer: %p MetadataType(vendor): %ld ExpectedSize: %ld",
              __FUNCTION__, buffer, metadataType.value, expected_size);
-    return (GetMetadataPrivate(buffer, metadataType.value, outData, outDataSize, false));
+    if (!buffer || !buf_mgr_) {
+      return -AIMAPPER_ERROR_BAD_BUFFER;
+    }
+    auto hnd = const_cast<private_handle_t *>(QTI_HANDLE_CONST(buffer));
+    int64_t flag = 0;
+    switch (metadataType.value) {
+      case static_cast<int64_t>(SnapMetadataType::PIXEL_FORMAT_ALLOCATED):
+        if (outDataSize >= sizeof(int32_t)) {
+          *static_cast<int32_t *>(outData) = hnd->format;
+        }
+        return sizeof(int32_t);
+      case static_cast<int64_t>(SnapMetadataType::IS_UBWC):
+        flag = qtigralloc::PRIV_FLAGS_UBWC_ALIGNED;
+        break;
+      case static_cast<int64_t>(SnapMetadataType::IS_TILE_RENDERED):
+        flag = qtigralloc::PRIV_FLAGS_TILE_RENDERED;
+        break;
+      case static_cast<int64_t>(SnapMetadataType::IS_CACHED):
+        flag = qtigralloc::PRIV_FLAGS_CACHED;
+        break;
+      // Legacy dataspace is a GrallocDataspace, not a SnapDataspace
+      case static_cast<int64_t>(SnapMetadataType::DATASPACE):
+        return -AIMAPPER_ERROR_UNSUPPORTED;
+      default:
+        break;
+    }
+    if (flag) {
+      if (outDataSize >= sizeof(int64_t)) {
+        *static_cast<int64_t *>(outData) = (hnd->flags & flag) ? 1 : 0;
+      }
+      return sizeof(int64_t);
+    }
+    if (outDataSize < expected_size) {
+      return expected_size;
+    }
+    auto error = buf_mgr_->GetMetadataValue(hnd, metadataType.value, outData);
+    return (error == gralloc::Error::NONE) ? expected_size : -static_cast<int32_t>(error);
   }
   return -AIMAPPER_ERROR_UNSUPPORTED;
 }
