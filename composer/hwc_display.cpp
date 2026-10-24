@@ -1813,7 +1813,10 @@ HWC3::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
     return HWC3::Error::None;
   }
 
-  layer_stack_.validate_only = validate_only;
+  bool has_cursor_layer = std::any_of(layer_set_.begin(), layer_set_.end(), [](HWCLayer *layer) {
+    return layer->GetClientRequestedCompositionType() == Composition::CURSOR;
+  });
+  layer_stack_.validate_only = validate_only || has_cursor_layer;
 
   DisplayError error = display_intf_->CommitOrPrepare(&layer_stack_);
   // Mask error if needed.
