@@ -861,6 +861,10 @@ void HWCDisplay::BuildLayerStack() {
     layer_stack_.layers.push_back(layer);
   }
 
+  // RC applies mask layers after blending, so present them as the topmost layers
+  std::stable_partition(layer_stack_.layers.begin(), layer_stack_.layers.end(),
+                        [](const Layer *layer) { return !layer->input_buffer.flags.mask_layer; });
+
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
 
   layer_stack_.flags.geometry_changed =
