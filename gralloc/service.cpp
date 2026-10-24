@@ -38,10 +38,12 @@
 
 #include <string>
 
+#include "QtiAllocator.h"
 #include "QtiAllocatorAIDL.h"
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
+using IQtiAllocator4 = vendor::qti::hardware::display::allocator::V4_0::IQtiAllocator;
 using aidl::android::hardware::graphics::allocator::impl::QtiAllocatorAIDL;
 
 int main(int, char **) {
@@ -51,6 +53,15 @@ int main(int, char **) {
   if (sched_setscheduler(0, SCHED_FIFO | SCHED_RESET_ON_FORK, &param) != 0) {
     ALOGI("%s: failed to set priority: %s", __FUNCTION__, strerror(errno));
   }
+
+  ALOGI("Registering qti-allocator 4");
+  android::sp<IQtiAllocator4> service4 =
+      new vendor::qti::hardware::display::allocator::V4_0::implementation::QtiAllocator();
+  if (service4->registerAsService() != android::OK) {
+    ALOGE("Cannot register QTI Allocator 4 service");
+    return -EINVAL;
+  }
+  ALOGI("Initialized qti-allocator 4");
 
   ALOGI("Registering QTI Allocator AIDL as a service");
   auto allocator = ndk::SharedRefBase::make<QtiAllocatorAIDL>();
