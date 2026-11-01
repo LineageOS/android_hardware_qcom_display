@@ -32,4 +32,18 @@ class PxlwSoftirisWrapper {
   friend class PxlwIrisWrapper;
 };
 
+// HW Iris 7 (AIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
+// Only used when PXLW_IRIS7 is defined.
+class PxlwIris7AidlWrapper {
+ public:
+  bool HasIrisDual();
+  void InitPrimaryDisplay(int32_t vsync_period_ns, uint32_t width, uint32_t height);
+  void SetColorModeWithRenderIntent(int32_t display_id, int32_t display_type, int32_t color_mode,
+                                    int32_t render_intent);
+
+ private:
+  PxlwIris7AidlWrapper() = default;
+  friend class PxlwIrisWrapper;
+};
+
 }  // namespace pxlw

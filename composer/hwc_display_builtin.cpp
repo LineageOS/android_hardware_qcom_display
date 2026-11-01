@@ -484,12 +484,24 @@ HWC3::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
   }
 
 #ifdef PXLW_IRIS
+#ifdef PXLW_IRIS7
+  DLOGI("Iris color: display=%d type=%d mode=%d intent=%d",
+        static_cast<int32_t>(id_), static_cast<int32_t>(type_),
+        static_cast<int32_t>(mode), static_cast<int32_t>(intent));
+  auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+  if (iris_wrapper) {
+    reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(iris_wrapper)
+        ->SetColorModeWithRenderIntent(static_cast<int32_t>(id_), static_cast<int32_t>(type_),
+                                       static_cast<int32_t>(mode), static_cast<int32_t>(intent));
+  }
+#else
   auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
   if (iris_wrapper) {
     reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
         ->SetColorModeWithRenderIntent(0, 0, static_cast<int32_t>(mode),
                                        static_cast<int32_t>(intent));
   }
+#endif
 #endif
 
   callbacks_->Refresh(id_);

@@ -2923,6 +2923,36 @@ int HWCSession::CreatePrimaryDisplay() {
         // or its rc declaration.
         auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
         auto iris_feature = pxlw::IrisFeature::getInstance();
+        if (iris_feature) {
+          DLOGI("Iris state: hasIris=%d hasSoftIris=%d hasIris5=%d hasIris7=%d",
+                iris_feature->hasIris(), iris_feature->hasSoftIris(),
+                iris_feature->hasIris5(), iris_feature->hasIris7());
+          DLOGI("Iris state: hasIrisDual=%d hasIris5Dual=%d hasIris7Dual=%d "
+                "hasIrisDualWithoutCSC=%d",
+                iris_feature->hasIrisDual(), iris_feature->hasIris5Dual(),
+                iris_feature->hasIris7Dual(), iris_feature->hasIrisDualWithoutCSC());
+        }
+#ifdef PXLW_IRIS7
+        // HW Iris devices ship the Iris service + rc, so just initialize the
+        // hardware wrapper for the primary panel during bring-up.
+        if (iris_wrapper) {
+          int32_t vsync_period_ns = 16666666;
+          uint32_t width = 0;
+          uint32_t height = 0;
+          if (*hwc_display) {
+            DisplayConfigVariableInfo var_info = {};
+            uint32_t config = 0;
+            (*hwc_display)->GetActiveDisplayConfig(&config);
+            if (!(*hwc_display)->GetDisplayAttributesForConfig(INT(config), &var_info)) {
+              vsync_period_ns = var_info.vsync_period_ns;
+              width = var_info.x_pixels;
+              height = var_info.y_pixels;
+            }
+          }
+          reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(iris_wrapper)
+              ->InitPrimaryDisplay(vsync_period_ns, width, height);
+        }
+#else
         DisplayConfigVariableInfo config = {};
         hwc_display[0]->GetDisplayAttributesForConfig(0, &config);
 
@@ -2930,6 +2960,7 @@ int HWCSession::CreatePrimaryDisplay() {
           reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
               ->InitPrimaryDisplay(config.vsync_period_ns, config.x_pixels, config.y_pixels);
         }
+#endif
 #endif
 
         map_active_displays_.insert(std::make_pair(client_id, &map_info_primary_));
@@ -2968,6 +2999,17 @@ int HWCSession::HandleBuiltInDisplays() {
     DLOGE("Failed to get connected display list. Error = %d", error);
     return -EINVAL;
   }
+
+#ifdef PXLW_IRIS7
+  // Stock keeps the Iris secondary dual-channel display
+  // private and never hotplugs it to SurfaceFlinger.
+  auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+  if (iris_wrapper &&
+      reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(iris_wrapper)->HasIrisDual()) {
+    DLOGW("Disable connect Hotplug builtin display caused by IRIS Dual enable");
+    return 0;
+  }
+#endif
 
   int status = 0;
   for (auto &iter : hw_displays_info) {
