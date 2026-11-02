@@ -9,6 +9,7 @@ soong_config_module_type {
         "gralloc4",
         "udfps",
         "oplus_udfps",
+        "legacy_cwb_config",
         "samsung_udfps",
         "default",
         "var3",
@@ -152,6 +153,9 @@ qtidisplay_cc_defaults {
         },
         udfps: {
             cflags: ["-DUDFPS_ZPOS"],
+        },
+        legacy_cwb_config: {
+            cflags: ["-DSDM_LEGACY_CWB_CONFIG"],
         },
         oplus_udfps: {
             cflags: [

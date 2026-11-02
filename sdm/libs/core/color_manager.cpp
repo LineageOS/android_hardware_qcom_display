@@ -824,12 +824,15 @@ DisplayError ColorManagerProxy::ColorMgrSetLtmPccConfig(void* pcc_input, size_t 
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::ConfigureCWBDither(std::shared_ptr<CwbConfig> cwb_cfg,
-                                                   bool free_data) {
+DisplayError ColorManagerProxy::ConfigureCWBDither(CwbConfigPtr cwb_cfg, bool free_data) {
   DisplayError error = kErrorNone;
 
   if (!stc_intf_ || (!cwb_cfg && !free_data)) {
+#ifdef SDM_LEGACY_CWB_CONFIG
+    DLOGE("Invalid stc_intf_ %pK, cwb_cfg %pK", stc_intf_, cwb_cfg);
+#else
     DLOGE("Invalid stc_intf_ %pK, cwb_cfg %pK", stc_intf_, cwb_cfg.get());
+#endif
     return kErrorParameters;
   }
 

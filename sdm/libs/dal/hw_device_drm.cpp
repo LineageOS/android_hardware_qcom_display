@@ -3432,7 +3432,7 @@ DisplayError HWDeviceDRM::SetupConcurrentWritebackModes(int32_t writeback_id) {
 }
 
 void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info) {
-  std::shared_ptr<CwbConfig> cwb_config = hw_layer_info.hw_cwb_config;
+  CwbConfigPtr cwb_config = hw_layer_info.hw_cwb_config;
   std::shared_ptr<LayerBuffer> output_buffer = hw_layer_info.output_buffer;
   bool fb_modified = false;
   registry_.MapOutputBufferToFbId(output_buffer, &fb_modified);

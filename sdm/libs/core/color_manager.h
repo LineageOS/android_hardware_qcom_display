@@ -162,7 +162,7 @@ class ColorManagerProxy {
    * if free_data is false to get dither setting needs to be applied.
    * if free_data is true to release the dither setting that has been applied.
    */
-  DisplayError ConfigureCWBDither(std::shared_ptr<CwbConfig> cwb_cfg, bool free_data);
+  DisplayError ConfigureCWBDither(CwbConfigPtr cwb_cfg, bool free_data);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
   DisplayError ColorMgrSetLtmPccConfig(void* pcc_input, size_t size);
   DisplayError ColorMgrSetSprIntf(std::shared_ptr<SPRIntf> spr_intf);

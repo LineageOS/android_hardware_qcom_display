@@ -543,6 +543,12 @@ struct LayerStackRequestFlags {
   };
 };
 
+#ifdef SDM_LEGACY_CWB_CONFIG
+typedef CwbConfig *CwbConfigPtr;
+#else
+typedef std::shared_ptr<CwbConfig> CwbConfigPtr;
+#endif
+
 struct LayerStack {
   std::vector<Layer *> layers = {};    //!< Vector of layer pointers.
 
@@ -573,7 +579,7 @@ struct LayerStack {
   bool needs_validate = false;         //!< Change in mode/colospace/fps etc
   bool solid_fill_enabled = false;
   bool tonemapper_active  = false;
-  std::shared_ptr<CwbConfig> cwb_config = nullptr;
+  CwbConfigPtr cwb_config = nullptr;
                                        //!< Struct that contains the original CWB configuration
                                        //!< provided by CWB client.
   int32_t cwb_id = -1;                 //!< Populate writeback connector ID allocated for CWB.
