@@ -453,6 +453,10 @@ void HWCSession::InitSupportedDisplaySlots() {
   }
 
   base_id = HWC_DISPLAY_BUILTIN_2;
+#ifdef SUPPORTS_PXLW_IRIS7
+  // The second DSI connector is the iris secondary channel, not another panel.
+  max_builtin = 0;
+#endif
   disp_count = UINT32(std::min(max_builtin, HWCCallbacks::kNumBuiltIn));
   map_info_builtin_.resize(disp_count);
   for (auto &map_info : map_info_builtin_) {
