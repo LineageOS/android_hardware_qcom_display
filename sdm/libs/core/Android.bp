@@ -36,6 +36,7 @@ cc_library_shared {
     ]+ select(soong_config_variable("qtidisplay", "pxlw_sm8650_vendor_namespace"), {
         any @ value: [
             "//" + value + ":libpwirisfeature",
+            "//" + value + ":libpwirishal",
         ],
         default: [],
     }),

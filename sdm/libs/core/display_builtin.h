@@ -37,6 +37,9 @@
 
 #include <core/dpps_interface.h>
 #include <core/ipc_interface.h>
+#ifdef PXLW_IRIS
+#include <pxlw_iris_hal.h>
+#endif
 #include <private/extension_interface.h>
 #include <private/spr_intf.h>
 #include <private/demuratn_core_uvm_fact_intf.h>
@@ -289,6 +292,12 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   // Posted Start is default mode
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerPostedStart;
   float level_remainder_ = 0.0f;
+#ifdef PXLW_IRIS
+  void SetColorGCInFOD(bool active);
+  std::shared_ptr<pxlw::IrisHal> iris_hal_;
+  int32_t last_fod_status_ = 0;
+  bool iris_gc_in_fod_ = false;
+#endif
   float cached_brightness_ = 0.0f;
   bool pending_brightness_ = false;
   recursive_mutex brightness_lock_;

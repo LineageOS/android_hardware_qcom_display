@@ -661,6 +661,28 @@ DisplayError ColorManagerProxy::ApplySwAssets() {
   return error;
 }
 
+#ifdef PXLW_IRIS
+constexpr uint32_t kOplusNotifyFodChange = 771;
+
+DisplayError ColorManagerProxy::NotifyFodChange(bool active) {
+  static bool last_active = false;
+  if (!stc_intf_ || last_active == active) {
+    return kErrorNone;
+  }
+  last_active = active;
+
+  uint64_t value = active;
+  ScPayload payload;
+  payload.len = sizeof(value);
+  payload.prop = static_cast<snapdragoncolor::ScProperty>(kOplusNotifyFodChange);
+  payload.payload = reinterpret_cast<uint64_t>(&value);
+  int ret = stc_intf_->SetProperty(payload);
+  DLOGI("fod active %d, ret = %d", active, ret);
+
+  return kErrorNone;
+}
+#endif
+
 DisplayError ColorManagerProxy::NotifyDisplayCalibrationMode(bool in_calibration) {
   if (!stc_intf_) {
     return kErrorUndefined;
@@ -711,6 +733,35 @@ DisplayError ColorManagerProxy::ConvertToPPFeatures(const HwConfigOutputParams &
   return error;
 }
 
+#ifdef PXLW_IRIS
+void ColorManagerProxy::SetFodColor3DData(const snapdragoncolor::HwConfigOutputParams &hw_params) {
+  using Set3DData = void (*)(void *);
+  static Set3DData set_3d_data = []() -> Set3DData {
+    void *lib = dlopen("/odm/lib64/libclstc_fod_color.so", RTLD_LAZY);
+    if (!lib) {
+      DLOGW("Failed to load the FOD color library: %s", dlerror());
+      return nullptr;
+    }
+    return reinterpret_cast<Set3DData>(dlsym(lib, "Set3DData"));
+  }();
+
+  if (!set_3d_data) {
+    return;
+  }
+
+  for (const auto &asset : hw_params.payload) {
+    if (asset.hw_asset != snapdragoncolor::kPbGamut || !asset.hw_payload) {
+      continue;
+    }
+    auto gamut = reinterpret_cast<snapdragoncolor::GamutConfig *>(asset.hw_payload.get());
+    if (gamut->enabled) {
+      set_3d_data(&gamut->gamut_info);
+      DLOGI("fod color gamut updated");
+    }
+  }
+}
+#endif
+
 DisplayError ColorManagerProxy::UpdateModeHwassets(int32_t mode_id,
                                   snapdragoncolor::ColorMode color_mode, bool valid_meta_data,
                                   const ColorMetaData &meta_data) {
@@ -740,6 +791,10 @@ DisplayError ColorManagerProxy::UpdateModeHwassets(int32_t mode_id,
     DLOGE("Failed to call ProcessOps, error = %d", result);
     return kErrorUndefined;
   }
+
+#ifdef PXLW_IRIS
+  SetFodColor3DData(hw_params);
+#endif
 
   error = ConvertToPPFeatures(hw_params, &pp_features_);
   if (error != kErrorNone) {

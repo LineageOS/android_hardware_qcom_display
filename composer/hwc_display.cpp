@@ -25,6 +25,7 @@
  */
 
 #include <cutils/properties.h>
+#include <dlfcn.h>
 #include <errno.h>
 #include <math.h>
 #include <sync/sync.h>
@@ -678,6 +679,72 @@ static bool IsHDRLayerPresent(Layer *layer) {
   return false;
 }
 
+#ifdef PXLW_IRIS7
+void HWCDisplay::UpdateFodColor() {
+  constexpr uint32_t kUdfpsDimZOrder = 0x41000005;
+  constexpr const char *kFodColorLib = "/odm/lib64/libclstc_fod_color.so";
+
+  if (id_ != HWC_DISPLAY_PRIMARY) {
+    return;
+  }
+
+  if (!fod_color_loaded_) {
+    fod_color_loaded_ = true;
+    fod_color_lib_ = dlopen(kFodColorLib, RTLD_LAZY);
+    if (fod_color_lib_) {
+      *reinterpret_cast<void **>(&fod_color_set_data_) = dlsym(fod_color_lib_, "SetData");
+      *reinterpret_cast<void **>(&fod_color_update_status_) =
+          dlsym(fod_color_lib_, "UpdateStatus");
+    } else {
+      DLOGW("Failed to load %s: %s", kFodColorLib, dlerror());
+    }
+  }
+
+  bool active = false;
+  for (auto hwc_layer : layer_set_) {
+    if ((hwc_layer->GetZ() | 4) == kUdfpsDimZOrder) {
+      active = true;
+      break;
+    }
+  }
+
+  if (active) {
+    for (auto hwc_layer : layer_set_) {
+      if (hwc_layer->GetZ() < kUdfpsDimZOrder) {
+        hwc_layer->GetSDMLayer()->flags.skip = true;
+        layer_stack_.flags.skip_present = true;
+      }
+    }
+  }
+
+  Layer *client_target = client_target_->GetSDMLayer();
+  client_target->flags.is_game = active;
+  client_target->input_buffer.flags.game = active;
+
+#ifdef PXLW_IRIS
+  layer_stack_.fod_status = active;
+#endif
+  if (active == fod_color_active_) {
+    return;
+  }
+  fod_color_active_ = active;
+
+  if (active && fod_color_set_data_ && color_mode_) {
+    constexpr uint32_t kMatrixSize = 16;
+    float matrix[kMatrixSize];
+    const double *color_matrix = color_mode_->GetColorMatrix();
+    for (uint32_t i = 0; i < kMatrixSize; i++) {
+      matrix[i] = static_cast<float>(color_matrix[i]);
+    }
+    fod_color_set_data_(matrix);
+  }
+  if (fod_color_update_status_) {
+    fod_color_update_status_(active);
+  }
+  DLOGI("fod color active %d", active);
+}
+#endif
+
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
@@ -858,6 +925,10 @@ void HWCDisplay::BuildLayerStack() {
   }
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
+
+#ifdef PXLW_IRIS7
+  UpdateFodColor();
+#endif
 
   layer_stack_.flags.geometry_changed =
       UINT32((geometry_changes_ || geometry_changes_on_doze_suspend_) > 0);

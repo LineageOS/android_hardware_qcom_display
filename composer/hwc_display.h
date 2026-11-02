@@ -136,6 +136,9 @@ class HWCColorMode {
   virtual HWC3::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC3::Error RestoreColorTransform();
   virtual ColorMode GetCurrentColorMode() { return current_color_mode_; }
+#ifdef PXLW_IRIS7
+  const double *GetColorMatrix() const { return color_matrix_; }
+#endif
   virtual RenderIntent GetCurrentRenderIntent() { return current_render_intent_; }
   virtual HWC3::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC3::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
@@ -541,6 +544,14 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect display_rect_;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
+#ifdef PXLW_IRIS7
+  void UpdateFodColor();
+  bool fod_color_loaded_ = false;
+  void *fod_color_lib_ = nullptr;
+  int (*fod_color_set_data_)(float *) = nullptr;
+  void (*fod_color_update_status_)(bool) = nullptr;
+  bool fod_color_active_ = false;
+#endif
   HWCToneMapper *tone_mapper_ = nullptr;
   uint32_t num_configs_ = 0;
   int disable_hdr_handling_ = 0;   // disables HDR handling.
