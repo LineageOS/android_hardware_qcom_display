@@ -387,6 +387,12 @@ struct LayerStackFlags {
       uint32_t front_buffer_layer_present : 1;  //!< Set if stack has front buffer layer.
 
       uint32_t fod_pressed_present : 1;
+
+#ifdef OPLUS_FINGERPRINT_MASK
+      uint32_t udfps_dim_present : 1;  //!< Set if stack has the UDFPS dim layer.
+
+      uint32_t udfps_pressed_present : 1;  //!< Set if stack has the UDFPS touched layer.
+#endif
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.

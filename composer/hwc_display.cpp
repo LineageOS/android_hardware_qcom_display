@@ -55,6 +55,11 @@
 #include <hardware/display_defs.h>
 #endif
 
+#ifdef OPLUS_FINGERPRINT_MASK
+#include <UdfpsExtension.h>
+static constexpr char kUdfpsTouchedLayerName[] = "SurfaceView[UdfpsControllerOverlay]";
+#endif
+
 #define __CLASS__ "HWCDisplay"
 
 using aidl::android::hardware::graphics::common::StandardMetadataType;
@@ -722,7 +727,11 @@ void HWCDisplay::UpdateFodColor() {
   client_target->input_buffer.flags.game = active;
 
 #ifdef PXLW_IRIS
+#ifdef OPLUS_FINGERPRINT_MASK
+  layer_stack_.fod_status = active || layer_stack_.flags.udfps_pressed_present;
+#else
   layer_stack_.fod_status = active;
+#endif
 #endif
   if (active == fod_color_active_) {
     return;
@@ -923,6 +932,18 @@ void HWCDisplay::BuildLayerStack() {
     layer->geometry_changes = hwc_layer->GetGeometryChanges();
     layer_stack_.layers.push_back(layer);
   }
+
+#ifdef OPLUS_FINGERPRINT_MASK
+  layer_stack_.flags.udfps_dim_present = false;
+  layer_stack_.flags.udfps_pressed_present = false;
+  for (auto layer : layer_stack_.layers) {
+    if (layer->layer_name.find(UDFPS_DIM_LAYER_NAME) != std::string::npos) {
+      layer_stack_.flags.udfps_dim_present = true;
+    } else if (layer->layer_name.find(kUdfpsTouchedLayerName) != std::string::npos) {
+      layer_stack_.flags.udfps_pressed_present = true;
+    }
+  }
+#endif
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
 
