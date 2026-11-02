@@ -3264,6 +3264,12 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     return;
   }
 
+#ifdef PXLW_IRIS
+  if (color_mgr_) {
+    color_mgr_->NotifyFodChange(layer_stack->fod_status & 1);
+  }
+#endif
+
   // Copy the acquire fence from clients layers  to HWLayers
   uint32_t hw_layers_count = UINT32(disp_layer_stack_->info.hw_layers.size());
 

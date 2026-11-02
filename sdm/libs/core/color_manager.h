@@ -164,6 +164,10 @@ class ColorManagerProxy {
    */
   DisplayError ConfigureCWBDither(CwbConfigPtr cwb_cfg, bool free_data);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
+#ifdef PXLW_IRIS
+  DisplayError NotifyFodChange(bool active);
+  void SetFodColor3DData(const snapdragoncolor::HwConfigOutputParams &hw_params);
+#endif
   DisplayError ColorMgrSetLtmPccConfig(void* pcc_input, size_t size);
   DisplayError ColorMgrSetSprIntf(std::shared_ptr<SPRIntf> spr_intf);
 

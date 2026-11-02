@@ -984,10 +984,40 @@ DisplayError DisplayBuiltIn::SetDisplayStateForDemuraTn(DisplayState state) {
   return kErrorNone;
 }
 
+#ifdef PXLW_IRIS
+void DisplayBuiltIn::SetColorGCInFOD(bool active) {
+  constexpr int kIrisConfigType = 528;
+  constexpr int kIrisBypassGC = 9;
+
+  if (iris_gc_in_fod_ == active) {
+    return;
+  }
+  iris_gc_in_fod_ = active;
+
+  if (!iris_hal_) {
+    iris_hal_ = std::make_shared<pxlw::IrisHal>();
+  }
+  if (!iris_hal_->ready()) {
+    DLOGW("iris hal is not ready");
+    return;
+  }
+
+  int ret = iris_hal_->irisConfigureSet(kIrisConfigType, {kIrisBypassGC, active ? 1 : 0});
+  DLOGI("iris gc in fod %d, ret = %d", active, ret);
+}
+#endif
+
 DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
+
+#ifdef PXLW_IRIS
+  if (layer_stack->fod_status != last_fod_status_) {
+    last_fod_status_ = layer_stack->fod_status;
+    SetColorGCInFOD(last_fod_status_ > 0);
+  }
+#endif
 
   return DisplayBase::SetUpCommit(layer_stack);
 }
