@@ -2790,6 +2790,15 @@ void DisplayBuiltIn::HandleVmReleaseEvent() {
     event_handler_->HandleEvent(kVmReleaseDone);
 }
 
+DisplayError DisplayBuiltIn::GetScalerCount(uint32_t *scaler_count) {
+  ClientLock lock(disp_mutex_);
+  if (!scaler_count) {
+    return kErrorParameters;
+  }
+  *scaler_count = mixer_attributes_.dest_scaler_blocks_used;
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
   ClientLock lock(disp_mutex_);
   return hw_intf_->GetQsyncFps(qsync_fps);
