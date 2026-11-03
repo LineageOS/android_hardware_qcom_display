@@ -22,6 +22,30 @@
       },
       "revId": "0c9edcf850837fa19a218d4e698d6eee701b21e4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b68fedd3_00efe7c5",
+        "filename": "composer/hwc_display.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 139,
+      "author": {
+        "id": 30975
+      },
+      "writtenOn": "2026-11-03T22:23:29Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "ecefa076_b4107097",
+      "range": {
+        "startLine": 139,
+        "startChar": 0,
+        "endLine": 139,
+        "endChar": 64
+      },
+      "revId": "0c9edcf850837fa19a218d4e698d6eee701b21e4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
