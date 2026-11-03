@@ -47,6 +47,7 @@
 #include <vector>
 
 #include "hwc_display.h"
+#include "hwc_display_resolution_extn.h"
 #include "hwc_debugger.h"
 #include "hwc_tonemapper.h"
 #include "hwc_session.h"
@@ -589,6 +590,10 @@ void HWCDisplay::UpdateConfigs() {
     }
   }
 
+  if (NeedsExtendedResolution()) {
+    PopulateExtendedDisplayResolution();
+  }
+
   if (num_configs_ != 0) {
     Config active_config = hwc_config_map_.at(0);
     GetActiveConfig(&active_config);
@@ -598,6 +603,105 @@ void HWCDisplay::UpdateConfigs() {
   // Update num config count.
   num_configs_ = UINT32(variable_config_map_.size());
   DLOGI("num_configs = %d", num_configs_);
+}
+
+bool HWCDisplay::IsPanelConfig(uint32_t width, uint32_t height) {
+  for (auto &config : variable_config_map_) {
+    if (config.second.x_pixels == width && config.second.y_pixels == height) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool HWCDisplay::NeedsExtendedResolution() {
+  if (type_ != kBuiltIn) {
+    return false;
+  }
+
+  uint32_t scaler_count = 0;
+  DisplayError error = display_intf_->GetScalerCount(&scaler_count);
+  if (error != kErrorNone) {
+    return false;
+  }
+  return scaler_count != 0;
+}
+
+void HWCDisplay::PopulateExtendedDisplayResolution() {
+  // Extended resolutions are scaled from the highest panel resolution only.
+  uint32_t panel_width = 0, panel_height = 0;
+  for (auto &config : variable_config_map_) {
+    if (config.second.x_pixels * config.second.y_pixels > panel_width * panel_height) {
+      panel_width = config.second.x_pixels;
+      panel_height = config.second.y_pixels;
+    }
+  }
+
+  std::vector<std::pair<uint32_t, uint32_t>> extended_res = {}, final_res = {};
+  HWCDisplayResolutionExtn disp_res_ext;
+  if (disp_res_ext.GetExtendedDisplayResolutions(panel_width, panel_height, &extended_res) !=
+      kErrorNone) {
+    DLOGI("Extended display resolution not supported");
+    return;
+  }
+
+  if (display_intf_->ValidateExtendedDisplayResolutions(extended_res, &final_res) != kErrorNone) {
+    return;
+  }
+
+  std::vector<uint32_t> parents;
+  for (auto &config : variable_config_map_) {
+    if (config.second.x_pixels == panel_width && config.second.y_pixels == panel_height) {
+      parents.push_back(config.first);
+    }
+  }
+
+  // Keep virtual ids clear of the core config indices.
+  uint32_t config_index = std::max(UINT32(hwc_config_map_.size()),
+                                   variable_config_map_.rbegin()->first + 1);
+  for (auto &res : final_res) {
+    if (IsPanelConfig(res.first, res.second)) {
+      continue;
+    }
+
+    for (uint32_t parent : parents) {
+      DisplayConfigVariableInfo info = variable_config_map_.at(parent);
+      info.x_pixels = res.first;
+      info.y_pixels = res.second;
+      info.x_dpi *= (FLOAT(info.x_pixels) / panel_width);
+      info.y_dpi *= (FLOAT(info.y_pixels) / panel_height);
+      info.h_total -= (panel_width - info.x_pixels);
+      info.v_total -= (panel_height - info.y_pixels);
+      variable_config_map_[config_index] = info;
+      virtual_config_parent_[config_index] = parent;
+      DLOGI("Virtual config %u: %ux%u@%u from config %u", config_index, info.x_pixels,
+            info.y_pixels, info.fps, parent);
+      config_index++;
+    }
+  }
+}
+
+Config HWCDisplay::GetClientVisibleConfig(Config real_config) {
+  int cached = GetActiveConfigIndex();
+  if (cached < 0 || !IsVirtualConfig(UINT32(cached))) {
+    return real_config;
+  }
+
+  if (GetParentConfig(UINT32(cached)) == real_config) {
+    return UINT32(cached);
+  }
+
+  // The real config changed underneath, report its virtual sibling of the same size.
+  const auto &virtual_info = variable_config_map_.at(UINT32(cached));
+  for (auto &[virtual_config, parent] : virtual_config_parent_) {
+    const auto &info = variable_config_map_.at(virtual_config);
+    if (parent == real_config && info.x_pixels == virtual_info.x_pixels &&
+        info.y_pixels == virtual_info.y_pixels) {
+      return virtual_config;
+    }
+  }
+
+  return real_config;
 }
 
 int HWCDisplay::Deinit() {
@@ -1362,13 +1466,17 @@ HWC3::Error HWCDisplay::GetActiveConfig(Config *out_config) {
 
   if (pending_config_) {
     *out_config = pending_config_index_;
+    if (*out_config < hwc_config_map_.size()) {
+      *out_config = hwc_config_map_.at(*out_config);
+    }
   } else {
     GetActiveDisplayConfig(out_config);
+    if (*out_config < hwc_config_map_.size()) {
+      *out_config = hwc_config_map_.at(*out_config);
+    }
+    *out_config = GetClientVisibleConfig(*out_config);
   }
 
-  if (*out_config < hwc_config_map_.size()) {
-    *out_config = hwc_config_map_.at(*out_config);
-  }
   return HWC3::Error::None;
 }
 
@@ -2684,6 +2792,10 @@ int HWCDisplay::GetDisplayConfigCount(uint32_t *count) {
 
 int HWCDisplay::GetDisplayAttributesForConfig(int config,
                                               DisplayConfigVariableInfo *display_attributes) {
+  if (config >= 0 && IsVirtualConfig(UINT32(config))) {
+    *display_attributes = variable_config_map_.at(UINT32(config));
+    return 0;
+  }
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
 }
 
@@ -2924,6 +3036,18 @@ void HWCDisplay::UpdateActiveConfig() {
     return;
   }
 
+  int active_config = GetActiveConfigIndex();
+  if (IsVirtualConfig(pending_config_index_) ||
+      (active_config >= 0 && IsVirtualConfig(UINT32(active_config)))) {
+    // Reset pending config first, so the switch sees the current config as active.
+    pending_config_ = false;
+    // Virtual configs share the panel mode, the framebuffer is what changes.
+    if (SubmitDisplayConfig(pending_config_index_) != HWC3::Error::None) {
+      DLOGI("Failed to set %d config", INT(pending_config_index_));
+    }
+    return;
+  }
+
   DisplayError error = display_intf_->SetActiveConfig(pending_config_index_);
   if (error != kErrorNone) {
     DLOGI("Failed to set %d config", INT(pending_config_index_));
@@ -2948,6 +3072,7 @@ int32_t HWCDisplay::GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config
 
 bool HWCDisplay::IsModeSwitchAllowed(uint32_t config) {
   DisplayError error = kErrorNone;
+  config = GetParentConfig(config);
   uint32_t allowed_mode_switch = 0;
 
   error = display_intf_->IsSupportedOnDisplay(kSupportedModeSwitch, &allowed_mode_switch);
@@ -3177,7 +3302,7 @@ HWC3::Error HWCDisplay::SubmitDisplayConfig(Config config) {
   Config current_config = 0;
   GetActiveConfig(&current_config);
 
-  DisplayError error = display_intf_->SetActiveConfig(config);
+  DisplayError error = display_intf_->SetActiveConfig(GetParentConfig(config));
   if (error == kErrorDeferred) {
     DLOGW("Failed to set new config:%d from current config:%d! Error: %d", config, current_config,
           error);
@@ -3211,6 +3336,10 @@ HWC3::Error HWCDisplay::SubmitDisplayConfig(Config config) {
 
 HWC3::Error HWCDisplay::GetCachedActiveConfig(Config *active_config) {
   int config_index = GetActiveConfigIndex();
+  if (config_index >= 0 && IsVirtualConfig(UINT32(config_index))) {
+    *active_config = UINT32(config_index);
+    return HWC3::Error::None;
+  }
   if ((config_index < 0) || (config_index >= hwc_config_map_.size())) {
     return GetActiveConfig(active_config);
   }
