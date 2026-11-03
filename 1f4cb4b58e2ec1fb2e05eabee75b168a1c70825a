@@ -16,6 +16,23 @@
       "message": "Port of CLO\u0027s sdm_display_resolution_extn from sm8750, so panels without FHD timings get FHD+ as a scaled mode (oplus uses wm size instead). Only active when a device ships the xml; panels with native FHD timings are skipped.",
       "revId": "1f4cb4b58e2ec1fb2e05eabee75b168a1c70825a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4d81504d_6b8fb54c",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-11-03T21:51:40Z",
+      "side": 1,
+      "message": "Why don\u0027t you squash this to previous?",
+      "revId": "1f4cb4b58e2ec1fb2e05eabee75b168a1c70825a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
