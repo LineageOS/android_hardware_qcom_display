@@ -76,6 +76,17 @@ class DisplayNull : public DisplayInterface {
   virtual void CheckMMRMState() {}
   virtual bool IsValidated() { return true; }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
+  virtual DisplayError GetScalerCount(uint32_t *scaler_count) {
+    if (scaler_count) {
+      *scaler_count = 0;
+    }
+    return kErrorNotSupported;
+  }
+  virtual DisplayError ValidateExtendedDisplayResolutions(
+      std::vector<std::pair<uint32_t, uint32_t>> ext_disp_res,
+      std::vector<std::pair<uint32_t, uint32_t>> *fin_disp_res) {
+    return kErrorNotSupported;
+  }
   virtual void FlushConcurrentWriteback() {}
   virtual void ScreenRefresh() {}
   virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
