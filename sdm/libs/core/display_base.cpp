@@ -4590,4 +4590,43 @@ DisplayError DisplayBase::DisableDestinationScalar() {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::ValidateExtendedDisplayResolutions(
+    std::vector<std::pair<uint32_t, uint32_t>> ext_disp_res,
+    std::vector<std::pair<uint32_t, uint32_t>> *fin_disp_res) {
+  ClientLock lock(disp_mutex_);
+  std::vector<std::pair<uint32_t, uint32_t>> extended_res = {};
+  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_y = 2;
+  uint32_t splits = std::max(1u, display_attributes_.topology_num_split);
+  const HWDestScalarInfo &ds = hw_resource_info_.hw_dest_scalar_info;
+
+  for (auto &res : ext_disp_res) {
+    uint32_t width = res.first, height = res.second;
+
+    if ((width % align_x) || (height % align_y)) {
+      continue;
+    }
+    if (width >= display_attributes_.x_pixels || height >= display_attributes_.y_pixels) {
+      continue;
+    }
+    if (ds.max_input_width && (width / splits) > ds.max_input_width) {
+      continue;
+    }
+    if (ds.max_scale_up &&
+        ((FLOAT(display_attributes_.x_pixels) / width) > ds.max_scale_up ||
+         (FLOAT(display_attributes_.y_pixels) / height) > ds.max_scale_up)) {
+      continue;
+    }
+    extended_res.push_back(res);
+  }
+
+  if (extended_res.empty()) {
+    DLOGI("No supported extended display resolution");
+    return kErrorNotSupported;
+  }
+
+  *fin_disp_res = extended_res;
+  return kErrorNone;
+}
+
 }  // namespace sdm
