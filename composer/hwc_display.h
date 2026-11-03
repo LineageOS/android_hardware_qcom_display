@@ -515,6 +515,17 @@ class HWCDisplay : public DisplayEventHandler {
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
   void UpdateConfigs();
+  bool NeedsExtendedResolution();
+  void PopulateExtendedDisplayResolution();
+  bool IsPanelConfig(uint32_t width, uint32_t height);
+  bool IsVirtualConfig(hwc2_config_t config) const {
+    return virtual_config_parent_.find(config) != virtual_config_parent_.end();
+  }
+  hwc2_config_t GetParentConfig(hwc2_config_t config) const {
+    auto it = virtual_config_parent_.find(config);
+    return (it == virtual_config_parent_.end()) ? config : it->second;
+  }
+  hwc2_config_t GetClientVisibleConfig(hwc2_config_t real_config);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
   bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
@@ -600,6 +611,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool skip_commit_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
+  std::map<uint32_t, uint32_t> virtual_config_parent_;
   bool client_connected_ = true;
   bool pending_config_ = false;
   bool has_client_composition_ = false;

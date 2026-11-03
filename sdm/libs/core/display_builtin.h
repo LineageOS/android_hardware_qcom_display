@@ -222,6 +222,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetUpCommit(LayerStack *layer_stack) override;
   DisplayError PostCommit(HWLayersInfo *hw_layers_info) override;
   DisplayError GetQsyncFps(uint32_t *qsync_fps) override;
+  DisplayError GetScalerCount(uint32_t *scaler_count) override;
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);

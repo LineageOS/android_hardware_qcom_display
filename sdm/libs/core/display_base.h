@@ -253,6 +253,10 @@ class DisplayBase : public DisplayInterface, public CompManagerEventHandler {
   virtual bool HandleCwbTeardown();
   virtual uint32_t GetAvailableMixerCount();
   virtual DisplayError SetDemuraState(int state) { return kErrorNotSupported; }
+  virtual DisplayError GetScalerCount(uint32_t *scaler_count) { return kErrorNotSupported; }
+  DisplayError ValidateExtendedDisplayResolutions(
+      std::vector<std::pair<uint32_t, uint32_t>> ext_disp_res,
+      std::vector<std::pair<uint32_t, uint32_t>> *fin_disp_res) override;
 
  protected:
   struct DisplayMutex {
