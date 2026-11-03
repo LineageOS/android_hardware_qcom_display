@@ -1370,6 +1370,25 @@ class DisplayInterface {
   virtual DisplayError PanelOprInfo(const std::string &client_name, bool enable,
                                     SdmDisplayCbInterface<PanelOprPayload> *cb_intf) = 0;
 
+  /*! @brief Method to get the number of destination scalers available to the display.
+
+   @param[out] scaler_count : number of destination scaler blocks
+
+   @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetScalerCount(uint32_t *scaler_count) = 0;
+
+  /*! @brief Method to filter the extended display resolutions the display can support.
+
+   @param[in] ext_disp_res : list of extended resolutions as width and height pairs
+   @param[out] fin_disp_res : list of supported extended resolutions
+
+   @return \link DisplayError \endlink
+  */
+  virtual DisplayError ValidateExtendedDisplayResolutions(
+      std::vector<std::pair<uint32_t, uint32_t>> ext_disp_res,
+      std::vector<std::pair<uint32_t, uint32_t>> *fin_disp_res) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };
