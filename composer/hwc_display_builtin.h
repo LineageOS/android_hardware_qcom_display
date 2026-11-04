@@ -185,6 +185,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void PostCommitStitchLayers();
   bool NeedsLargeCompPerfHint();
   void ValidateUiScaling();
+#ifdef PXLW_IRIS7
+  void PrepareIrisFrame();
+#endif
   void EnablePartialUpdate();
   uint32_t GetUpdatingAppLayersCount();
   void LoadMixedModePerfHintThreshold();

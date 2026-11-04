@@ -245,6 +245,10 @@ HWC3::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   // Fill in the remaining blanks in the layers and add them to the SDM layerstack
   BuildLayerStack();
 
+#ifdef PXLW_IRIS7
+  PrepareIrisFrame();
+#endif
+
   // Check for scaling layers during Doze mode
   ValidateUiScaling();
 
@@ -279,6 +283,35 @@ HWC3::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
 
   return status;
 }
+
+#ifdef PXLW_IRIS7
+void HWCDisplayBuiltIn::PrepareIrisFrame() {
+  auto iris = reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(pxlw::PxlwIrisWrapper::GetInstance());
+  if (id_ != HWC_DISPLAY_PRIMARY || !iris) {
+    return;
+  }
+
+  int config = GetActiveConfigIndex();
+  if (config >= 0 && config != iris_config_index_) {
+    DisplayConfigVariableInfo info = {};
+    if (GetDisplayAttributesForConfig(config, &info) == 0) {
+      iris->SetActiveConfig(INT32(id_), type_, UINT32(config), &info);
+      iris_config_index_ = config;
+    }
+  }
+
+  // Iris expects the display orientation on every layer. A video layer rotated
+  // onto the portrait panel means the display is in landscape.
+  bool landscape = std::any_of(layer_set_.begin(), layer_set_.end(),
+                               [](HWCLayer *layer) { return layer->IsIrisLandscapeVideo(); });
+  for (auto *layer : layer_set_) {
+    layer->SetIrisOrientation(landscape);
+  }
+
+  iris->BuildLayerStackInternal(INT32(id_), type_, &layer_stack_);
+  iris->PresentDisplay(id_);
+}
+#endif
 
 HWC3::Error HWCDisplayBuiltIn::CommitLayerStack() {
   skip_commit_ = CanSkipCommit();

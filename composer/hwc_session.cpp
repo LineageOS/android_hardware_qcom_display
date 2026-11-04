@@ -340,6 +340,13 @@ void HWCSession::PostInit() {
 }
 
 int HWCSession::Deinit() {
+#ifdef PXLW_IRIS7
+  auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+  if (iris_wrapper) {
+    iris_wrapper->SetRefreshCB(nullptr, nullptr);
+  }
+#endif
+
   HpdDeinit();
 
   // Destroy all connected displays
@@ -2951,6 +2958,11 @@ int HWCSession::CreatePrimaryDisplay() {
           }
           reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(iris_wrapper)
               ->InitPrimaryDisplay(vsync_period_ns, width, height);
+          iris_wrapper->SetRefreshCB(
+              [](void *session) {
+                static_cast<HWCSession *>(session)->Refresh(HWC_DISPLAY_PRIMARY);
+              },
+              this);
         }
 #else
         DisplayConfigVariableInfo config = {};

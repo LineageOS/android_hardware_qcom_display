@@ -46,6 +46,12 @@
 using aidl::android::hardware::graphics::composer3::PerFrameMetadataKey;
 using PixelFormat_V3 = aidl::android::hardware::graphics::common::PixelFormat;
 
+#ifdef PXLW_IRIS7
+namespace pxlw {
+class PxlwIris7AidlWrapper;
+}  // namespace pxlw
+#endif
+
 namespace sdm {
 
 DisplayError SetCSC(const native_handle_t *pvt_handle, ColorMetaData *color_metadata);
@@ -126,8 +132,17 @@ class HWCLayer {
 #ifdef UDFPS_ZPOS
   bool IsFodPressed() { return fod_pressed_; }
 #endif
+#ifdef PXLW_IRIS7
+  void CreateIrisLayer();
+  bool IsIrisLandscapeVideo() const;
+  void SetIrisOrientation(bool landscape);
+#endif
 
  private:
+#ifdef PXLW_IRIS7
+  pxlw::PxlwIris7AidlWrapper *iris_ = nullptr;
+  int32_t iris_orientation_ = 0;
+#endif
   Layer *layer_ = nullptr;
   LayerTypes type_ = kLayerUnknown;
   uint32_t z_ = 0;

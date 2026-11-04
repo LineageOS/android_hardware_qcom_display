@@ -32,6 +32,10 @@
 #include <cmath>
 #include <gr_utils.h>
 
+#ifdef PXLW_IRIS7
+#include <pxlw_iris_wrapper.h>
+#endif
+
 #ifdef UDFPS_ZPOS
 #include <display/drm/sde_drm.h>
 #endif
@@ -341,7 +345,40 @@ HWCLayer::HWCLayer(Display display_id, HWCBufferAllocator *buf_allocator)
   geometry_changes_ |= kAdded;
 }
 
+#ifdef PXLW_IRIS7
+void HWCLayer::CreateIrisLayer() {
+  if (display_id_ != HWC_DISPLAY_PRIMARY) {
+    return;
+  }
+
+  iris_ = reinterpret_cast<pxlw::PxlwIris7AidlWrapper *>(pxlw::PxlwIrisWrapper::GetInstance());
+  if (iris_) {
+    iris_->CreateLayer(display_id_, id_);
+  }
+}
+
+bool HWCLayer::IsIrisLandscapeVideo() const {
+  return layer_->input_buffer.flags.video && layer_transform_.rotation == 90.0f;
+}
+
+void HWCLayer::SetIrisOrientation(bool landscape) {
+  int32_t orientation = landscape ? 1 : 0;
+  if (!iris_ || iris_orientation_ == orientation) {
+    return;
+  }
+
+  iris_orientation_ = orientation;
+  float property = static_cast<float>(orientation << pxlw::kIrisLayerOrientationShift);
+  iris_->SetLayerPerFrameMetadata(display_id_, id_, 1, &pxlw::kIrisLayerProperty, &property);
+}
+#endif
+
 HWCLayer::~HWCLayer() {
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->DestroyLayer(display_id_, id_);
+  }
+#endif
   // Close any fences left for this layer
   release_fence_ = nullptr;
   if (layer_) {
@@ -456,6 +493,13 @@ HWC3::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   if (err != gralloc::Error::NONE) {
     DLOGW("Failed to retrieve handle usage");
   }
+
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->SetLayerBuffer(display_id_, id_, handle, -1);
+  }
+#endif
+
   return HWC3::Error::None;
 }
 
@@ -553,6 +597,12 @@ HWC3::Error HWCLayer::SetLayerCompositionType(Composition type) {
       return HWC3::Error::Unsupported;
   }
 
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->SetLayerCompositionType(display_id_, id_, static_cast<int32_t>(type));
+  }
+#endif
+
   return HWC3::Error::None;
 }
 
@@ -579,6 +629,12 @@ HWC3::Error HWCLayer::SetLayerDisplayFrame(Rect frame) {
     geometry_changes_ |= kDisplayFrame;
     dst_rect_ = dst_rect;
   }
+
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->SetLayerDisplayFrame(display_id_, id_, frame);
+  }
+#endif
 
   return HWC3::Error::None;
 }
@@ -637,6 +693,12 @@ HWC3::Error HWCLayer::SetLayerSourceCrop(FRect crop) {
     layer_->src_rect = src_rect;
   }
 
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->SetLayerSourceCrop(display_id_, id_, crop);
+  }
+#endif
+
   return HWC3::Error::None;
 }
 
@@ -683,6 +745,12 @@ HWC3::Error HWCLayer::SetLayerTransform(Transform transform) {
     layer_transform_ = layer_transform;
   }
 
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->SetLayerTransform(display_id_, id_, static_cast<int32_t>(transform));
+  }
+#endif
+
   return HWC3::Error::None;
 }
 
@@ -711,6 +779,12 @@ HWC3::Error HWCLayer::SetLayerZOrder(uint32_t z) {
     geometry_changes_ |= kZOrder;
     z_ = z;
   }
+
+#ifdef PXLW_IRIS7
+  if (iris_) {
+    iris_->SetLayerZOrder(display_id_, id_, z);
+  }
+#endif
 
   return HWC3::Error::None;
 }

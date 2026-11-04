@@ -545,6 +545,9 @@ class HWCDisplay : public DisplayEventHandler {
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
 #ifdef PXLW_IRIS7
+  void SetIrisActiveConfig(Config config);
+  bool IsIrisActiveConfigAllowed();
+  int iris_config_index_ = -1;
   void UpdateFodColor();
   bool fod_color_loaded_ = false;
   void *fod_color_lib_ = nullptr;
