@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9635866b_e477efde",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 38138
+      },
+      "writtenOn": "2026-11-04T21:49:53Z",
+      "side": 1,
+      "message": "I think this can be improved to be more universal as in my sm8450 commit",
+      "revId": "108e687106118f8977a4423d9e419fde9fb82e97",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3624f3ef_201efdc9",
+        "filename": "composer/hwc_session.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 457,
+      "author": {
+        "id": 38138
+      },
+      "writtenOn": "2026-11-04T21:49:53Z",
+      "side": 1,
+      "message": "Why not to use Iris own Dual property?\nReversed and verified myself that stock composer does this:\nhttps://github.com/realme-GT-Neo5-Development/android_hardware_qcom_display/commit/2b6c6f41e0fb773ea26702f8e8595c7592c96919#diff-0000883ebc3e37e6ee2957c45059eb4efdcf0589f5cdca2ad85d8bdc805c2308R2824",
+      "revId": "108e687106118f8977a4423d9e419fde9fb82e97",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
