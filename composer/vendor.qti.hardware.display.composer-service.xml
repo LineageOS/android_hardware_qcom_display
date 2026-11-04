@@ -37,7 +37,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 <manifest version="1.0" type="device">
     <hal format="aidl">
         <name>android.hardware.graphics.composer3</name>
-        <version>2</version>
+        <version>3</version>
         <fqname>IComposer/default</fqname>
     </hal>
     <hal format="aidl">
