@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "32ee94f9_6de78140",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 36633
+      },
+      "writtenOn": "2026-11-07T10:03:09Z",
+      "side": 1,
+      "message": "Works for bale",
+      "revId": "3b1df42576f200980d8c454f4258e574c0a62d7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
