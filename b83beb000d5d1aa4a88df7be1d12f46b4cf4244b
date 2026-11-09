@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "09289142_98ed973d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 38138
+      },
+      "writtenOn": "2026-11-09T08:24:11Z",
+      "side": 1,
+      "message": "https://github.com/realme-GT-Neo5-Development/android_hardware_qcom_display/commit/ee1aeec86675593cbb2d5c343fe3656aa32fae00\nIf you wanna sync changes with my current iris progress on sm8450",
+      "revId": "b83beb000d5d1aa4a88df7be1d12f46b4cf4244b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
