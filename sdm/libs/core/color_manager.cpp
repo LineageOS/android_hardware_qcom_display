@@ -85,6 +85,9 @@ HWResourceInfo ColorManagerProxy::hw_res_info_;
 
 GetScPostBlendInterface ColorManagerProxy::create_stc_intf_ = NULL;
 
+// QDCM command id that libsdm-disp-vndapis uses to set the global PA (HSIC) config
+static const uint32_t kQdcmCmdSetGlobalPaConfig = 0x17;
+
 bool NeedsToneMap(const std::vector<Layer> &layers) {
   for (auto &layer : layers) {
     if (layer.request.flags.dest_tone_map) {
@@ -318,6 +321,14 @@ DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &
   // On completion, dspp_features_ will be populated and mark dirty with all resolved dspp
   // feature list with paramaters being transformed into target requirement.
   ret = color_intf_->ColorSVCRequestRoute(in_payload, out_payload, &pp_features_, pending_action);
+
+  uint32_t cmd = 0;
+  if (!ret && in_payload.payload && in_payload.size >= sizeof(cmd)) {
+    memcpy(&cmd, in_payload.payload, sizeof(cmd));
+    if (cmd == kQdcmCmdSetGlobalPaConfig) {
+      global_pa_cfg_.assign(in_payload.payload, in_payload.payload + in_payload.size);
+    }
+  }
 
   if (!stc_intf_) {
     return ret;
@@ -735,8 +746,26 @@ DisplayError ColorManagerProxy::UpdateModeHwassets(int32_t mode_id,
     DLOGE("Failed to convert hw assets to PP features, error = %d", error);
     return kErrorUndefined;
   }
+  // The mode assets include PostBlendPa, which overrides the user's global PA
+  ReapplyGlobalPaConfig();
   pp_features_.MarkAsDirty();
   return error;
+}
+
+void ColorManagerProxy::ReapplyGlobalPaConfig() {
+  if (global_pa_cfg_.empty()) {
+    return;
+  }
+
+  PPDisplayAPIPayload in_payload(UINT32(global_pa_cfg_.size()), global_pa_cfg_.data());
+  PPDisplayAPIPayload out_payload;
+  PPPendingParams pending_action;
+  DisplayError error = color_intf_->ColorSVCRequestRoute(in_payload, &out_payload, &pp_features_,
+                                                         &pending_action);
+  if (error != kErrorNone) {
+    DLOGW("Failed to reapply global PA config, error = %d", error);
+  }
+  out_payload.DestroyPayload();
 }
 
 void ColorManagerProxy::DumpColorMetaData(const ColorMetaData &color_metadata) {
