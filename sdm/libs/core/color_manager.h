@@ -188,6 +188,7 @@ class ColorManagerProxy {
   void DumpColorMetaData(const ColorMetaData &color_metadata);
   bool HasNativeModeSupport();
   DisplayError ApplySwAssets();
+  void ReapplyGlobalPaConfig();
 
   int32_t display_id_;
   DisplayType device_type_;
@@ -204,6 +205,7 @@ class ColorManagerProxy {
   snapdragoncolor::ScPostBlendInterface *stc_intf_ = NULL;
   snapdragoncolor::ColorMode curr_mode_;
   bool needs_update_ = false;
+  std::vector<uint8_t> global_pa_cfg_;
 };
 
 class ColorFeatureCheckingImpl : public FeatureInterface {
