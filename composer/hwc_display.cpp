@@ -2587,11 +2587,26 @@ void HWCDisplay::UpdateActiveConfig() {
     return;
   }
 
+  uint32_t current_config = 0;
+  display_intf_->GetActiveConfig(&current_config);
+
   DisplayError error = display_intf_->SetActiveConfig(pending_config_index_);
   if (error != kErrorNone) {
     DLOGI("Failed to set %d config", INT(pending_config_index_));
   } else {
     SetActiveConfigIndex(pending_config_index_);
+
+    DisplayConfigVariableInfo info = {};
+    GetDisplayAttributesForConfig(INT(pending_config_index_), &info);
+
+    DisplayConfigVariableInfo current_config_info = {};
+    GetDisplayAttributesForConfig(INT(current_config), &current_config_info);
+    if (info.x_pixels != current_config_info.x_pixels ||
+        info.y_pixels != current_config_info.y_pixels) {
+      if (SetFrameBufferResolution(info.x_pixels, info.y_pixels)) {
+        DLOGE("Failed to set framebuffer resolution %ux%u", info.x_pixels, info.y_pixels);
+      }
+    }
   }
 
   // Reset pending config.
