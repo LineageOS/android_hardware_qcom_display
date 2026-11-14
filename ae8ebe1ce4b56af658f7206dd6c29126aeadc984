@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e3716265_1fc9c531",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-11-14T16:36:02Z",
+      "side": 1,
+      "message": "Can you retry with this new chain? It looks fine here.",
+      "revId": "ae8ebe1ce4b56af658f7206dd6c29126aeadc984",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
