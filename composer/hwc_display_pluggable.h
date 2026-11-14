@@ -56,6 +56,8 @@ class HWCDisplayPluggable : public HWCDisplay {
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
+  virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                      int32_t dataspace, hwc_region_t damage);
 
  private:
   HWCDisplayPluggable(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

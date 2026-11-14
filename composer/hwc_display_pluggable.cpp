@@ -160,6 +160,34 @@ HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   return status;
 }
 
+HWC2::Error HWCDisplayPluggable::SetClientTarget(buffer_handle_t target,
+                                                 shared_ptr<Fence> acquire_fence,
+                                                 int32_t dataspace, hwc_region_t damage) {
+  HWC2::Error error = HWCDisplay::SetClientTarget(target, acquire_fence, dataspace, damage);
+  if (error != HWC2::Error::None) {
+    return error;
+  }
+
+  // The framebuffer is sized once, when the display is connected. After a
+  // config change to a smaller resolution, SurfaceFlinger sends a client
+  // target matching the new config, so follow its size instead of trying to
+  // scale a framebuffer larger than the buffer.
+  Layer *sdm_layer = client_target_->GetSDMLayer();
+  uint32_t fb_width = 0, fb_height = 0;
+
+  GetFrameBufferResolution(&fb_width, &fb_height);
+
+  if (fb_width != sdm_layer->input_buffer.unaligned_width ||
+      fb_height != sdm_layer->input_buffer.unaligned_height) {
+    if (SetFrameBufferConfig(sdm_layer->input_buffer.unaligned_width,
+                             sdm_layer->input_buffer.unaligned_height)) {
+      return HWC2::Error::BadParameter;
+    }
+  }
+
+  return HWC2::Error::None;
+}
+
 void HWCDisplayPluggable::ApplyScanAdjustment(hwc_rect_t *display_frame) {
   if ((underscan_width_ <= 0) || (underscan_height_ <= 0)) {
     return;
