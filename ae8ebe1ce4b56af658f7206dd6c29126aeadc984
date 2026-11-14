@@ -16,6 +16,24 @@
       "message": "Can you retry with this new chain? It looks fine here.",
       "revId": "ae8ebe1ce4b56af658f7206dd6c29126aeadc984",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "46551bcf_aae5ad11",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 36786
+      },
+      "writtenOn": "2026-11-14T21:43:44Z",
+      "side": 1,
+      "message": "Tested this chain on gts7lwifi with a DP monitor: switching to a lower resolution still fails every frame, because SurfaceFlinger uses the legacy setActiveConfig() for external displays (b/319505580), so SubmitDisplayConfig() never runs. I pushed a follow-up doing the same resize in UpdateActiveConfig(). I found nothing equivalent exists in newer CAF HALs (47cb8a0047 was reverted). With it, every mode works with zero errors.",
+      "parentUuid": "e3716265_1fc9c531",
+      "revId": "ae8ebe1ce4b56af658f7206dd6c29126aeadc984",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
