@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2a1cd149_88792d1e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 36786
+      },
+      "writtenOn": "2026-11-14T23:57:59Z",
+      "side": 1,
+      "message": "Now working with https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/513424",
+      "revId": "9ced216eb322b614871cbdb16a841c961235ad5d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
