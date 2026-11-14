@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2ce398f4_901a3496",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-11-14T22:13:25Z",
+      "side": 1,
+      "message": "Thanks, Alexis. Please leave votes if it works. On my setup it does work, but I can\u0027t reproduce this second issue.",
+      "revId": "1062b67b900ef1dd11d4cdabd442dc9bb38d2f38",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
