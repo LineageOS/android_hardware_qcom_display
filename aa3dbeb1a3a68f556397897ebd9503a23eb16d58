@@ -69,6 +69,23 @@
       "message": "Yeah this is effectively the same just the other change used a virtual override instead of an inline type_ check. Need one more change for composer3 HALs, but this is fine for SM8250.",
       "revId": "aa3dbeb1a3a68f556397897ebd9503a23eb16d58",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "0129aa05_d0132c45",
+        "filename": "composer/hwc_display.cpp",
+        "patchSetId": 4
+      },
+      "lineNbr": 1124,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2026-11-14T20:39:18Z",
+      "side": 1,
+      "message": "This should probably just be in the commit message",
+      "revId": "aa3dbeb1a3a68f556397897ebd9503a23eb16d58",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
