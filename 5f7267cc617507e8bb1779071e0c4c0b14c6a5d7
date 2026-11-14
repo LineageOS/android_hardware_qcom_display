@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e4bc1f89_6bf664bb",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 5
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-11-14T21:56:41Z",
+      "side": 1,
+      "message": "Well, at this point I think we should just pick https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/507697, to have the same change (even if HWC3 part doesn\u0027t apply here) in both branches.",
+      "revId": "5f7267cc617507e8bb1779071e0c4c0b14c6a5d7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
