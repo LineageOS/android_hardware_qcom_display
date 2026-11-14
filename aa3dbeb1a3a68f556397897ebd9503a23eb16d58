@@ -16,6 +16,24 @@
       "message": "Isn\u0027t this similar/same as https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/507697 ?",
       "revId": "aa3dbeb1a3a68f556397897ebd9503a23eb16d58",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "079ba27a_10b7e66d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2026-11-14T20:16:21Z",
+      "side": 1,
+      "message": "Looks like it.",
+      "parentUuid": "d6c8a465_394040e5",
+      "revId": "aa3dbeb1a3a68f556397897ebd9503a23eb16d58",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
