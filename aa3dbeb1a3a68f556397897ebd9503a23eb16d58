@@ -86,6 +86,24 @@
       "message": "This should probably just be in the commit message",
       "revId": "aa3dbeb1a3a68f556397897ebd9503a23eb16d58",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7ecb5b7a_e94a1edb",
+        "filename": "composer/hwc_display.cpp",
+        "patchSetId": 4
+      },
+      "lineNbr": 1124,
+      "author": {
+        "id": 36786
+      },
+      "writtenOn": "2026-11-14T21:53:47Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0129aa05_d0132c45",
+      "revId": "aa3dbeb1a3a68f556397897ebd9503a23eb16d58",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
