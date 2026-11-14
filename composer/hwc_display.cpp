@@ -1121,7 +1121,7 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
       *out_value = INT32(variable_config.y_dpi * 1000.0f);
       break;
     case HwcAttribute::CONFIG_GROUP:
-      *out_value = GetDisplayConfigGroup(variable_config);
+      *out_value = (type_ == kPluggable) ? INT32(config) : GetDisplayConfigGroup(variable_config);
       break;
     default:
       DLOGW("Spurious attribute type = %s", composer_V2_4::toString(attribute).c_str());
@@ -2783,6 +2783,10 @@ bool HWCDisplay::IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2)
       (variable_config2 == variable_config_map_.end())) {
     DLOGE("Invalid config: %u, %u", config_id1, config_id2);
     return false;
+  }
+
+  if (type_ == kPluggable) {
+    return (config_id1 == config_id2);
   }
 
   const DisplayConfigGroupInfo &config_group1 = variable_config1->second;
