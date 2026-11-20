@@ -701,7 +701,6 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.fod_pressed_present = true;
     } else {
       layer->flags.fod_pressed = false;
-      layer_stack_.flags.fod_pressed_present = false;
     }
 #endif
 
