@@ -28,6 +28,14 @@
  */
 #include <hidl/LegacySupport.h>
 
+#ifdef TARGET_USES_GRALLOC4
+#include <android/binder_manager.h>
+#include <android/binder_process.h>
+
+#include <string>
+
+#include "QtiAllocatorAIDL.h"
+#endif
 #include "QtiAllocator.h"
 
 using android::hardware::configureRpcThreadpool;
@@ -54,6 +62,29 @@ int main(int, char **) {
     return -EINVAL;
   }
   ALOGI("Initialized qti-allocator 4");
+
+  // AIDL android.hardware.graphics.allocator-V1, next to the HIDL 3.0/4.0
+  // services (the SDM composer still uses HIDL IAllocator 3.0). It is declared
+  // in the VINTF manifest, so every libui client waits for it with
+  // AServiceManager_waitForService(): fail hard here instead of running
+  // without it, so init restarts us (and surfaceflinger via onrestart).
+  auto aidl_allocator =
+      ndk::SharedRefBase::make<aidl::android::hardware::graphics::allocator::impl::QtiAllocatorAIDL>();
+  const std::string aidl_instance =
+      std::string() +
+      aidl::android::hardware::graphics::allocator::impl::QtiAllocatorAIDL::descriptor + "/default";
+  binder_exception_t aidl_status = AServiceManager_addServiceWithFlags(
+      aidl_allocator->asBinder().get(), aidl_instance.c_str(),
+      AServiceManager_AddServiceFlag::ADD_SERVICE_ALLOW_ISOLATED);
+  if (aidl_status != EX_NONE) {
+    ALOGE("Cannot register the AIDL allocator %s (status %d)", aidl_instance.c_str(),
+          aidl_status);
+    return -EINVAL;
+  }
+  ALOGI("Initialized AIDL allocator %s", aidl_instance.c_str());
+
+  ABinderProcess_setThreadPoolMaxThreadCount(4);
+  ABinderProcess_startThreadPool();
 #endif
 
   joinRpcThreadpool();
