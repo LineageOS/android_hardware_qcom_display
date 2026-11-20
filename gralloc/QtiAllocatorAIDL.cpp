@@ -36,6 +36,8 @@ static inline ndk::ScopedAStatus ToBinderStatus(Error error) {
   AllocationError ret;
 
   switch (error) {
+    case Error::NONE:
+      return ndk::ScopedAStatus::ok();
     case Error::BAD_DESCRIPTOR:
       ret = AllocationError::BAD_DESCRIPTOR;
       break;
@@ -46,7 +48,9 @@ static inline ndk::ScopedAStatus ToBinderStatus(Error error) {
       ret = AllocationError::UNSUPPORTED;
       break;
     default:
-      return ndk::ScopedAStatus::ok();
+      // Never report success for an unknown failure
+      ret = AllocationError::NO_RESOURCES;
+      break;
   }
 
   return ndk::ScopedAStatus::fromServiceSpecificError(static_cast<int32_t>(ret));
@@ -63,6 +67,9 @@ QtiAllocatorAIDL::QtiAllocatorAIDL() {
 ndk::ScopedAStatus QtiAllocatorAIDL::allocate(const std::vector<uint8_t>& descriptor, int32_t count,
                                                  AllocationResult* result) {
   ALOGD_IF(enable_logs_, "Allocating buffers count: %d", count);
+  if (count <= 0) {
+    return ToBinderStatus(Error::BAD_DESCRIPTOR);
+  }
   gralloc::BufferDescriptor desc;
   ::android::hardware::hidl_vec<uint8_t> hidl_desc(descriptor);
 
@@ -81,14 +88,20 @@ ndk::ScopedAStatus QtiAllocatorAIDL::allocate(const std::vector<uint8_t>& descri
     buffer_handle_t buffer;
     err = buf_mgr_->AllocateBuffer(desc, &buffer);
     if (err != Error::NONE) {
-      return ToBinderStatus(err);
+      break;
     }
     buffers.emplace_back(buffer);
   }
 
-  if (buffers.size() > 0) {
-    result->stride = static_cast<int32_t>(PRIV_HANDLE_CONST(buffers[0])->width);
+  if (err != Error::NONE) {
+    // Do not leak the buffers allocated before the failure
+    for (auto b : buffers) {
+      buf_mgr_->ReleaseBuffer(PRIV_HANDLE_CONST(b));
+    }
+    return ToBinderStatus(err);
   }
+
+  result->stride = static_cast<int32_t>(PRIV_HANDLE_CONST(buffers[0])->width);
 
   result->buffers.resize(n);
   for (size_t i = 0; i < n; i++) {

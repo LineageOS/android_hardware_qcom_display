@@ -239,9 +239,15 @@ cc_binary {
     }),
     srcs: [
         "QtiAllocator.cpp",
-        "QtiAllocatorAIDL.cpp",
         "service.cpp",
-    ],
+    ] + select(soong_config_variable("qtidisplay", "gralloc4"), {
+        "true": ["QtiAllocatorAIDL.cpp"],
+        default: [],
+    }),
     init_rc: ["vendor.qti.hardware.display.allocator-service.rc"],
-    vintf_fragments: ["vendor.qti.hardware.display.allocator-service.xml"],
+    vintf_fragments: ["vendor.qti.hardware.display.allocator-service.xml"] +
+        select(soong_config_variable("qtidisplay", "gralloc4"), {
+            "true": ["vendor.qti.hardware.display.allocator-service-aidl.xml"],
+            default: [],
+        }),
 }

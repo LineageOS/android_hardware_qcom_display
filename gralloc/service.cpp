@@ -65,8 +65,10 @@ int main(int, char **) {
     return -EINVAL;
   }
   ALOGI("Initialized qti-allocator 4");
-#endif
 
+  // The AIDL allocator is declared in the VINTF manifest, so every libui
+  // client waits for it without a timeout: fail hard if it cannot register,
+  // so init restarts us (and surfaceflinger through onrestart).
   ALOGI("Registering QTI Allocator AIDL as a service");
   auto allocator = ndk::SharedRefBase::make<QtiAllocatorAIDL>();
   const std::string instance = std::string() + QtiAllocatorAIDL::descriptor + "/default";
@@ -75,9 +77,10 @@ int main(int, char **) {
     return EXIT_FAILURE;
   }
 
-  binder_status_t status =
-      AServiceManager_addService(allocator->asBinder().get(), instance.c_str());
-  if (status != STATUS_OK) {
+  binder_exception_t status = AServiceManager_addServiceWithFlags(
+      allocator->asBinder().get(), instance.c_str(),
+      AServiceManager_AddServiceFlag::ADD_SERVICE_ALLOW_ISOLATED);
+  if (status != EX_NONE) {
     ALOGW("Failed to register QTI Allocator AIDL as a service (status:%d)", status);
     return EXIT_FAILURE;
   }
@@ -85,6 +88,7 @@ int main(int, char **) {
 
   ABinderProcess_setThreadPoolMaxThreadCount(4);
   ABinderProcess_startThreadPool();
+#endif
 
   joinRpcThreadpool();
 

@@ -1,0 +1,18 @@
+<!--
+SPDX-License-Identifier: BSD-3-Clause-Clear
+
+AIDL android.hardware.graphics.allocator-V1 served by
+vendor.qti.hardware.display.allocator-service (gralloc4 builds only).
+Declaring this makes every libui client block in
+AServiceManager_waitForService() until the service registers it.
+-->
+<manifest version="1.0" type="device">
+    <hal format="aidl">
+        <name>android.hardware.graphics.allocator</name>
+        <version>1</version>
+        <interface>
+            <name>IAllocator</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+</manifest>
