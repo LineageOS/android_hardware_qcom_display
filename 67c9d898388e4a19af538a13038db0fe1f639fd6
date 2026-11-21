@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "89b3bdae_56531bf7",
+        "filename": "composer/hwc_display.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 704,
+      "author": {
+        "id": 33569
+      },
+      "writtenOn": "2026-11-21T12:07:08Z",
+      "side": 0,
+      "message": "Not sure how this would affect the other devices but it can be guarded with SEC_FINGERPRINT_MASK if it\u0027s required",
+      "revId": "67c9d898388e4a19af538a13038db0fe1f639fd6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
